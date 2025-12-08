@@ -51,7 +51,7 @@
           </el-input>
           <div
             class="cursor-pointer flex items-center justify-center"
-            style=" flex-shrink: 0;width: 120px; height: 40px"
+            style="flex-shrink: 0; width: 120px; height: 40px"
             @click="getCaptcha"
           >
             <el-icon v-if="codeLoading" class="is-loading" size="20"><Loading /></el-icon>

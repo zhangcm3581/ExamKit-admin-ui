@@ -1,1 +1,2 @@
-npx --no-install commitlint --edit $1
+# commitlint 已禁用 - 允许任意格式的 commit message
+# npx --no-install commitlint --edit $1

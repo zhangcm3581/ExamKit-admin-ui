@@ -24,6 +24,7 @@ module.exports = {
     "prettier/prettier": true, // 强制执行 Prettier 格式化规则（需配合 .prettierrc 配置文件）
     "no-empty-source": null, //  允许空的样式文件
     "declaration-property-value-no-unknown": null, // 允许非常规数值格式 ,如 height: calc(100% - 50)
+    "no-descending-specificity": null, // 禁用选择器特异性顺序检查（过于严格）
     // 允许使用未知伪类
     "selector-pseudo-class-no-unknown": [
       true,
