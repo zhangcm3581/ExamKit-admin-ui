@@ -136,7 +136,7 @@ function handleQuery() {
   loading.value = true;
   NoticeAPI.getMyNoticePage(queryParams)
     .then((data) => {
-      pageData.value = data.list;
+      pageData.value = data.data;
       total.value = data.total;
     })
     .finally(() => {

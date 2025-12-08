@@ -48,7 +48,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
           changeOrigin: true,
           // 代理目标地址：https://api.youlai.tech
           target: env.VITE_APP_API_URL,
-          rewrite: (path: string) => path.replace(new RegExp("^" + env.VITE_APP_BASE_API), ""),
+          rewrite: (path: string) => path.replace(new RegExp("^" + env.VITE_APP_BASE_API), "/api"),
         },
       },
     },

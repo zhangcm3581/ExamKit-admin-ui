@@ -199,7 +199,7 @@ function fetchData() {
   loading.value = true;
   DictAPI.getDictItemPage(dictCode.value, queryParams)
     .then((data) => {
-      tableData.value = data.list;
+      tableData.value = data.data;
       total.value = data.total;
     })
     .finally(() => {

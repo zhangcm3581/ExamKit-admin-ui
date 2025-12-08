@@ -1,21 +1,18 @@
 import request from "@/utils/request";
 
-const AUTH_BASE_URL = "/api/v1/auth";
+const AUTH_BASE_URL = "/v1/auth";
 
 const AuthAPI = {
   /** 登录接口*/
   login(data: LoginFormData) {
-    const formData = new FormData();
-    formData.append("username", data.username);
-    formData.append("password", data.password);
-    formData.append("captchaKey", data.captchaKey);
-    formData.append("captchaCode", data.captchaCode);
     return request<any, LoginResult>({
       url: `${AUTH_BASE_URL}/login`,
       method: "post",
-      data: formData,
-      headers: {
-        "Content-Type": "multipart/form-data",
+      data: {
+        username: data.username,
+        password: data.password,
+        captchaKey: data.captchaKey,
+        captchaCode: data.captchaCode,
       },
     });
   },

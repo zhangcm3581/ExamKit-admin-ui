@@ -3,9 +3,22 @@ declare global {
    * 响应数据
    */
   interface ApiResponse<T = any> {
+    /** 是否成功 */
+    success?: boolean;
+    /** 状态码 */
     code: string;
+    /** 数据 */
     data: T;
-    msg: string;
+    /** 消息 */
+    msg?: string;
+    /** 消息（后端返回的字段名） */
+    message?: string;
+    /** 分页总数 */
+    total?: number;
+    /** 当前页 */
+    page?: number;
+    /** 每页大小 */
+    size?: number;
   }
 
   /**

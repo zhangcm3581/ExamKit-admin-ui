@@ -356,7 +356,7 @@ function fetchData() {
   loading.value = true;
   AiCommandApi.getCommandRecordPage(queryParams)
     .then((data) => {
-      pageData.value = data.list || [];
+      pageData.value = data.data || [];
       total.value = data.total || 0;
     })
     .finally(() => {

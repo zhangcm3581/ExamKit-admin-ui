@@ -23,9 +23,9 @@
       </div>
 
       <!-- 通知 -->
-      <div class="navbar-actions__item">
+      <!-- <div class="navbar-actions__item">
         <Notification />
-      </div>
+      </div> -->
     </template>
 
     <!-- 用户菜单 -->
@@ -73,7 +73,7 @@ import MenuSearch from "@/components/MenuSearch/index.vue";
 import Fullscreen from "@/components/Fullscreen/index.vue";
 import SizeSelect from "@/components/SizeSelect/index.vue";
 import LangSelect from "@/components/LangSelect/index.vue";
-import Notification from "@/components/Notification/index.vue";
+// import Notification from "@/components/Notification/index.vue";
 
 const { t } = useI18n();
 const appStore = useAppStore();

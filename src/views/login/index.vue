@@ -35,11 +35,6 @@
           </transition>
         </div>
       </div>
-      <!-- 登录页底部版权 -->
-      <el-text size="small" class="py-2.5! fixed bottom-0 text-center">
-        Copyright © 2021 - 2025 youlai.tech All Rights Reserved.
-        <a href="http://beian.miit.gov.cn/" target="_blank">皖ICP备20006496号-2</a>
-      </el-text>
     </div>
   </div>
 </template>
@@ -61,37 +56,11 @@ const formComponents = {
   resetPwd: defineAsyncComponent(() => import("./components/ResetPwd.vue")),
 };
 
-// 投票通知
-const voteUrl = "https://gitee.com/activity/2025opensource?ident=I6VXEH";
-// 保存通知实例，用于在组件卸载时关闭
-let notificationInstance: ReturnType<typeof ElNotification> | null = null;
-
-// 显示投票通知
-const showVoteNotification = () => {
-  notificationInstance = ElNotification({
-    title: "⭐ Gitee 2025 开源评选 · 诚邀您的支持！ 🙏",
-    message: `我正在参加 Gitee 2025 最受欢迎的开源软件投票活动，快来给我投票吧！<br/><a href="${voteUrl}" target="_blank" style="color: var(--el-color-primary); text-decoration: none; font-weight: 500;">点击投票 →</a>`,
-    type: "success",
-    position: "bottom-right",
-    duration: 0,
-    dangerouslyUseHTMLString: true,
-  });
-};
-
 // 延迟显示
-onMounted(() => {
-  setTimeout(() => {
-    showVoteNotification();
-  }, 500);
-});
+onMounted(() => {});
 
 // 组件卸载时关闭通知
-onBeforeUnmount(() => {
-  if (notificationInstance) {
-    notificationInstance.close();
-    notificationInstance = null;
-  }
-});
+onBeforeUnmount(() => {});
 </script>
 
 <style lang="scss" scoped>

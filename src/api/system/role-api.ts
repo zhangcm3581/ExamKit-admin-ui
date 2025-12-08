@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 
-const ROLE_BASE_URL = "/api/v1/roles";
+const ROLE_BASE_URL = "/v1/roles";
 
 const RoleAPI = {
   /** 获取角色分页数据 */
@@ -54,6 +54,8 @@ export interface RolePageVO {
   code?: string;
   /** 角色名称 */
   name?: string;
+  /** 数据权限 */
+  dataScope?: number;
   /** 排序 */
   sort?: number;
   /** 角色状态 */

@@ -45,15 +45,29 @@ httpRequest.interceptors.request.use(
  */
 httpRequest.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
-    // 如果响应是二进制数据，则直接返回response对象（用于文件下载、Excel导出、图片显示等）
+    // 如果响应是二进制数据,则直接返回response对象(用于文件下载、Excel导出、图片显示等)
     if (response.config.responseType === "blob" || response.config.responseType === "arraybuffer") {
       return response;
     }
 
-    const { code, data, msg } = response.data;
+    const responseData = response.data;
+    // 适配后端响应格式: {success, code, message, data}
+    // 转换为前端期望格式: {code, data, msg}
+    const { success, code, message, data, total, page, size } = responseData;
+    const msg = message;
 
     // 请求成功
-    if (code === ApiCodeEnum.SUCCESS) {
+    if (success === true || code === "SUCCESS" || code === ApiCodeEnum.SUCCESS) {
+      // 如果是MultiResult分页响应，包装分页信息
+      if (total !== undefined && page !== undefined && size !== undefined) {
+        return {
+          data,
+          total,
+          page,
+          size,
+        };
+      }
+      // 普通Result响应，直接返回data
       return data;
     }
 
@@ -72,10 +86,14 @@ httpRequest.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const { code, msg } = response.data as ApiResponse;
+    const responseData = response.data;
+    // 适配后端响应格式
+    const { success, code, message } = responseData;
+    const msg = message;
 
     switch (code) {
       case ApiCodeEnum.ACCESS_TOKEN_INVALID:
+      case "TOKEN_EXPIRED":
         // Access Token 过期
         if (authConfig.enableTokenRefresh) {
           // 启用了token刷新，尝试刷新
@@ -87,6 +105,7 @@ httpRequest.interceptors.response.use(
         }
 
       case ApiCodeEnum.REFRESH_TOKEN_INVALID:
+      case "REFRESH_TOKEN_EXPIRED":
         // Refresh Token 过期，跳转登录页
         await redirectToLogin("登录已过期，请重新登录");
         return Promise.reject(new Error(msg || "Refresh Token Invalid"));

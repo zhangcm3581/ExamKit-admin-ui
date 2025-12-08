@@ -281,9 +281,10 @@ const parentChildLinked = ref(true);
 function fetchData() {
   loading.value = true;
   RoleAPI.getPage(queryParams)
-    .then((data) => {
-      roleList.value = data.list;
-      total.value = data.total;
+    .then((result) => {
+      // 后端返回的分页数据结构: { data, total, page, size }
+      roleList.value = result.data;
+      total.value = result.total;
     })
     .finally(() => {
       loading.value = false;

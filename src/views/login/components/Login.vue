@@ -37,25 +37,33 @@
 
       <!-- 验证码 -->
       <el-form-item prop="captchaCode">
-        <div flex items-center gap-10px>
+        <div class="flex items-center gap-10px w-full">
           <el-input
             v-model.trim="loginFormData.captchaCode"
             :placeholder="t('login.captchaCode')"
             clearable
-            class="flex-1"
+            style="flex: 1"
             @keyup.enter="handleLoginSubmit"
           >
             <template #prefix>
               <div class="i-svg:captcha" />
             </template>
           </el-input>
-          <div cursor-pointer h-40px w-120px flex-center @click="getCaptcha">
+          <div
+            class="cursor-pointer flex items-center justify-center"
+            style=" flex-shrink: 0;width: 120px; height: 40px"
+            @click="getCaptcha"
+          >
             <el-icon v-if="codeLoading" class="is-loading" size="20"><Loading /></el-icon>
             <img
               v-else-if="captchaBase64"
-              border-rd-4px
-              object-cover
-              shadow="[0_0_0_1px_var(--el-border-color)_inset]"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 4px;
+                box-shadow: 0 0 0 1px var(--el-border-color) inset;
+              "
               :src="captchaBase64"
               alt="captchaCode"
             />
@@ -78,36 +86,6 @@
         </el-button>
       </el-form-item>
     </el-form>
-
-    <div flex-center gap-10px>
-      <el-text size="default">{{ t("login.noAccount") }}</el-text>
-      <el-link type="primary" underline="never" @click="toOtherForm('register')">
-        {{ t("login.reg") }}
-      </el-link>
-    </div>
-
-    <!-- 第三方登录 -->
-    <div class="third-party-login">
-      <div class="divider-container">
-        <div class="divider-line"></div>
-        <span class="divider-text">{{ t("login.otherLoginMethods") }}</span>
-        <div class="divider-line"></div>
-      </div>
-      <div class="flex-center gap-x-5 w-full text-[var(--el-text-color-secondary)]">
-        <CommonWrapper>
-          <div text-20px class="i-svg:wechat" />
-        </CommonWrapper>
-        <CommonWrapper>
-          <div text-20px cursor-pointer class="i-svg:qq" />
-        </CommonWrapper>
-        <CommonWrapper>
-          <div text-20px cursor-pointer class="i-svg:github" />
-        </CommonWrapper>
-        <CommonWrapper>
-          <div text-20px cursor-pointer class="i-svg:gitee" />
-        </CommonWrapper>
-      </div>
-    </div>
   </div>
 </template>
 <script setup lang="ts">
@@ -115,7 +93,6 @@ import type { FormInstance } from "element-plus";
 import AuthAPI, { type LoginFormData } from "@/api/auth-api";
 import router from "@/router";
 import { useUserStore } from "@/store";
-import CommonWrapper from "@/components/CommonWrapper/index.vue";
 import { AuthStorage } from "@/utils/auth";
 
 const { t } = useI18n();
@@ -198,12 +175,22 @@ async function handleLoginSubmit() {
     // 2. 执行登录
     await userStore.login(loginFormData.value);
 
-    const redirectPath = (route.query.redirect as string) || "/";
+    // 3. 登录成功后显示成功消息
+    ElMessage.success("登录成功");
 
+    // 4. 等待一下确保token已保存，然后跳转
+    await nextTick();
+
+    const redirectPath = (route.query.redirect as string) || "/";
     await router.push(decodeURIComponent(redirectPath));
-  } catch (error) {
-    // 4. 统一错误处理
+  } catch (error: any) {
+    // 5. 统一错误处理
     getCaptcha(); // 刷新验证码
+
+    // 显示错误消息
+    const errorMessage = error?.message || error || "登录失败，请重试";
+    ElMessage.error(errorMessage);
+
     console.error("登录失败:", error);
   } finally {
     loading.value = false;
@@ -224,25 +211,4 @@ function toOtherForm(type: "register" | "resetPwd") {
 }
 </script>
 
-<style lang="scss" scoped>
-.third-party-login {
-  .divider-container {
-    display: flex;
-    align-items: center;
-    margin: 40px 0;
-
-    .divider-line {
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--el-border-color-light), transparent);
-    }
-
-    .divider-text {
-      padding: 0 16px;
-      font-size: 12px;
-      color: var(--el-text-color-regular);
-      white-space: nowrap;
-    }
-  }
-}
-</style>
+<style lang="scss" scoped></style>

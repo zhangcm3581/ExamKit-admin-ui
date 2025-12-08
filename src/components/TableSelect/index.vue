@@ -263,7 +263,7 @@ function fetchPageData(isRestart = false) {
     .indexAction(queryParams)
     .then((data) => {
       total.value = data.total;
-      pageData.value = data.list;
+      pageData.value = data.data;
     })
     .finally(() => {
       loading.value = false;

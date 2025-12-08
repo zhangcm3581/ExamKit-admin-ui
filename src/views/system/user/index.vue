@@ -1,14 +1,9 @@
 <!-- 用户管理 -->
 <template>
   <div class="app-container">
-    <el-row :gutter="20">
-      <!-- 部门树 -->
-      <el-col :lg="4" :xs="24" class="mb-[12px]">
-        <DeptTree v-model="queryParams.deptId" @node-click="handleQuery" />
-      </el-col>
-
+    <el-row>
       <!-- 用户列表 -->
-      <el-col :lg="20" :xs="24">
+      <el-col>
         <!-- 搜索区域 -->
         <div class="search-container">
           <el-form ref="queryFormRef" :model="queryParams" :inline="true" label-width="auto">
@@ -51,7 +46,6 @@
             </el-form-item>
           </el-form>
         </div>
-
         <el-card shadow="hover" class="data-table">
           <div class="data-table__toolbar">
             <div class="data-table__toolbar--actions">
@@ -99,25 +93,23 @@
             @selection-change="handleSelectionChange"
           >
             <el-table-column type="selection" width="50" align="center" />
-            <el-table-column label="用户名" prop="username" />
-            <el-table-column label="昵称" width="150" align="center" prop="nickname" />
-            <el-table-column label="性别" width="100" align="center">
-              <template #default="scope">
-                <DictLabel v-model="scope.row.gender" code="gender" />
-              </template>
-            </el-table-column>
-            <el-table-column label="部门" width="120" align="center" prop="deptName" />
-            <el-table-column label="手机号码" align="center" prop="mobile" width="120" />
-            <el-table-column label="邮箱" align="center" prop="email" width="160" />
-            <el-table-column label="状态" align="center" prop="status" width="80">
+            <el-table-column label="用户名" prop="username" width="200" />
+            <el-table-column label="昵称" align="center" prop="nickname" />
+            <el-table-column label="手机号码" align="center" prop="mobile" />
+            <el-table-column label="邮箱" align="center" prop="email" />
+            <el-table-column label="状态" align="center">
               <template #default="scope">
                 <el-tag :type="scope.row.status == 1 ? 'success' : 'info'">
                   {{ scope.row.status == 1 ? "正常" : "禁用" }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="创建时间" align="center" prop="createTime" width="150" />
-            <el-table-column label="操作" fixed="right" width="220">
+            <el-table-column label="创建时间" align="center" width="200">
+              <template #default="scope">
+                {{ formatDateTime(scope.row.createTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" fixed="right" width="300">
               <template #default="scope">
                 <el-button
                   v-hasPerm="'sys:user:reset-password'"
@@ -185,17 +177,6 @@
           <el-input v-model="formData.nickname" placeholder="请输入用户昵称" />
         </el-form-item>
 
-        <el-form-item label="所属部门" prop="deptId">
-          <el-tree-select
-            v-model="formData.deptId"
-            placeholder="请选择所属部门"
-            :data="deptOptions"
-            filterable
-            check-strictly
-            :render-after-expand="false"
-          />
-        </el-form-item>
-
         <el-form-item label="性别" prop="gender">
           <Dict v-model="formData.gender" code="gender" />
         </el-form-item>
@@ -206,7 +187,7 @@
               v-for="item in roleOptions"
               :key="item.value"
               :label="item.label"
-              :value="item.value"
+              :value="Number(item.value)"
             />
           </el-select>
         </el-form-item>
@@ -256,7 +237,6 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import type { UserForm, UserPageQuery, UserPageVO } from "@/api/system/user-api";
 // ==================== 4. API 服务 ====================
 import UserAPI from "@/api/system/user-api";
-import DeptAPI from "@/api/system/dept-api";
 import RoleAPI from "@/api/system/role-api";
 
 // ==================== 5. Store ====================
@@ -270,8 +250,10 @@ import { DeviceEnum } from "@/enums/settings/device-enum";
 import { useAiAction, useTableSelection } from "@/composables";
 
 // ==================== 8. 组件 ====================
-import DeptTree from "./components/DeptTree.vue";
 import UserImport from "./components/UserImport.vue";
+
+// ==================== 9. 工具函数 ====================
+import { formatDateTime } from "@/utils/datetime";
 
 // ==================== 组件配置 ====================
 defineOptions({
@@ -312,7 +294,6 @@ const formData = reactive<UserForm>({
 });
 
 // 下拉选项数据
-const deptOptions = ref<OptionType[]>();
 const roleOptions = ref<OptionType[]>();
 
 // 导入弹窗
@@ -339,13 +320,6 @@ const rules = reactive({
     {
       required: true,
       message: "用户昵称不能为空",
-      trigger: "blur",
-    },
-  ],
-  deptId: [
-    {
-      required: true,
-      message: "所属部门不能为空",
       trigger: "blur",
     },
   ],
@@ -380,9 +354,10 @@ const rules = reactive({
 async function fetchUserList(): Promise<void> {
   loading.value = true;
   try {
-    const data = await UserAPI.getPage(queryParams);
-    pageData.value = data.list;
-    total.value = data.total;
+    const result = await UserAPI.getPage(queryParams);
+    // 后端返回的分页数据结构: { data, total, page, size }
+    pageData.value = result.data;
+    total.value = result.total;
   } catch (error) {
     ElMessage.error("获取用户列表失败");
     console.error("获取用户列表失败:", error);
@@ -409,7 +384,6 @@ function handleQuery(): Promise<void> {
  */
 function handleResetQuery(): void {
   queryFormRef.value.resetFields();
-  queryParams.deptId = undefined;
   queryParams.createTime = undefined;
   handleQuery();
 }
@@ -448,15 +422,12 @@ function handleResetPassword(row: UserPageVO): void {
 async function handleOpenDialog(id?: string): Promise<void> {
   dialog.visible = true;
 
-  // 并行加载下拉选项数据
+  // 加载角色选项数据
   try {
-    [roleOptions.value, deptOptions.value] = await Promise.all([
-      RoleAPI.getOptions(),
-      DeptAPI.getOptions(),
-    ]);
+    roleOptions.value = await RoleAPI.getOptions();
   } catch (error) {
-    ElMessage.error("加载选项数据失败");
-    console.error("加载选项数据失败:", error);
+    ElMessage.error("加载角色选项失败");
+    console.error("加载角色选项失败:", error);
   }
 
   // 编辑：加载用户数据
