@@ -95,6 +95,19 @@ const FileManageAPI = {
       params: queryParams,
     });
   },
+
+  /** 获取图片列表(用于图片选择器) */
+  getImages(queryParams: FilePageQuery & { folder?: string }) {
+    return request<any, PageResult<FileVO>>({
+      url: `${FILE_BASE_URL}/page`,
+      method: "get",
+      params: {
+        ...queryParams,
+        fileType: "image",
+        status: 1, // 只显示未删除的图片
+      },
+    });
+  },
 };
 
 export default FileManageAPI;
