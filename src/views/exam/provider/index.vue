@@ -63,7 +63,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="180" align="center">
+        <el-table-column label="添加时间" width="230" align="center">
           <template #default="scope">
             {{ formatDateTime(scope.row.createTime) }}
           </template>
@@ -1023,6 +1023,11 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+
+  // 工具栏按钮加粗
+  .el-button {
+    font-weight: 600;
+  }
 }
 
 .toolbar-right {
@@ -1053,6 +1058,11 @@ onMounted(() => {
 
   :deep(.el-table__row) {
     cursor: pointer;
+  }
+
+  // 状态列加粗
+  :deep(.el-tag) {
+    font-weight: 600;
   }
 }
 
@@ -1090,6 +1100,7 @@ onMounted(() => {
 .name-text {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600; // 名称列加粗
   white-space: nowrap;
 }
 
@@ -1097,6 +1108,17 @@ onMounted(() => {
   display: flex;
   gap: 4px;
   align-items: center;
+
+  // 操作列按钮加粗
+  .el-button {
+    font-weight: 600;
+  }
+
+  :deep(.el-dropdown) {
+    .el-button {
+      font-weight: 600;
+    }
+  }
 }
 
 .pagination-wrapper {

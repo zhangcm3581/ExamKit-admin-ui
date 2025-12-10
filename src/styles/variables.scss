@@ -40,9 +40,10 @@
 /** 浅色主题-深蓝色侧边栏配色 */
 html.sidebar-color-blue {
   --menu-background: #304156; // 菜单背景色
-  --menu-text: #bfcbd9; // 菜单文字颜色
-  --menu-active-text: var(--el-menu-active-color); // 菜单激活文字颜色
+  --menu-text: #ffffff; // 菜单文字颜色（白色）
+  --menu-active-text: #ffffff; // 菜单激活文字颜色（白色）
   --menu-hover: #263445; // 菜单悬停背景色
+  --menu-active-background: #4080ff; // 菜单激活背景色（使用主题蓝色）
   --sidebar-logo-background: #2d3748; // 侧边栏 Logo 背景色
   --sidebar-logo-text-color: #fff; // 侧边栏 Logo 文字颜色
 }

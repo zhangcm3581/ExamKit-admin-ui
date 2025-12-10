@@ -4,6 +4,21 @@
 @use "./vxe-table";
 @import url("./vxe-table.css");
 
+// 全局字体样式增强
+* {
+  font-family:
+    "微软雅黑", "Microsoft YaHei", "Hiragino Sans GB", "Segoe UI", "Helvetica Neue", Helvetica,
+    Arial, sans-serif;
+}
+
+// 代码区域使用等宽字体
+code,
+pre,
+.code,
+.monospace {
+  font-family: "Monaco", "Consolas", "Courier New", monospace;
+}
+
 .app-container {
   padding: 15px;
 }
@@ -16,6 +31,8 @@
 // 混合布局左侧菜单的hover样式
 .layout-mix .layout__sidebar--left .el-menu {
   .el-menu-item {
+    font-weight: 600; // 菜单项加粗
+
     &:hover {
       // 极简白主题：使用浅灰色背景
       background-color: var(--el-fill-color-light) !important;
@@ -23,6 +40,8 @@
   }
 
   .el-sub-menu__title {
+    font-weight: 600; // 子菜单标题加粗
+
     &:hover {
       // 极简白主题：使用浅灰色背景
       background-color: var(--el-fill-color-light) !important;
@@ -34,6 +53,8 @@
 html.dark .layout-mix .layout__sidebar--left .el-menu,
 html.sidebar-color-blue .layout-mix .layout__sidebar--left .el-menu {
   .el-menu-item {
+    font-weight: 600; // 菜单项加粗
+
     &:hover {
       // 深色背景：使用CSS变量
       background-color: var(--menu-hover) !important;
@@ -41,9 +62,40 @@ html.sidebar-color-blue .layout-mix .layout__sidebar--left .el-menu {
   }
 
   .el-sub-menu__title {
+    font-weight: 600; // 子菜单标题加粗
+
     &:hover {
       // 深色背景：使用CSS变量
       background-color: var(--menu-hover) !important;
+    }
+  }
+}
+
+// 所有菜单项通用加粗样式
+.el-menu {
+  .el-menu-item {
+    font-weight: 600;
+  }
+
+  .el-sub-menu__title {
+    font-weight: 600;
+  }
+}
+
+// 深蓝色侧边栏配色 - 菜单激活状态使用蓝色背景
+html.sidebar-color-blue {
+  .el-menu-item.is-active {
+    color: #ffffff !important;
+    background-color: var(--menu-active-background) !important;
+  }
+
+  // 父菜单（目录）不显示激活背景色，只保持白色文字
+  .el-sub-menu.has-active-child > .el-sub-menu__title {
+    color: #ffffff !important;
+    background-color: transparent !important;
+
+    .menu-icon {
+      color: #ffffff !important;
     }
   }
 }
