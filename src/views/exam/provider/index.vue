@@ -7,7 +7,7 @@
         <div class="toolbar-left">
           <el-button type="primary">上传题库</el-button>
           <!--          <el-button type="warning">人工导题</el-button>-->
-          <el-button>下载模板</el-button>
+          <el-button @click="handleDownloadTemplate">下载模板</el-button>
           <el-button @click="handleNewFolder">新建文件夹</el-button>
           <el-button v-if="currentFolder" @click="handleBackToRoot">
             <el-icon><ArrowLeft /></el-icon>
@@ -31,10 +31,11 @@
 
       <!-- 表格 -->
       <el-table
-        v-if="tableData.length > 0"
+        ref="tableRef"
         v-loading="loading"
         :data="tableData"
         class="bank-table"
+        :row-key="(row) => row.id"
         @selection-change="handleSelectionChange"
         @row-click="handleRowClick"
       >
@@ -72,17 +73,35 @@
             {{ scope.row.isFolder ? "--" : scope.row.totalQuestions || 0 }}
           </template>
         </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="scope">
+            <template v-if="scope.row.isFolder">
+              <el-tag v-if="scope.row.status === 1" type="success">启用</el-tag>
+              <el-tag v-else type="info">禁用</el-tag>
+            </template>
+            <template v-else>
+              <el-switch
+                :model-value="scope.row.status === 1"
+                @change="(val: boolean) => handleSubjectStatusChange(scope.row, val)"
+              />
+            </template>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280" align="left">
           <template #default="scope">
             <div class="action-buttons">
               <!-- 文件夹操作 -->
               <template v-if="scope.row.isFolder">
-                <el-button type="primary" link @click="handleSetCover(scope.row)">
+                <el-button type="primary" link @click.stop="handleSetCover(scope.row)">
                   设置封面
                 </el-button>
-                <el-button type="primary" link @click="handleViewFolder(scope.row)">查看</el-button>
-                <el-button type="primary" link @click="handleEditFolder(scope.row)">编辑</el-button>
-                <el-button type="danger" link @click="handleDeleteFolder(scope.row)">
+                <el-button type="primary" link @click.stop="handleViewFolder(scope.row)">
+                  查看
+                </el-button>
+                <el-button type="primary" link @click.stop="handleEditFolder(scope.row)">
+                  编辑
+                </el-button>
+                <el-button type="danger" link @click.stop="handleDeleteFolder(scope.row)">
                   删除
                 </el-button>
               </template>
@@ -106,6 +125,8 @@
                   <template #dropdown>
                     <el-dropdown-menu>
                       <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                      <el-dropdown-item command="editDescription">编辑描述</el-dropdown-item>
+                      <el-dropdown-item command="editExamInfo">编辑考试信息</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
                       <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
@@ -116,17 +137,19 @@
             </div>
           </template>
         </el-table-column>
-      </el-table>
 
-      <!-- 空状态 -->
-      <div v-if="tableData.length === 0 && !loading" class="empty-state">
-        <img :src="examIcon" alt="没有题库" class="empty-icon" />
-        <h3 class="empty-title">没有题库</h3>
-        <p class="empty-tip">您可以上传自己的题库,进行练习</p>
-        <el-button v-if="currentFolder" type="primary" plain @click="handleBackToRoot">
-          返回上级
-        </el-button>
-      </div>
+        <!-- 空状态 -->
+        <template #empty>
+          <div class="empty-state">
+            <img :src="examIcon" alt="没有题库" class="empty-icon" />
+            <h3 class="empty-title">没有题库</h3>
+            <p class="empty-tip">您可以上传自己的题库,进行练习</p>
+            <el-button v-if="currentFolder" type="primary" plain @click="handleBackToRoot">
+              返回上级
+            </el-button>
+          </div>
+        </template>
+      </el-table>
 
       <!-- 分页 (只在根目录显示) -->
       <div v-if="tableData.length > 0 && !currentFolder" class="pagination-wrapper">
@@ -201,6 +224,66 @@
       </template>
     </el-dialog>
 
+    <!-- 重命名弹窗（文件夹用） -->
+    <el-dialog
+      v-model="renameDialog.visible"
+      title="编辑文件夹"
+      width="400px"
+      align-center
+      destroy-on-close
+      class="rename-dialog"
+    >
+      <div class="dialog-body">
+        <el-input v-model="renameDialog.name" placeholder="请输入文件夹名称" />
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="renameDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmRename">确定</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 科目重命名弹窗 -->
+    <el-dialog v-model="subjectRenameDialog.visible" title="重命名" width="500px" destroy-on-close>
+      <el-form
+        ref="subjectRenameFormRef"
+        :model="subjectRenameForm"
+        :rules="subjectRenameRules"
+        label-width="100px"
+      >
+        <el-form-item
+          label="中文名称"
+          prop="nameZh"
+          :required="subjectRenameForm.supportLanguages?.includes('zh')"
+        >
+          <el-input v-model="subjectRenameForm.nameZh" placeholder="请输入科目名称（中文）" />
+        </el-form-item>
+        <el-form-item
+          label="英文名称"
+          prop="nameEn"
+          :required="subjectRenameForm.supportLanguages?.includes('en')"
+        >
+          <el-input v-model="subjectRenameForm.nameEn" placeholder="请输入科目名称（英文）" />
+        </el-form-item>
+        <el-form-item label="支持语言" prop="supportLanguages">
+          <el-select
+            v-model="subjectRenameForm.supportLanguages"
+            placeholder="请选择"
+            style="width: 100%"
+          >
+            <el-option label="中文" value="zh" />
+            <el-option label="英文" value="en" />
+            <el-option label="中英文" value="zh,en" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="subjectRenameDialog.visible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirmSubjectRename">确定</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 设置封面弹窗 -->
     <el-dialog v-model="coverDialog.visible" title="设置封面" width="400px">
       <div class="cover-picker-wrapper">
@@ -209,6 +292,41 @@
       <template #footer>
         <el-button @click="coverDialog.visible = false">取消</el-button>
         <el-button type="primary" @click="handleConfirmCover">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑描述弹窗 -->
+    <el-dialog v-model="descriptionDialog.visible" title="编辑描述" width="800px" destroy-on-close>
+      <el-form label-width="100px">
+        <el-form-item v-if="descriptionDialog.showZh" label="中文描述">
+          <el-input
+            v-model="descriptionDialog.descriptionZh"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入科目描述（中文）"
+          />
+        </el-form-item>
+        <el-form-item v-if="descriptionDialog.showEn" label="英文描述">
+          <el-input
+            v-model="descriptionDialog.descriptionEn"
+            type="textarea"
+            :rows="8"
+            placeholder="请输入科目描述（英文）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="descriptionDialog.visible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirmDescription">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑考试信息弹窗 -->
+    <el-dialog v-model="examInfoDialog.visible" title="编辑考试信息" width="900px" destroy-on-close>
+      <WangEditor v-model="examInfoDialog.examInfo" height="400px" />
+      <template #footer>
+        <el-button @click="examInfoDialog.visible = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirmExamInfo">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -224,8 +342,10 @@ import ProviderAPI, {
 } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
+import WangEditor from "@/components/WangEditor/index.vue";
 import { formatDateTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
+import Sortable from "sortablejs";
 
 const examIcon = "/exam.png";
 const folderIcon = "/folder.png";
@@ -258,6 +378,7 @@ const loading = ref(false);
 const total = ref(0);
 const gotoPage = ref("");
 const selectedRows = ref<TableRow[]>([]);
+const tableRef = ref(); // 表格引用
 
 const queryParams = reactive<ProviderPageQuery>({
   pageNum: 1,
@@ -293,12 +414,75 @@ const moveDialog = reactive({
   subjectId: "" as string,
 });
 
+// 重命名弹窗
+const renameDialog = reactive({
+  visible: false,
+  name: "",
+  id: null as number | null,
+});
+
 // 设置封面弹窗
 const coverDialog = reactive({
   visible: false,
   logo: "",
   itemId: null as number | string | null,
   isFolder: false,
+});
+
+// 科目重命名弹窗
+const subjectRenameFormRef = ref();
+const subjectRenameDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+});
+const subjectRenameForm = reactive({
+  nameZh: "",
+  nameEn: "",
+  providerId: undefined as number | undefined,
+  supportLanguages: "",
+  descriptionZh: "",
+  descriptionEn: "",
+  sortOrder: 0,
+  status: 1,
+});
+
+// 科目重命名表单验证规则（动态）
+const subjectRenameRules = computed(() => {
+  const rules: any = {
+    supportLanguages: [{ required: true, message: "请选择支持语言", trigger: "change" }],
+    nameZh: [],
+    nameEn: [],
+  };
+
+  // 根据选择的语言动态设置必填规则
+  const languages = subjectRenameForm.supportLanguages;
+  if (languages) {
+    if (languages.includes("zh")) {
+      rules.nameZh.push({ required: true, message: "请输入中文名称", trigger: "blur" });
+    }
+    if (languages.includes("en")) {
+      rules.nameEn.push({ required: true, message: "请输入英文名称", trigger: "blur" });
+    }
+  }
+
+  return rules;
+});
+
+// 编辑描述弹窗
+const descriptionDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  descriptionZh: "",
+  descriptionEn: "",
+  showZh: false,
+  showEn: false,
+});
+
+// 编辑考试信息弹窗
+const examInfoDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  examInfo: "",
 });
 
 // 加载供应商选项
@@ -331,6 +515,11 @@ async function fetchData() {
         providerId: s.providerId,
       }));
       total.value = subjectRes.total || 0;
+
+      // 在文件夹内时，初始化拖拽排序
+      nextTick(() => {
+        initSortable();
+      });
     } else {
       // 根目录：显示文件夹和未分类的题库
       const providerRes = await ProviderAPI.getPage(queryParams);
@@ -426,7 +615,16 @@ function handleRowMoreAction(command: string, row: TableRow) {
       ElMessage.info("置顶功能开发中");
       break;
     case "rename":
-      ElMessage.info("重命名功能开发中");
+      // 科目重命名
+      handleRenameSubject(row);
+      break;
+    case "editDescription":
+      // 编辑描述
+      handleEditDescription(row);
+      break;
+    case "editExamInfo":
+      // 编辑考试信息
+      handleEditExamInfo(row);
       break;
     case "move":
       moveDialog.visible = true;
@@ -491,9 +689,29 @@ function handleEditFolder(row: TableRow) {
   folderDialog.visible = true;
   folderDialog.title = "编辑文件夹";
   folderDialog.editId = row.id as number;
+
+  // 加载文件夹详情
   ProviderAPI.getFormData(row.id as number).then((data) => {
-    Object.assign(folderForm, data);
+    folderForm.folderName = data.folderName;
+    folderForm.displayName = data.displayName;
+    folderForm.logo = data.logo;
+    folderForm.sortOrder = data.sortOrder;
+    folderForm.status = data.status;
   });
+}
+
+// 确认重命名
+function handleConfirmRename() {
+  if (renameDialog.id && renameDialog.name.trim()) {
+    ProviderAPI.update(renameDialog.id, { folderName: renameDialog.name.trim() }).then(() => {
+      ElMessage.success("重命名成功");
+      renameDialog.visible = false;
+      fetchData();
+      loadProviderOptions();
+    });
+  } else {
+    ElMessage.warning("请输入名称");
+  }
 }
 
 // 删除文件夹
@@ -586,6 +804,133 @@ function handlePractice(row: TableRow) {
   ElMessage.info(`开始练习: ${row.nameZh}`);
 }
 
+// 下载模板
+function handleDownloadTemplate() {
+  const link = document.createElement("a");
+  link.href = "/docs/example.xlsx";
+  link.download = "题库导入模板.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  ElMessage.success("模板下载成功");
+}
+
+// 重命名科目
+function handleRenameSubject(row: TableRow) {
+  subjectRenameDialog.visible = true;
+  subjectRenameDialog.subjectId = row.id as string;
+
+  // 加载科目详情
+  SubjectAPI.getFormData(row.id as string).then((data) => {
+    subjectRenameForm.nameZh = data.nameZh || "";
+    subjectRenameForm.nameEn = data.nameEn || "";
+    subjectRenameForm.providerId = data.providerId;
+    subjectRenameForm.supportLanguages = data.supportLanguages || "";
+    subjectRenameForm.descriptionZh = data.descriptionZh || "";
+    subjectRenameForm.descriptionEn = data.descriptionEn || "";
+    subjectRenameForm.sortOrder = data.sortOrder || 0;
+    subjectRenameForm.status = data.status || 1;
+  });
+}
+
+// 确认科目重命名
+function handleConfirmSubjectRename() {
+  // 清除之前的验证状态，重新验证
+  subjectRenameFormRef.value.clearValidate();
+
+  subjectRenameFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const updateData = {
+        nameZh: subjectRenameForm.nameZh,
+        nameEn: subjectRenameForm.nameEn,
+        supportLanguages: subjectRenameForm.supportLanguages,
+      };
+
+      SubjectAPI.update(subjectRenameDialog.subjectId, updateData).then(() => {
+        ElMessage.success("修改成功");
+        subjectRenameDialog.visible = false;
+        fetchData();
+      });
+    }
+  });
+}
+
+// 编辑描述
+function handleEditDescription(row: TableRow) {
+  descriptionDialog.visible = true;
+  descriptionDialog.subjectId = row.id as string;
+
+  // 加载科目详情
+  SubjectAPI.getFormData(row.id as string).then((data) => {
+    descriptionDialog.descriptionZh = data.descriptionZh || "";
+    descriptionDialog.descriptionEn = data.descriptionEn || "";
+
+    // 根据支持语言显示对应的描述字段
+    const languages = data.supportLanguages || "";
+    descriptionDialog.showZh = languages.includes("zh");
+    descriptionDialog.showEn = languages.includes("en");
+  });
+}
+
+// 确认编辑描述
+function handleConfirmDescription() {
+  const updateData: any = {};
+
+  if (descriptionDialog.showZh) {
+    updateData.descriptionZh = descriptionDialog.descriptionZh;
+  }
+  if (descriptionDialog.showEn) {
+    updateData.descriptionEn = descriptionDialog.descriptionEn;
+  }
+
+  SubjectAPI.update(descriptionDialog.subjectId, updateData).then(() => {
+    ElMessage.success("修改成功");
+    descriptionDialog.visible = false;
+    fetchData();
+  });
+}
+
+// 编辑考试信息
+function handleEditExamInfo(row: TableRow) {
+  examInfoDialog.visible = true;
+  examInfoDialog.subjectId = row.id as string;
+
+  // 加载科目详情
+  SubjectAPI.getFormData(row.id as string).then((data) => {
+    examInfoDialog.examInfo = data.examInfo || "";
+  });
+}
+
+// 确认编辑考试信息
+function handleConfirmExamInfo() {
+  SubjectAPI.update(examInfoDialog.subjectId, { examInfo: examInfoDialog.examInfo }).then(() => {
+    ElMessage.success("修改成功");
+    examInfoDialog.visible = false;
+    fetchData();
+  });
+}
+
+// 科目状态切换
+function handleSubjectStatusChange(row: TableRow, newStatus: boolean) {
+  const statusValue = newStatus ? 1 : 0;
+  const statusText = newStatus ? "启用" : "禁用";
+
+  ElMessageBox.confirm(`确认${statusText}科目 "${row.nameZh}" ？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(() => {
+      SubjectAPI.update(row.id as string, { status: statusValue }).then(() => {
+        ElMessage.success(`${statusText}成功`);
+        fetchData();
+      });
+    })
+    .catch(() => {
+      // 用户取消，不需要做任何操作
+    });
+}
+
 // 监听路由变化
 watch(
   () => route.query,
@@ -603,6 +948,55 @@ watch(
   },
   { immediate: true }
 );
+
+// 初始化拖拽排序
+function initSortable() {
+  // 只在文件夹内启用拖拽排序
+  if (!currentFolder.value || !tableRef.value) {
+    return;
+  }
+
+  const el = tableRef.value.$el.querySelector(".el-table__body-wrapper tbody");
+  if (!el) return;
+
+  Sortable.create(el, {
+    handle: ".el-table__row", // 可拖拽的元素
+    animation: 150,
+    ghostClass: "sortable-ghost",
+    onEnd: (evt: any) => {
+      const { oldIndex, newIndex } = evt;
+      if (oldIndex === newIndex) return;
+
+      // 更新本地数据顺序
+      const movedItem = tableData.value.splice(oldIndex, 1)[0];
+      tableData.value.splice(newIndex, 0, movedItem);
+
+      // 批量更新排序值
+      updateSubjectSort();
+    },
+  });
+}
+
+// 更新科目排序
+function updateSubjectSort() {
+  // 根据当前顺序更新 sortOrder
+  const updatePromises = tableData.value.map((item, index) => {
+    if (!item.isFolder && item.sortOrder !== index) {
+      return SubjectAPI.update(item.id as string, { sortOrder: index });
+    }
+    return Promise.resolve();
+  });
+
+  Promise.all(updatePromises)
+    .then(() => {
+      ElMessage.success("排序更新成功");
+      fetchData();
+    })
+    .catch(() => {
+      ElMessage.error("排序更新失败");
+      fetchData(); // 失败时重新加载数据
+    });
+}
 
 onMounted(() => {
   loadProviderOptions();
@@ -647,9 +1041,25 @@ onMounted(() => {
 .bank-table {
   min-height: 400px;
 
+  :deep(.el-table__header-wrapper) {
+    th.el-table__cell {
+      height: 56px;
+      padding: 16px 0;
+      font-weight: 600;
+      color: #606266;
+      background-color: #f5f7fa;
+    }
+  }
+
   :deep(.el-table__row) {
     cursor: pointer;
   }
+}
+
+// 拖拽排序样式
+.sortable-ghost {
+  background-color: #f5f7fa;
+  opacity: 0.5;
 }
 
 .name-cell {
@@ -751,5 +1161,18 @@ onMounted(() => {
   margin-bottom: 20px;
   font-size: 14px;
   color: #909399;
+}
+
+:deep(.el-dialog) {
+  .el-dialog__header {
+    padding: 5px;
+    border-bottom: none;
+  }
+  .el-dialog__body {
+    padding: 0;
+  }
+  .el-dialog__footer {
+    border-top: none;
+  }
 }
 </style>

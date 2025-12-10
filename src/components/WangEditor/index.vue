@@ -34,7 +34,7 @@ import { Toolbar, Editor } from "@wangeditor-next/editor-for-vue";
 import { IToolbarConfig, IEditorConfig } from "@wangeditor-next/editor";
 
 // 文件上传 API
-import FileAPI from "@/api/file-api";
+import FileManageAPI from "@/api/file-api";
 
 // 上传图片回调函数类型
 type InsertFnType = (_url: string, _alt: string, _href: string) => void;
@@ -63,11 +63,20 @@ const editorConfig = ref<Partial<IEditorConfig>>({
   MENU_CONF: {
     uploadImage: {
       customUpload(file: File, insertFn: InsertFnType) {
-        // 上传图片
-        FileAPI.uploadFile(file).then((res) => {
-          // 插入图片
-          insertFn(res.url, res.name, res.url);
-        });
+        // 创建 FormData
+        const formData = new FormData();
+        formData.append("file", file);
+
+        // 上传图片到 COS
+        FileManageAPI.upload(formData)
+          .then((res) => {
+            // 插入图片（url, alt, href）
+            insertFn(res.url, res.fileName, res.url);
+          })
+          .catch((error) => {
+            console.error("图片上传失败:", error);
+            ElMessage.error("图片上传失败");
+          });
       },
     } as any,
   },

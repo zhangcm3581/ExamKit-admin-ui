@@ -22,7 +22,7 @@ const ProviderAPI = {
 
   /** 获取供应商表单数据 */
   getFormData(id: number) {
-    return request<any, ProviderForm>({
+    return request<any, ProviderVO>({
       url: `${PROVIDER_BASE_URL}/${id}/form`,
       method: "get",
     });

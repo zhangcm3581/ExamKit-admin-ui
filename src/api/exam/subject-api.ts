@@ -14,7 +14,7 @@ const SubjectAPI = {
 
   /** 获取科目表单数据 */
   getFormData(id: string) {
-    return request<any, SubjectForm>({
+    return request<any, SubjectVO>({
       url: `${SUBJECT_BASE_URL}/${id}/form`,
       method: "get",
     });
