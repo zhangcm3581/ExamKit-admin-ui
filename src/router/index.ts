@@ -71,6 +71,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: "字典项", icon: "dict", hidden: true },
       },
       {
+        path: "exam/import",
+        name: "QuestionImport",
+        component: () => import("@/views/exam/import/index.vue"),
+        meta: { title: "题库导入", icon: "upload", hidden: true, activeMenu: "/exam/provider" },
+      },
+      {
         path: "/detail/:id(\\d+)",
         name: "DemoDetail",
         component: () => import("@/views/demo/detail.vue"),

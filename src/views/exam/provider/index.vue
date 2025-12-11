@@ -5,7 +5,7 @@
       <!-- 工具栏 -->
       <div class="toolbar">
         <div class="toolbar-left">
-          <el-button type="primary">上传题库</el-button>
+          <el-button type="primary" @click="handleToolbarUpload">上传题库</el-button>
           <!--          <el-button type="warning">人工导题</el-button>-->
           <el-button @click="handleDownloadTemplate">下载模板</el-button>
           <el-button @click="handleNewFolder">新建文件夹</el-button>
@@ -115,6 +115,9 @@
               </template>
               <!-- 题库操作 -->
               <template v-else>
+                <el-button type="primary" link @click="handleUploadQuestions(scope.row)">
+                  上传题库
+                </el-button>
                 <el-button type="primary" link @click="handleAddQuestion(scope.row)">
                   添加试题
                 </el-button>
@@ -814,9 +817,28 @@ function handleConfirmMove() {
   }
 }
 
+// 上传题库(工具栏按钮)
+function handleToolbarUpload() {
+  // 直接跳转到导入页面，不需要先选择题库
+  router.push({
+    path: "/exam/import",
+  });
+}
+
 // 添加试题
 function handleAddQuestion(row: TableRow) {
   ElMessage.info(`添加试题到: ${row.nameZh}`);
+}
+
+// 上传题库
+function handleUploadQuestions(row: TableRow) {
+  router.push({
+    path: "/exam/import",
+    query: {
+      subjectId: row.id,
+      subjectName: row.nameZh || row.nameEn,
+    },
+  });
 }
 
 // 试题管理
