@@ -3,6 +3,15 @@ import request from "@/utils/request";
 const PROVIDER_BASE_URL = "/v1/providers";
 
 const ProviderAPI = {
+  /** 获取题库组合分页列表 (Provider + 未分类Subject) */
+  getBankItemPage(queryParams: ProviderPageQuery) {
+    return request<any, PageResult<BankItemVO[]>>({
+      url: `${PROVIDER_BASE_URL}/bank-items/page`,
+      method: "get",
+      params: queryParams,
+    });
+  },
+
   /** 获取供应商分页列表 */
   getPage(queryParams: ProviderPageQuery) {
     return request<any, PageResult<ProviderVO[]>>({
@@ -107,4 +116,36 @@ export interface ProviderOptionVO {
   value: number;
   /** 显示名称 */
   label: string;
+}
+
+/** 题库项VO (Provider或Subject的统一展示) */
+export interface BankItemVO {
+  /** ID */
+  id: string;
+  /** 是否是文件夹 */
+  isFolder: boolean;
+  /** 文件夹名称 (仅Provider) */
+  folderName?: string;
+  /** 显示名称 (仅Provider) */
+  displayName?: string;
+  /** 科目名称(中文) (仅Subject) */
+  nameZh?: string;
+  /** 科目名称(英文) (仅Subject) */
+  nameEn?: string;
+  /** 支持的语言 (仅Subject) */
+  supportLanguages?: string;
+  /** Logo/图标 */
+  logo?: string;
+  /** 题目总数 (仅Subject) */
+  totalQuestions?: number;
+  /** 排序值 */
+  sortOrder?: number;
+  /** 状态 */
+  status: number;
+  /** 供应商ID (仅Subject) */
+  providerId?: number;
+  /** 创建时间 */
+  createTime: string;
+  /** 更新时间 */
+  updateTime: string;
 }

@@ -58,7 +58,15 @@
               <!-- 题库(Subject) -->
               <template v-else>
                 <img :src="examIcon" alt="题库" class="subject-icon-img" />
-                <span class="name-text">{{ scope.row.nameZh || scope.row.folderName }}</span>
+                <div class="subject-name-wrapper">
+                  <span class="name-text">{{ getSubjectPrimaryName(scope.row) }}</span>
+                  <span
+                    v-if="getSubjectSecondaryName(scope.row)"
+                    class="name-text subject-name-secondary"
+                  >
+                    {{ getSubjectSecondaryName(scope.row) }}
+                  </span>
+                </div>
               </template>
             </div>
           </template>
@@ -123,13 +131,15 @@
                     <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                   </el-button>
                   <template #dropdown>
-                    <el-dropdown-menu>
+                    <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="rename">重命名</el-dropdown-item>
                       <el-dropdown-item command="editDescription">编辑描述</el-dropdown-item>
                       <el-dropdown-item command="editExamInfo">编辑考试信息</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
-                      <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                      <el-dropdown-item command="delete" divided class="delete-item">
+                        删除
+                      </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -154,7 +164,11 @@
       <!-- 分页 (只在根目录显示) -->
       <div v-if="tableData.length > 0 && !currentFolder" class="pagination-wrapper">
         <span class="total-text">共 {{ total }} 条</span>
-        <el-select v-model="queryParams.pageSize" style="width: 100px" @change="handleQuery">
+        <el-select
+          v-model="queryParams.pageSize"
+          style="width: 100px"
+          @change="handlePageSizeChange"
+        >
           <el-option label="10条/页" :value="10" />
           <el-option label="20条/页" :value="20" />
           <el-option label="50条/页" :value="50" />
@@ -164,7 +178,7 @@
           :page-size="queryParams.pageSize"
           :total="total"
           layout="prev, pager, next"
-          @current-change="fetchData"
+          @current-change="handlePageChange"
         />
         <span class="goto-text">前往</span>
         <el-input v-model="gotoPage" style="width: 50px" @keyup.enter="handleGotoPage" />
@@ -173,7 +187,14 @@
     </el-card>
 
     <!-- 新建文件夹弹窗 -->
-    <el-dialog v-model="folderDialog.visible" :title="folderDialog.title" width="500px">
+    <!-- 文件夹弹窗 -->
+    <Dialog
+      v-model="folderDialog.visible"
+      :title="folderDialog.title"
+      width="500px"
+      @confirm="handleSubmitFolder"
+      @cancel="() => (folderDialog.visible = false)"
+    >
       <el-form ref="folderFormRef" :model="folderForm" :rules="folderRules" label-width="110px">
         <el-form-item label="文件夹名称" prop="folderName">
           <el-input v-model="folderForm.folderName" placeholder="请输入文件夹名称(管理后台显示)" />
@@ -197,14 +218,16 @@
           </el-radio-group>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="folderDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmitFolder">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
 
     <!-- 移动至弹窗 -->
-    <el-dialog v-model="moveDialog.visible" title="移动至" width="400px">
+    <Dialog
+      v-model="moveDialog.visible"
+      title="移动至"
+      width="400px"
+      @confirm="handleConfirmMove"
+      @cancel="() => (moveDialog.visible = false)"
+    >
       <el-form label-width="80px">
         <el-form-item label="目标位置">
           <el-select v-model="moveDialog.targetProviderId" placeholder="请选择" style="width: 100%">
@@ -218,34 +241,29 @@
           </el-select>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="moveDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmMove">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
 
     <!-- 重命名弹窗（文件夹用） -->
-    <el-dialog
+    <Dialog
       v-model="renameDialog.visible"
       title="编辑文件夹"
       width="400px"
-      align-center
-      destroy-on-close
-      class="rename-dialog"
+      :destroy-on-close="true"
+      @confirm="handleConfirmRename"
+      @cancel="() => (renameDialog.visible = false)"
     >
-      <div class="dialog-body">
-        <el-input v-model="renameDialog.name" placeholder="请输入文件夹名称" />
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="renameDialog.visible = false">取消</el-button>
-          <el-button type="primary" @click="handleConfirmRename">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
+      <el-input v-model="renameDialog.name" placeholder="请输入文件夹名称" />
+    </Dialog>
 
     <!-- 科目重命名弹窗 -->
-    <el-dialog v-model="subjectRenameDialog.visible" title="重命名" width="500px" destroy-on-close>
+    <Dialog
+      v-model="subjectRenameDialog.visible"
+      title="重命名"
+      width="500px"
+      :destroy-on-close="true"
+      @confirm="handleConfirmSubjectRename"
+      @cancel="() => (subjectRenameDialog.visible = false)"
+    >
       <el-form
         ref="subjectRenameFormRef"
         :model="subjectRenameForm"
@@ -278,25 +296,30 @@
           </el-select>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="subjectRenameDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmSubjectRename">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
 
     <!-- 设置封面弹窗 -->
-    <el-dialog v-model="coverDialog.visible" title="设置封面" width="400px">
+    <Dialog
+      v-model="coverDialog.visible"
+      title="设置封面"
+      width="400px"
+      @confirm="handleConfirmCover"
+      @cancel="() => (coverDialog.visible = false)"
+    >
       <div class="cover-picker-wrapper">
         <ImagePicker v-model="coverDialog.logo" :width="200" :height="150" />
       </div>
-      <template #footer>
-        <el-button @click="coverDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmCover">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
 
     <!-- 编辑描述弹窗 -->
-    <el-dialog v-model="descriptionDialog.visible" title="编辑描述" width="800px" destroy-on-close>
+    <Dialog
+      v-model="descriptionDialog.visible"
+      title="编辑描述"
+      width="800px"
+      :destroy-on-close="true"
+      @confirm="handleConfirmDescription"
+      @cancel="() => (descriptionDialog.visible = false)"
+    >
       <el-form label-width="100px">
         <el-form-item v-if="descriptionDialog.showZh" label="中文描述">
           <el-input
@@ -315,20 +338,19 @@
           />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="descriptionDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmDescription">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
 
     <!-- 编辑考试信息弹窗 -->
-    <el-dialog v-model="examInfoDialog.visible" title="编辑考试信息" width="900px" destroy-on-close>
+    <Dialog
+      v-model="examInfoDialog.visible"
+      title="编辑考试信息"
+      width="900px"
+      :destroy-on-close="true"
+      @confirm="handleConfirmExamInfo"
+      @cancel="() => (examInfoDialog.visible = false)"
+    >
       <WangEditor v-model="examInfoDialog.examInfo" height="400px" />
-      <template #footer>
-        <el-button @click="examInfoDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmExamInfo">确定</el-button>
-      </template>
-    </el-dialog>
+    </Dialog>
   </div>
 </template>
 
@@ -336,13 +358,14 @@
 import { ArrowDown, ArrowLeft, Search } from "@element-plus/icons-vue";
 import ProviderAPI, {
   type ProviderPageQuery,
-  type ProviderVO,
   type ProviderForm,
   type ProviderOptionVO,
+  type BankItemVO,
 } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import WangEditor from "@/components/WangEditor/index.vue";
+import Dialog from "@/components/Dialog/index.vue";
 import { formatDateTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
@@ -365,6 +388,8 @@ interface TableRow {
   folderName?: string;
   displayName?: string;
   nameZh?: string;
+  nameEn?: string;
+  supportLanguages?: string;
   logo?: string;
   totalQuestions?: number;
   createTime: string;
@@ -508,6 +533,8 @@ async function fetchData() {
         id: s.id,
         isFolder: false,
         nameZh: s.nameZh,
+        nameEn: s.nameEn,
+        supportLanguages: s.supportLanguages,
         totalQuestions: s.totalQuestions,
         createTime: s.createTime,
         sortOrder: s.sortOrder,
@@ -521,40 +548,27 @@ async function fetchData() {
         initSortable();
       });
     } else {
-      // 根目录：显示文件夹和未分类的题库
-      const providerRes = await ProviderAPI.getPage(queryParams);
-      const providers: TableRow[] = (providerRes.data || []).map((p: ProviderVO) => ({
-        id: p.id,
-        isFolder: true,
-        folderName: p.folderName,
-        displayName: p.displayName,
-        logo: p.logo,
-        createTime: p.createTime,
-        sortOrder: p.sortOrder,
-        status: p.status,
+      // 根目录：使用后端统一分页接口
+      // 后端会自动合并Provider和未分类Subject，并进行分页
+      const bankItemRes = await ProviderAPI.getBankItemPage(queryParams);
+
+      tableData.value = (bankItemRes.data || []).map((item: BankItemVO) => ({
+        id: item.id,
+        isFolder: item.isFolder,
+        folderName: item.folderName,
+        displayName: item.displayName,
+        nameZh: item.nameZh,
+        nameEn: item.nameEn,
+        supportLanguages: item.supportLanguages,
+        logo: item.logo,
+        totalQuestions: item.totalQuestions,
+        createTime: item.createTime,
+        sortOrder: item.sortOrder,
+        status: item.status,
+        providerId: item.providerId,
       }));
 
-      // 获取未分类的题库(没有关联Provider的)
-      const subjectRes = await SubjectAPI.getPage({
-        pageNum: 1,
-        pageSize: 100,
-        keywords: queryParams.keywords,
-      });
-      const subjects: TableRow[] = (subjectRes.data || [])
-        .filter((s: SubjectVO) => !s.providerId)
-        .map((s: SubjectVO) => ({
-          id: s.id,
-          isFolder: false,
-          nameZh: s.nameZh,
-          totalQuestions: s.totalQuestions,
-          createTime: s.createTime,
-          sortOrder: s.sortOrder,
-          status: s.status,
-          providerId: s.providerId,
-        }));
-
-      tableData.value = [...providers, ...subjects];
-      total.value = providers.length + subjects.length;
+      total.value = bankItemRes.total || 0;
     }
   } finally {
     loading.value = false;
@@ -563,6 +577,18 @@ async function fetchData() {
 
 // 查询
 function handleQuery() {
+  queryParams.pageNum = 1;
+  fetchData();
+}
+
+// 页码改变
+function handlePageChange(page: number) {
+  queryParams.pageNum = page;
+  fetchData();
+}
+
+// 每页大小改变
+function handlePageSizeChange() {
   queryParams.pageNum = 1;
   fetchData();
 }
@@ -676,12 +702,11 @@ function handleConfirmCover() {
 
 // 查看文件夹
 function handleViewFolder(row: TableRow) {
-  currentFolder.value = {
-    id: row.id as number,
-    folderName: row.folderName || "",
-  };
-  queryParams.pageNum = 1;
-  fetchData();
+  // 通过路由导航，避免直接修改状态，让路由监听器统一处理
+  router.push({
+    path: route.path,
+    query: { folderId: String(row.id), folderName: row.folderName || "" },
+  });
 }
 
 // 编辑文件夹
@@ -931,10 +956,48 @@ function handleSubjectStatusChange(row: TableRow, newStatus: boolean) {
     });
 }
 
+// 获取科目主要显示名称
+function getSubjectPrimaryName(row: TableRow): string {
+  const supportLanguages = row.supportLanguages || "";
+
+  // 如果支持中文，优先显示中文
+  if (supportLanguages.includes("zh") && row.nameZh) {
+    return row.nameZh;
+  }
+
+  // 否则显示英文
+  if (supportLanguages.includes("en") && row.nameEn) {
+    return row.nameEn;
+  }
+
+  // 兜底：返回任何可用的名称
+  return row.nameZh || row.nameEn || "";
+}
+
+// 获取科目次要显示名称（多语言时显示）
+function getSubjectSecondaryName(row: TableRow): string {
+  const supportLanguages = row.supportLanguages || "";
+
+  // 只有当支持多语言时才显示次要名称
+  if (supportLanguages.includes("zh") && supportLanguages.includes("en")) {
+    // 主要显示中文时，次要显示英文
+    if (row.nameZh && row.nameEn) {
+      return row.nameEn;
+    }
+  }
+
+  return "";
+}
+
 // 监听路由变化
 watch(
   () => route.query,
-  (query) => {
+  (query, oldQuery) => {
+    // 防止重复触发
+    if (JSON.stringify(query) === JSON.stringify(oldQuery)) {
+      return;
+    }
+
     if (query.folderId) {
       currentFolder.value = {
         id: Number(query.folderId),
@@ -1185,16 +1248,50 @@ onMounted(() => {
   color: #909399;
 }
 
-:deep(.el-dialog) {
-  .el-dialog__header {
-    padding: 5px;
-    border-bottom: none;
+/* 科目名称样式 */
+.subject-name-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subject-name-secondary {
+  font-size: 12px; /* 字体小一点，区分主次 */
+  color: #909399; /* 稍微灰一点 */
+}
+
+/* 下拉菜单样式 */
+.subject-dropdown-menu {
+  :deep(.el-dropdown-menu__item) {
+    font-size: 13px;
+    font-weight: bold;
+    color: #409eff;
   }
-  .el-dialog__body {
-    padding: 0;
+
+  :deep(.el-dropdown-menu__item.delete-item) {
+    font-weight: bold;
+    color: #f56c6c !important;
   }
-  .el-dialog__footer {
-    border-top: none;
+
+  :deep(.el-dropdown-menu__item:hover) {
+    background-color: #ecf5ff;
+  }
+
+  :deep(.el-dropdown-menu__item.delete-item:hover) {
+    background-color: #fef0f0;
+  }
+}
+
+/* MessageBox 确认框样式 */
+:deep(.el-message-box) {
+  .el-message-box__title {
+    font-weight: bold;
+  }
+
+  .el-message-box__btns {
+    .el-button {
+      font-weight: bold;
+    }
   }
 }
 </style>
