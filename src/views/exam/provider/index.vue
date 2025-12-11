@@ -36,10 +36,8 @@
         :data="tableData"
         class="bank-table"
         :row-key="(row) => row.id"
-        @selection-change="handleSelectionChange"
         @row-click="handleRowClick"
       >
-        <el-table-column type="selection" width="50" align="center" />
         <el-table-column label="编号" type="index" width="70" align="center" />
         <el-table-column label="名称" min-width="200">
           <template #default="scope">
@@ -71,12 +69,12 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="230" align="center">
+        <el-table-column label="添加时间" width="200" align="center">
           <template #default="scope">
             {{ formatDateTime(scope.row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="题目数量" width="150" align="center">
+        <el-table-column label="题目数量" width="120" align="center">
           <template #default="scope">
             {{ scope.row.isFolder ? "--" : scope.row.totalQuestions || 0 }}
           </template>
@@ -95,7 +93,7 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" align="left">
+        <el-table-column label="操作" width="350" align="left">
           <template #default="scope">
             <div class="action-buttons">
               <!-- 文件夹操作 -->
@@ -405,7 +403,6 @@ interface TableRow {
 const loading = ref(false);
 const total = ref(0);
 const gotoPage = ref("");
-const selectedRows = ref<TableRow[]>([]);
 const tableRef = ref(); // 表格引用
 
 const queryParams = reactive<ProviderPageQuery>({
@@ -619,11 +616,6 @@ function handleGotoPage() {
     fetchData();
   }
   gotoPage.value = "";
-}
-
-// 行选择
-function handleSelectionChange(selection: TableRow[]) {
-  selectedRows.value = selection;
 }
 
 // 新建文件夹
@@ -1186,7 +1178,8 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 600; // 名称列加粗
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .action-buttons {
