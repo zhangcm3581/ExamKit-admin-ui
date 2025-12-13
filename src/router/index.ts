@@ -74,7 +74,25 @@ export const constantRoutes: RouteRecordRaw[] = [
         path: "exam/import",
         name: "QuestionImport",
         component: () => import("@/views/exam/import/index.vue"),
-        meta: { title: "题库导入", icon: "upload", hidden: true, activeMenu: "/exam/provider" },
+        meta: { title: "题库导入(旧)", icon: "upload", hidden: true, activeMenu: "/exam/provider" },
+      },
+      {
+        path: "exam/question-bank/draft-list",
+        name: "QuestionBankDraftList",
+        component: () => import("@/views/exam/question-bank/draft-list.vue"),
+        meta: { title: "草稿题库", icon: "document", hidden: true },
+      },
+      {
+        path: "exam/question-bank/upload",
+        name: "QuestionBankUpload",
+        component: () => import("@/views/exam/question-bank/upload.vue"),
+        meta: { title: "题库上传", icon: "upload", hidden: true },
+      },
+      {
+        path: "exam/question-bank/preview",
+        name: "QuestionBankPreview",
+        component: () => import("@/views/exam/question-bank/preview.vue"),
+        meta: { title: "题库预览", icon: "view", hidden: true },
       },
       {
         path: "/detail/:id(\\d+)",
@@ -94,6 +112,15 @@ const router = createRouter({
   routes: constantRoutes,
   // 刷新时，滚动条位置还原
   scrollBehavior: () => ({ left: 0, top: 0 }),
+});
+
+// 全局路由守卫 - 动态设置activeMenu
+router.beforeEach((to, from, next) => {
+  // 如果路由query中有activeMenu参数，动态设置
+  if (to.query.activeMenu && typeof to.query.activeMenu === "string") {
+    to.meta.activeMenu = to.query.activeMenu;
+  }
+  next();
 });
 
 // 全局注册 router

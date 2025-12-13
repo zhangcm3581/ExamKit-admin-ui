@@ -811,9 +811,10 @@ function handleConfirmMove() {
 
 // 上传题库(工具栏按钮)
 function handleToolbarUpload() {
-  // 直接跳转到导入页面，不需要先选择题库
+  // 跳转到新的题库上传页面
   router.push({
-    path: "/exam/import",
+    path: "/exam/question-bank/upload",
+    query: { activeMenu: "/exam/provider" },
   });
 }
 
@@ -824,11 +825,12 @@ function handleAddQuestion(row: TableRow) {
 
 // 上传题库
 function handleUploadQuestions(row: TableRow) {
+  // 跳转到新的题库上传页面，携带科目ID
   router.push({
-    path: "/exam/import",
+    path: "/exam/question-bank/upload",
     query: {
       subjectId: row.id,
-      subjectName: row.nameZh || row.nameEn,
+      activeMenu: "/exam/provider",
     },
   });
 }
