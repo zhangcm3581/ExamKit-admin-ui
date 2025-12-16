@@ -4,7 +4,15 @@
       <!-- 头部信息 -->
       <div class="preview-header">
         <div class="header-info">
-          <h2>题库预览</h2>
+          <div class="header-title">
+            <h2>题库预览</h2>
+            <div class="header-actions">
+              <el-button class="action-btn" @click="handleBack">返回</el-button>
+              <el-button class="action-btn" type="primary" @click="handlePublish">
+                发布到科目
+              </el-button>
+            </div>
+          </div>
           <el-descriptions :column="4" border>
             <el-descriptions-item label="文件名">{{ metadata.fileName }}</el-descriptions-item>
             <el-descriptions-item label="语言">
@@ -17,10 +25,6 @@
               <el-text size="small" type="info">{{ metadata.batchId }}</el-text>
             </el-descriptions-item>
           </el-descriptions>
-        </div>
-        <div class="header-actions">
-          <el-button @click="handleBack">返回</el-button>
-          <el-button type="primary" @click="handlePublish">发布到科目</el-button>
         </div>
       </div>
 
@@ -39,9 +43,9 @@
             <template #default="{ row }">
               <div v-if="row.isCase && row.caseContent" class="case-content">
                 <el-text type="warning" size="small">【案例背景】</el-text>
-                <div class="case-text">{{ row.caseContent }}</div>
+                <div class="case-text" v-html="formatHtmlContent(row.caseContent)"></div>
               </div>
-              <div class="question-content">{{ row.content }}</div>
+              <div class="question-content" v-html="formatHtmlContent(row.content)"></div>
             </template>
           </el-table-column>
           <el-table-column label="选项" min-width="200">
@@ -57,7 +61,7 @@
                 >
                   {{ option.label }}
                 </el-tag>
-                {{ option.value }}
+                <span v-html="formatHtmlContent(option.value)"></span>
               </div>
             </template>
           </el-table-column>
@@ -79,7 +83,7 @@
     <el-dialog
       v-model="editDialogVisible"
       title="编辑题目"
-      width="800px"
+      width="1000px"
       :close-on-click-modal="false"
     >
       <el-form ref="editFormRef" :model="editForm" label-width="100px">
@@ -87,25 +91,38 @@
           <el-input v-model="editForm.questionNumber" disabled />
         </el-form-item>
         <el-form-item label="题型">
-          <el-select v-model="editForm.type" disabled>
+          <el-select v-model="editForm.type" style="width: 100%">
             <el-option label="单选题" value="SINGLE" />
             <el-option label="多选题" value="MULTIPLE" />
             <el-option label="判断题" value="JUDGE" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
-          <el-input v-model="editForm.content" type="textarea" :rows="4" />
+          <WangEditor v-model="editForm.content" :height="250" />
         </el-form-item>
+
+        <!-- 选项编辑 -->
+        <el-form-item label="选项">
+          <div style="width: 100%">
+            <div v-for="(option, index) in editOptions" :key="index" style="margin-bottom: 15px">
+              <div style="margin-bottom: 5px; font-weight: 500; color: #606266">
+                选项 {{ option.label }}
+              </div>
+              <WangEditor v-model="option.value" :height="150" />
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item label="答案">
-          <el-input v-model="editForm.answer" />
+          <el-input v-model="editForm.answer" placeholder="例如：A 或 ABC" />
         </el-form-item>
         <el-form-item label="答案解析">
-          <el-input v-model="editForm.explanation" type="textarea" :rows="3" />
+          <WangEditor v-model="editForm.explanation" :height="200" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveEdit">保存</el-button>
+        <el-button style="font-weight: bold" @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" style="font-weight: bold" @click="handleSaveEdit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -151,8 +168,13 @@
         </el-alert>
       </el-form>
       <template #footer>
-        <el-button @click="publishDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="publishLoading" @click="handleConfirmPublish">
+        <el-button style="font-weight: bold" @click="publishDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="publishLoading"
+          style="font-weight: bold"
+          @click="handleConfirmPublish"
+        >
           确认发布
         </el-button>
       </template>
@@ -163,13 +185,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import QuestionBankAPI, {
   type QuestionDraftPreviewVO,
   type QuestionDraftItemVO,
   type LanguageCheckVO,
 } from "@/api/exam/question-bank-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import WangEditor from "@/components/WangEditor/index.vue";
 
 defineOptions({
   name: "QuestionBankPreview",
@@ -202,6 +225,9 @@ const editForm = reactive({
   answer: "",
   explanation: "",
 });
+
+// 编辑选项（数组形式）
+const editOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const publishForm = reactive({
   subjectId: "",
@@ -298,6 +324,16 @@ const getQuestionTypeColor = (type: string) => {
   return colorMap[type] || "";
 };
 
+// 格式化HTML内容（去除<p>标签，保留换行）
+const formatHtmlContent = (html: string) => {
+  if (!html) return "";
+  // 将</p>替换为<br>以保留换行，然后去除<p>和</p>标签
+  return html
+    .replace(/<\/p>/g, "<br>") // </p> 替换为 <br>
+    .replace(/<p>/g, "") // 去除 <p>
+    .replace(/<br>$/g, ""); // 去除末尾多余的 <br>
+};
+
 // 编辑题目
 const handleEdit = (row: QuestionDraftItemVO) => {
   Object.assign(editForm, {
@@ -308,14 +344,28 @@ const handleEdit = (row: QuestionDraftItemVO) => {
     answer: row.answer,
     explanation: row.explanation || "",
   });
+
+  // 解析选项JSON
+  try {
+    editOptions.value = JSON.parse(row.options);
+  } catch (error) {
+    editOptions.value = [];
+    console.error("解析选项失败", error);
+  }
+
   editDialogVisible.value = true;
 };
 
 // 保存编辑
 const handleSaveEdit = async () => {
   try {
+    // 将选项数组转为JSON字符串
+    const optionsJson = JSON.stringify(editOptions.value);
+
     await QuestionBankAPI.updateDraft(editForm.id, {
+      type: editForm.type,
       content: editForm.content,
+      options: optionsJson,
       answer: editForm.answer,
       explanation: editForm.explanation,
     });
@@ -340,15 +390,7 @@ const handleConfirmPublish = async () => {
     return;
   }
 
-  const confirmText = languageCheck.hasLanguage
-    ? `确认要全量替换该科目的${metadata.language === "zh" ? "中文" : "英文"}题目吗？原有题目将被覆盖。`
-    : `确认要发布到该科目吗？`;
-
   try {
-    await ElMessageBox.confirm(confirmText, "确认发布", {
-      type: "warning",
-    });
-
     publishLoading.value = true;
     const result = await QuestionBankAPI.publish({
       batchId: metadata.batchId,
@@ -361,13 +403,11 @@ const handleConfirmPublish = async () => {
     publishDialogVisible.value = false;
 
     setTimeout(() => {
-      router.push("/exam/subject");
+      router.push("/exam/provider");
     }, 1000);
   } catch (error: any) {
-    if (error !== "cancel") {
-      ElMessage.error("发布失败");
-      console.error(error);
-    }
+    ElMessage.error("发布失败");
+    console.error(error);
   } finally {
     publishLoading.value = false;
   }
@@ -390,24 +430,31 @@ onMounted(() => {
 }
 
 .preview-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   margin-bottom: 20px;
 
   .header-info {
-    flex: 1;
+    .header-title {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin-bottom: 15px;
 
-    h2 {
-      margin: 0 0 15px 0;
-      font-size: 20px;
-      font-weight: 600;
+      h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
     }
   }
 
   .header-actions {
     display: flex;
     gap: 10px;
+    margin-left: 20px;
+
+    .action-btn {
+      font-weight: bold;
+    }
   }
 }
 

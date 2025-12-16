@@ -141,11 +141,12 @@
 
     <!--科目弹窗-->
     <el-dialog
+      v-if="dialog.visible"
       v-model="dialog.visible"
       :title="dialog.title"
       width="800px"
       class="subject-dialog"
-      @close="handleCloseDialog"
+      @closed="handleDialogClosed"
     >
       <el-form ref="dataFormRef" :model="formData" :rules="computedRules" label-width="80px">
         <el-form-item label="中文名称" prop="nameZh">
@@ -229,15 +230,21 @@
           </el-col>
         </el-row>
 
-        <el-form-item label="考试信息">
-          <WangEditor v-model:model-value="formData.examInfo" height="200px" />
+        <el-form-item label="中文考试信息">
+          <WangEditor v-model:model-value="formData.examInfoZh" height="300px" />
+        </el-form-item>
+
+        <el-form-item label="英文考试信息">
+          <WangEditor v-model:model-value="formData.examInfoEn" height="300px" />
         </el-form-item>
       </el-form>
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="handleCloseDialog">取 消</el-button>
-          <el-button type="primary" @click="handleSubmitClick">确 定</el-button>
+          <el-button style="font-weight: bold" @click="handleCloseDialog">取 消</el-button>
+          <el-button type="primary" style="font-weight: bold" @click="handleSubmitClick">
+            确 定
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -356,14 +363,29 @@ function handleAddClick() {
  * @param id 科目ID
  */
 function handleEditClick(id: string) {
-  dialog.visible = true;
-  dialog.title = "修改科目";
+  // 先加载数据，再打开对话框
   SubjectAPI.getFormData(id).then((data) => {
-    Object.assign(formData, data);
+    // 先设置表单数据
+    formData.id = data.id;
+    formData.providerId = data.providerId;
+    formData.nameZh = data.nameZh || "";
+    formData.nameEn = data.nameEn || "";
+    formData.descriptionZh = data.descriptionZh || "";
+    formData.descriptionEn = data.descriptionEn || "";
+    formData.supportLanguages = data.supportLanguages || "";
+    formData.examInfoZh = data.examInfoZh || "";
+    formData.examInfoEn = data.examInfoEn || "";
+    formData.sortOrder = data.sortOrder || 0;
+    formData.status = data.status !== undefined ? data.status : 1;
+
     // 解析支持语言到多选数组
     if (data.supportLanguages) {
       selectedLanguages.value = data.supportLanguages.split(",").filter(Boolean);
     }
+
+    // 数据设置完成后再打开对话框，这样 WangEditor 初始化时就有正确的值
+    dialog.visible = true;
+    dialog.title = "修改科目";
   });
 }
 
@@ -397,21 +419,30 @@ function handleSubmitClick() {
 // 关闭科目弹窗
 function handleCloseDialog() {
   dialog.visible = false;
+}
 
-  dataFormRef.value.resetFields();
-  dataFormRef.value.clearValidate();
+// 对话框关闭动画完成后的回调
+function handleDialogClosed() {
+  // 在对话框完全关闭后再重置表单，避免影响 WangEditor
+  nextTick(() => {
+    if (dataFormRef.value) {
+      dataFormRef.value.resetFields();
+      dataFormRef.value.clearValidate();
+    }
 
-  formData.id = undefined;
-  formData.providerId = undefined;
-  formData.nameZh = undefined;
-  formData.nameEn = undefined;
-  formData.descriptionZh = undefined;
-  formData.descriptionEn = undefined;
-  formData.supportLanguages = undefined;
-  formData.examInfo = undefined;
-  formData.sortOrder = 0;
-  formData.status = 1;
-  selectedLanguages.value = [];
+    formData.id = undefined;
+    formData.providerId = undefined;
+    formData.nameZh = undefined;
+    formData.nameEn = undefined;
+    formData.descriptionZh = undefined;
+    formData.descriptionEn = undefined;
+    formData.supportLanguages = undefined;
+    formData.examInfoZh = undefined;
+    formData.examInfoEn = undefined;
+    formData.sortOrder = 0;
+    formData.status = 1;
+    selectedLanguages.value = [];
+  });
 }
 
 /**

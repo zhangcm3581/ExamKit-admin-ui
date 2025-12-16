@@ -43,3 +43,8 @@ $border: 1px solid var(--el-border-color-light);
   gap: 8px;
   justify-content: flex-end;
 }
+
+// Element Plus 对话框按钮加粗
+:deep(.el-dialog__footer) .el-button {
+  font-weight: bold;
+}

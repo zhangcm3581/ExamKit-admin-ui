@@ -88,8 +88,10 @@ export interface SubjectVO {
   supportLanguages?: string;
   /** 题目总数 */
   totalQuestions: number;
-  /** 考试信息 */
-  examInfo?: string;
+  /** 考试信息-中文 */
+  examInfoZh?: string;
+  /** 考试信息-英文 */
+  examInfoEn?: string;
   /** PDF资料URL */
   pdfUrl?: string;
   /** 视频资料URLs */
@@ -120,8 +122,10 @@ export interface SubjectForm {
   descriptionEn?: string;
   /** 支持的语言 */
   supportLanguages?: string;
-  /** 考试信息 */
-  examInfo?: string;
+  /** 考试信息-中文 */
+  examInfoZh?: string;
+  /** 考试信息-英文 */
+  examInfoEn?: string;
   /** PDF资料URL */
   pdfUrl?: string;
   /** 视频资料URLs */

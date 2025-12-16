@@ -5,7 +5,13 @@
       <div class="page-header">
         <div class="header-left">
           <span class="page-title">草稿题库</span>
-          <el-button type="primary" icon="Upload" style="margin-left: 16px" @click="handleUpload">
+          <el-button
+            type="primary"
+            class="action-btn"
+            icon="Upload"
+            style="margin-left: 16px"
+            @click="handleUpload"
+          >
             上传题库
           </el-button>
         </div>
@@ -35,8 +41,10 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button type="primary" class="action-btn" icon="Search" @click="handleQuery">
+            搜索
+          </el-button>
+          <el-button icon="Refresh" class="action-btn" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -54,8 +62,24 @@
         <el-table-column prop="createTime" label="上传时间" width="200" />
         <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link icon="View" @click="handlePreview(row)">预览</el-button>
-            <el-button type="danger" link icon="Delete" @click="handleDelete(row)">删除</el-button>
+            <el-button
+              class="action-btn"
+              type="primary"
+              link
+              icon="View"
+              @click="handlePreview(row)"
+            >
+              预览
+            </el-button>
+            <el-button
+              class="action-btn"
+              type="danger"
+              link
+              icon="Delete"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -135,7 +159,10 @@ const handleUpload = () => {
 const handlePreview = (row: any) => {
   router.push({
     name: "QuestionBankPreview",
-    query: { batchId: row.batchId },
+    query: {
+      batchId: row.batchId,
+      activeMenu: "/exam/question-bank",
+    },
   });
 };
 
@@ -192,5 +219,9 @@ onMounted(() => {
 .search-form {
   margin-top: 16px;
   margin-bottom: 16px;
+}
+
+.action-btn {
+  font-weight: bold;
 }
 </style>

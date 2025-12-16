@@ -6,6 +6,7 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <el-button type="primary" @click="handleToolbarUpload">上传题库</el-button>
+          <el-button type="success" @click="handleNewSubject">新建科目</el-button>
           <!--          <el-button type="warning">人工导题</el-button>-->
           <el-button @click="handleDownloadTemplate">下载模板</el-button>
           <el-button @click="handleNewFolder">新建文件夹</el-button>
@@ -133,9 +134,7 @@
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
-                      <el-dropdown-item command="rename">重命名</el-dropdown-item>
-                      <el-dropdown-item command="editDescription">编辑描述</el-dropdown-item>
-                      <el-dropdown-item command="editExamInfo">编辑考试信息</el-dropdown-item>
+                      <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
                       <el-dropdown-item command="delete" divided class="delete-item">
@@ -256,48 +255,240 @@
       <el-input v-model="renameDialog.name" placeholder="请输入文件夹名称" />
     </Dialog>
 
-    <!-- 科目重命名弹窗 -->
-    <Dialog
-      v-model="subjectRenameDialog.visible"
-      title="重命名"
-      width="500px"
-      :destroy-on-close="true"
-      @confirm="handleConfirmSubjectRename"
-      @cancel="() => (subjectRenameDialog.visible = false)"
+    <!-- 编辑题库信息弹窗 -->
+    <!-- 编辑科目信息弹窗 -->
+    <el-dialog
+      v-if="subjectEditDialog.visible"
+      v-model="subjectEditDialog.visible"
+      :title="subjectEditDialog.title"
+      width="800px"
+      class="subject-dialog"
+      @closed="handleSubjectEditDialogClosed"
     >
       <el-form
-        ref="subjectRenameFormRef"
-        :model="subjectRenameForm"
-        :rules="subjectRenameRules"
-        label-width="100px"
+        ref="subjectEditFormRef"
+        :model="subjectEditForm"
+        :rules="subjectEditRules"
+        label-width="80px"
       >
-        <el-form-item
-          label="中文名称"
-          prop="nameZh"
-          :required="subjectRenameForm.supportLanguages?.includes('zh')"
-        >
-          <el-input v-model="subjectRenameForm.nameZh" placeholder="请输入科目名称（中文）" />
+        <el-form-item label="中文名称" prop="nameZh">
+          <el-input v-model="subjectEditForm.nameZh" placeholder="请输入科目名称（中文）" />
         </el-form-item>
-        <el-form-item
-          label="英文名称"
-          prop="nameEn"
-          :required="subjectRenameForm.supportLanguages?.includes('en')"
-        >
-          <el-input v-model="subjectRenameForm.nameEn" placeholder="请输入科目名称（英文）" />
+
+        <el-form-item label="英文名称" prop="nameEn">
+          <el-input v-model="subjectEditForm.nameEn" placeholder="请输入科目名称（英文）" />
         </el-form-item>
-        <el-form-item label="支持语言" prop="supportLanguages">
-          <el-select
-            v-model="subjectRenameForm.supportLanguages"
-            placeholder="请选择"
-            style="width: 100%"
-          >
-            <el-option label="中文" value="zh" />
-            <el-option label="英文" value="en" />
-            <el-option label="中英文" value="zh,en" />
-          </el-select>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="供应商">
+              <el-select
+                v-model="subjectEditForm.providerId"
+                placeholder="请选择供应商（可不选）"
+                clearable
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in providerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="支持语言" prop="supportLanguages">
+              <el-select
+                v-model="selectedLanguagesForEdit"
+                multiple
+                placeholder="请选择"
+                style="width: 100%"
+              >
+                <el-option label="中文" value="zh" />
+                <el-option label="English" value="en" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="中文描述">
+          <el-input
+            v-model="subjectEditForm.descriptionZh"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入科目描述（中文）"
+          />
+        </el-form-item>
+
+        <el-form-item label="英文描述">
+          <el-input
+            v-model="subjectEditForm.descriptionEn"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入科目描述（英文）"
+          />
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="排序" prop="sortOrder">
+              <el-input-number
+                v-model="subjectEditForm.sortOrder"
+                :min="0"
+                :max="9999"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-radio-group v-model="subjectEditForm.status">
+                <el-radio :value="1">启用</el-radio>
+                <el-radio :value="0">禁用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="中文考试信息">
+          <WangEditor v-model:model-value="subjectEditForm.examInfoZh" height="300px" />
+        </el-form-item>
+
+        <el-form-item label="英文考试信息">
+          <WangEditor v-model:model-value="subjectEditForm.examInfoEn" height="300px" />
         </el-form-item>
       </el-form>
-    </Dialog>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button style="font-weight: bold" @click="handleCloseSubjectEditDialog">
+            取 消
+          </el-button>
+          <el-button type="primary" style="font-weight: bold" @click="handleSubmitSubjectEdit">
+            确 定
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 新建科目弹窗 -->
+    <el-dialog
+      v-if="subjectCreateDialog.visible"
+      v-model="subjectCreateDialog.visible"
+      title="新建科目"
+      width="800px"
+      class="subject-dialog"
+      @closed="handleSubjectCreateDialogClosed"
+    >
+      <el-form
+        ref="subjectCreateFormRef"
+        :model="subjectCreateForm"
+        :rules="subjectCreateRules"
+        label-width="80px"
+      >
+        <el-form-item label="中文名称" prop="nameZh">
+          <el-input v-model="subjectCreateForm.nameZh" placeholder="请输入科目名称（中文）" />
+        </el-form-item>
+
+        <el-form-item label="英文名称" prop="nameEn">
+          <el-input v-model="subjectCreateForm.nameEn" placeholder="请输入科目名称（英文）" />
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="供应商">
+              <el-select
+                v-model="subjectCreateForm.providerId"
+                placeholder="请选择供应商（可不选）"
+                clearable
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in providerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="支持语言" prop="supportLanguages">
+              <el-select
+                v-model="selectedLanguagesForCreate"
+                multiple
+                placeholder="请选择"
+                style="width: 100%"
+              >
+                <el-option label="中文" value="zh" />
+                <el-option label="English" value="en" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="中文描述">
+          <el-input
+            v-model="subjectCreateForm.descriptionZh"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入科目描述（中文）"
+          />
+        </el-form-item>
+
+        <el-form-item label="英文描述">
+          <el-input
+            v-model="subjectCreateForm.descriptionEn"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入科目描述（英文）"
+          />
+        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="排序" prop="sortOrder">
+              <el-input-number
+                v-model="subjectCreateForm.sortOrder"
+                :min="0"
+                :max="9999"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-radio-group v-model="subjectCreateForm.status">
+                <el-radio :value="1">启用</el-radio>
+                <el-radio :value="0">禁用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="中文考试信息">
+          <WangEditor v-model:model-value="subjectCreateForm.examInfoZh" height="300px" />
+        </el-form-item>
+
+        <el-form-item label="英文考试信息">
+          <WangEditor v-model:model-value="subjectCreateForm.examInfoEn" height="300px" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button style="font-weight: bold" @click="handleCloseSubjectCreateDialog">
+            取 消
+          </el-button>
+          <el-button type="primary" style="font-weight: bold" @click="handleSubmitSubjectCreate">
+            确 定
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 设置封面弹窗 -->
     <Dialog
@@ -310,47 +501,6 @@
       <div class="cover-picker-wrapper">
         <ImagePicker v-model="coverDialog.logo" :width="200" :height="150" />
       </div>
-    </Dialog>
-
-    <!-- 编辑描述弹窗 -->
-    <Dialog
-      v-model="descriptionDialog.visible"
-      title="编辑描述"
-      width="800px"
-      :destroy-on-close="true"
-      @confirm="handleConfirmDescription"
-      @cancel="() => (descriptionDialog.visible = false)"
-    >
-      <el-form label-width="100px">
-        <el-form-item v-if="descriptionDialog.showZh" label="中文描述">
-          <el-input
-            v-model="descriptionDialog.descriptionZh"
-            type="textarea"
-            :rows="8"
-            placeholder="请输入科目描述（中文）"
-          />
-        </el-form-item>
-        <el-form-item v-if="descriptionDialog.showEn" label="英文描述">
-          <el-input
-            v-model="descriptionDialog.descriptionEn"
-            type="textarea"
-            :rows="8"
-            placeholder="请输入科目描述（英文）"
-          />
-        </el-form-item>
-      </el-form>
-    </Dialog>
-
-    <!-- 编辑考试信息弹窗 -->
-    <Dialog
-      v-model="examInfoDialog.visible"
-      title="编辑考试信息"
-      width="900px"
-      :destroy-on-close="true"
-      @confirm="handleConfirmExamInfo"
-      @cancel="() => (examInfoDialog.visible = false)"
-    >
-      <WangEditor v-model="examInfoDialog.examInfo" height="400px" />
     </Dialog>
   </div>
 </template>
@@ -454,13 +604,14 @@ const coverDialog = reactive({
   isFolder: false,
 });
 
-// 科目重命名弹窗
-const subjectRenameFormRef = ref();
-const subjectRenameDialog = reactive({
+// 编辑题库信息弹窗
+const subjectEditFormRef = ref();
+const subjectEditDialog = reactive({
   visible: false,
+  title: "编辑题库信息",
   subjectId: "" as string,
 });
-const subjectRenameForm = reactive({
+const subjectEditForm = reactive({
   nameZh: "",
   nameEn: "",
   providerId: undefined as number | undefined,
@@ -469,45 +620,60 @@ const subjectRenameForm = reactive({
   descriptionEn: "",
   sortOrder: 0,
   status: 1,
+  examInfoZh: "",
+  examInfoEn: "",
 });
 
-// 科目重命名表单验证规则（动态）
-const subjectRenameRules = computed(() => {
-  const rules: any = {
-    supportLanguages: [{ required: true, message: "请选择支持语言", trigger: "change" }],
-    nameZh: [],
-    nameEn: [],
+// 支持语言多选
+const selectedLanguagesForEdit = ref<string[]>([]);
+
+// 监听选中语言变化，同步到formData
+watch(selectedLanguagesForEdit, (val) => {
+  subjectEditForm.supportLanguages = val.join(",");
+});
+
+// 编辑科目表单验证规则
+const subjectEditRules = computed(() => {
+  const rules: Partial<Record<string, any>> = {
+    nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
+    supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
   };
-
-  // 根据选择的语言动态设置必填规则
-  const languages = subjectRenameForm.supportLanguages;
-  if (languages) {
-    if (languages.includes("zh")) {
-      rules.nameZh.push({ required: true, message: "请输入中文名称", trigger: "blur" });
-    }
-    if (languages.includes("en")) {
-      rules.nameEn.push({ required: true, message: "请输入英文名称", trigger: "blur" });
-    }
-  }
-
   return rules;
 });
 
-// 编辑描述弹窗
-const descriptionDialog = reactive({
+// 新建科目弹窗
+const subjectCreateFormRef = ref();
+const subjectCreateDialog = reactive({
   visible: false,
-  subjectId: "" as string,
+});
+const subjectCreateForm = reactive({
+  nameZh: "",
+  nameEn: "",
+  providerId: undefined as number | undefined,
+  supportLanguages: "",
   descriptionZh: "",
   descriptionEn: "",
-  showZh: false,
-  showEn: false,
+  sortOrder: 0,
+  status: 1,
+  examInfoZh: "",
+  examInfoEn: "",
 });
 
-// 编辑考试信息弹窗
-const examInfoDialog = reactive({
-  visible: false,
-  subjectId: "" as string,
-  examInfo: "",
+// 新建科目 - 支持语言多选
+const selectedLanguagesForCreate = ref<string[]>([]);
+
+// 监听选中语言变化，同步到formData
+watch(selectedLanguagesForCreate, (val) => {
+  subjectCreateForm.supportLanguages = val.join(",");
+});
+
+// 新建科目表单验证规则
+const subjectCreateRules = computed(() => {
+  const rules: Partial<Record<string, any>> = {
+    nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
+    supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
+  };
+  return rules;
 });
 
 // 加载供应商选项
@@ -635,17 +801,9 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "toggleTop":
       ElMessage.info("置顶功能开发中");
       break;
-    case "rename":
-      // 科目重命名
-      handleRenameSubject(row);
-      break;
-    case "editDescription":
-      // 编辑描述
-      handleEditDescription(row);
-      break;
-    case "editExamInfo":
-      // 编辑考试信息
-      handleEditExamInfo(row);
+    case "editSubject":
+      // 统一编辑题库信息
+      handleEditSubject(row);
       break;
     case "move":
       moveDialog.visible = true;
@@ -856,98 +1014,145 @@ function handleDownloadTemplate() {
   ElMessage.success("模板下载成功");
 }
 
-// 重命名科目
-function handleRenameSubject(row: TableRow) {
-  subjectRenameDialog.visible = true;
-  subjectRenameDialog.subjectId = row.id as string;
+// 编辑题库信息(合并:重命名、编辑描述、编辑考试信息)
+function handleEditSubject(row: TableRow) {
+  subjectEditDialog.subjectId = row.id as string;
 
-  // 加载科目详情
+  // 先加载数据，再打开对话框
   SubjectAPI.getFormData(row.id as string).then((data) => {
-    subjectRenameForm.nameZh = data.nameZh || "";
-    subjectRenameForm.nameEn = data.nameEn || "";
-    subjectRenameForm.providerId = data.providerId;
-    subjectRenameForm.supportLanguages = data.supportLanguages || "";
-    subjectRenameForm.descriptionZh = data.descriptionZh || "";
-    subjectRenameForm.descriptionEn = data.descriptionEn || "";
-    subjectRenameForm.sortOrder = data.sortOrder || 0;
-    subjectRenameForm.status = data.status || 1;
+    // 先设置表单数据
+    subjectEditForm.nameZh = data.nameZh || "";
+    subjectEditForm.nameEn = data.nameEn || "";
+    subjectEditForm.providerId = data.providerId;
+    subjectEditForm.supportLanguages = data.supportLanguages || "";
+    subjectEditForm.descriptionZh = data.descriptionZh || "";
+    subjectEditForm.descriptionEn = data.descriptionEn || "";
+    subjectEditForm.sortOrder = data.sortOrder || 0;
+    subjectEditForm.status = data.status !== undefined ? data.status : 1;
+    subjectEditForm.examInfoZh = data.examInfoZh || "";
+    subjectEditForm.examInfoEn = data.examInfoEn || "";
+
+    // 解析支持语言到多选数组
+    if (data.supportLanguages) {
+      selectedLanguagesForEdit.value = data.supportLanguages.split(",").filter(Boolean);
+    }
+
+    // 数据设置完成后再打开对话框，这样 WangEditor 初始化时就有正确的值
+    subjectEditDialog.visible = true;
+    subjectEditDialog.title = "编辑题库信息";
   });
 }
 
-// 确认科目重命名
-function handleConfirmSubjectRename() {
-  // 清除之前的验证状态，重新验证
-  subjectRenameFormRef.value.clearValidate();
-
-  subjectRenameFormRef.value.validate((valid: boolean) => {
+// 提交编辑科目信息
+function handleSubmitSubjectEdit() {
+  subjectEditFormRef.value.validate((valid: boolean) => {
     if (valid) {
       const updateData = {
-        nameZh: subjectRenameForm.nameZh,
-        nameEn: subjectRenameForm.nameEn,
-        supportLanguages: subjectRenameForm.supportLanguages,
+        nameZh: subjectEditForm.nameZh,
+        nameEn: subjectEditForm.nameEn,
+        providerId: subjectEditForm.providerId,
+        supportLanguages: subjectEditForm.supportLanguages,
+        descriptionZh: subjectEditForm.descriptionZh,
+        descriptionEn: subjectEditForm.descriptionEn,
+        sortOrder: subjectEditForm.sortOrder,
+        status: subjectEditForm.status,
+        examInfoZh: subjectEditForm.examInfoZh,
+        examInfoEn: subjectEditForm.examInfoEn,
       };
 
-      SubjectAPI.update(subjectRenameDialog.subjectId, updateData).then(() => {
+      SubjectAPI.update(subjectEditDialog.subjectId, updateData).then(() => {
         ElMessage.success("修改成功");
-        subjectRenameDialog.visible = false;
+        handleCloseSubjectEditDialog();
         fetchData();
       });
     }
   });
 }
 
-// 编辑描述
-function handleEditDescription(row: TableRow) {
-  descriptionDialog.visible = true;
-  descriptionDialog.subjectId = row.id as string;
+// 关闭编辑科目弹窗
+function handleCloseSubjectEditDialog() {
+  subjectEditDialog.visible = false;
+}
 
-  // 加载科目详情
-  SubjectAPI.getFormData(row.id as string).then((data) => {
-    descriptionDialog.descriptionZh = data.descriptionZh || "";
-    descriptionDialog.descriptionEn = data.descriptionEn || "";
+// 编辑科目对话框关闭动画完成后的回调
+function handleSubjectEditDialogClosed() {
+  // 在对话框完全关闭后再重置表单，避免影响 WangEditor
+  nextTick(() => {
+    if (subjectEditFormRef.value) {
+      subjectEditFormRef.value.resetFields();
+      subjectEditFormRef.value.clearValidate();
+    }
 
-    // 根据支持语言显示对应的描述字段
-    const languages = data.supportLanguages || "";
-    descriptionDialog.showZh = languages.includes("zh");
-    descriptionDialog.showEn = languages.includes("en");
+    subjectEditForm.nameZh = "";
+    subjectEditForm.nameEn = "";
+    subjectEditForm.providerId = undefined;
+    subjectEditForm.supportLanguages = "";
+    subjectEditForm.descriptionZh = "";
+    subjectEditForm.descriptionEn = "";
+    subjectEditForm.sortOrder = 0;
+    subjectEditForm.status = 1;
+    subjectEditForm.examInfoZh = "";
+    subjectEditForm.examInfoEn = "";
+    selectedLanguagesForEdit.value = [];
   });
 }
 
-// 确认编辑描述
-function handleConfirmDescription() {
-  const updateData: any = {};
+// 新建科目
+function handleNewSubject() {
+  subjectCreateDialog.visible = true;
+}
 
-  if (descriptionDialog.showZh) {
-    updateData.descriptionZh = descriptionDialog.descriptionZh;
-  }
-  if (descriptionDialog.showEn) {
-    updateData.descriptionEn = descriptionDialog.descriptionEn;
-  }
+// 提交新建科目
+function handleSubmitSubjectCreate() {
+  subjectCreateFormRef.value.validate((valid: boolean) => {
+    if (valid) {
+      const createData = {
+        nameZh: subjectCreateForm.nameZh,
+        nameEn: subjectCreateForm.nameEn,
+        providerId: subjectCreateForm.providerId,
+        supportLanguages: subjectCreateForm.supportLanguages,
+        descriptionZh: subjectCreateForm.descriptionZh,
+        descriptionEn: subjectCreateForm.descriptionEn,
+        sortOrder: subjectCreateForm.sortOrder,
+        status: subjectCreateForm.status,
+        examInfoZh: subjectCreateForm.examInfoZh,
+        examInfoEn: subjectCreateForm.examInfoEn,
+      };
 
-  SubjectAPI.update(descriptionDialog.subjectId, updateData).then(() => {
-    ElMessage.success("修改成功");
-    descriptionDialog.visible = false;
-    fetchData();
+      SubjectAPI.create(createData).then(() => {
+        ElMessage.success("新建成功");
+        handleCloseSubjectCreateDialog();
+        fetchData();
+      });
+    }
   });
 }
 
-// 编辑考试信息
-function handleEditExamInfo(row: TableRow) {
-  examInfoDialog.visible = true;
-  examInfoDialog.subjectId = row.id as string;
-
-  // 加载科目详情
-  SubjectAPI.getFormData(row.id as string).then((data) => {
-    examInfoDialog.examInfo = data.examInfo || "";
-  });
+// 关闭新建科目弹窗
+function handleCloseSubjectCreateDialog() {
+  subjectCreateDialog.visible = false;
 }
 
-// 确认编辑考试信息
-function handleConfirmExamInfo() {
-  SubjectAPI.update(examInfoDialog.subjectId, { examInfo: examInfoDialog.examInfo }).then(() => {
-    ElMessage.success("修改成功");
-    examInfoDialog.visible = false;
-    fetchData();
+// 新建科目对话框关闭动画完成后的回调
+function handleSubjectCreateDialogClosed() {
+  // 在对话框完全关闭后再重置表单，避免影响 WangEditor
+  nextTick(() => {
+    if (subjectCreateFormRef.value) {
+      subjectCreateFormRef.value.resetFields();
+      subjectCreateFormRef.value.clearValidate();
+    }
+
+    subjectCreateForm.nameZh = "";
+    subjectCreateForm.nameEn = "";
+    subjectCreateForm.providerId = undefined;
+    subjectCreateForm.supportLanguages = "";
+    subjectCreateForm.descriptionZh = "";
+    subjectCreateForm.descriptionEn = "";
+    subjectCreateForm.sortOrder = 0;
+    subjectCreateForm.status = 1;
+    subjectCreateForm.examInfoZh = "";
+    subjectCreateForm.examInfoEn = "";
+    selectedLanguagesForCreate.value = [];
   });
 }
 
@@ -1310,5 +1515,26 @@ onMounted(() => {
       font-weight: bold;
     }
   }
+}
+
+/* 科目编辑弹窗样式 */
+:deep(.subject-dialog) {
+  .el-dialog__body {
+    padding: 20px 24px;
+  }
+
+  .el-form-item {
+    margin-bottom: 18px;
+  }
+
+  .el-form-item__label {
+    font-weight: 500;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 </style>
