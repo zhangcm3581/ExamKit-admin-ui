@@ -95,6 +95,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: "题库预览", icon: "view", hidden: true },
       },
       {
+        path: "exam/question",
+        name: "QuestionManagement",
+        component: () => import("@/views/exam/question/index.vue"),
+        meta: { title: "试题管理", icon: "document", hidden: true, activeMenu: "/exam/provider" },
+      },
+      {
         path: "/detail/:id(\\d+)",
         name: "DemoDetail",
         component: () => import("@/views/demo/detail.vue"),

@@ -995,7 +995,14 @@ function handleUploadQuestions(row: TableRow) {
 
 // 试题管理
 function handleManageQuestion(row: TableRow) {
-  ElMessage.info(`管理试题: ${row.nameZh}`);
+  router.push({
+    path: "/exam/question",
+    query: {
+      subjectId: row.id as string,
+      subjectName: row.nameZh || row.nameEn || "",
+      activeMenu: "/exam/provider",
+    },
+  });
 }
 
 // 练习
