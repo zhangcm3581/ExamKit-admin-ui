@@ -94,7 +94,11 @@
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column type="expand">
           <template #default="{ row }">
-            <div class="question-detail-grid">
+            <div
+              class="question-detail-grid"
+              :class="{ 'has-both-languages': row.contentEn || row.optionsEn || row.explanationEn }"
+            >
+              <!-- 左侧：中文内容 -->
               <div class="left-section">
                 <!-- 中文题干 -->
                 <div v-if="row.contentZh" class="detail-block">
@@ -114,8 +118,20 @@
                     </div>
                   </div>
                 </div>
-                <!-- 分割线 -->
-                <div v-if="row.contentEn || row.optionsEn" class="divider"></div>
+                <!-- 答案（中文区域总是显示） -->
+                <div class="detail-block">
+                  <div class="block-label">答案</div>
+                  <div class="block-content answer-content">{{ row.answer }}</div>
+                </div>
+                <!-- 中文解析 -->
+                <div v-if="row.explanationZh" class="detail-block">
+                  <div class="block-label">解析</div>
+                  <div class="block-content" v-html="formatExplanation(row.explanationZh)"></div>
+                </div>
+              </div>
+
+              <!-- 右侧：英文内容 -->
+              <div v-if="row.contentEn || row.optionsEn || row.explanationEn" class="right-section">
                 <!-- 英文题干 -->
                 <div v-if="row.contentEn" class="detail-block">
                   <div class="block-label">Question</div>
@@ -134,23 +150,15 @@
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="right-section">
+                <!-- 答案（英文区域） -->
                 <div class="detail-block">
-                  <div class="block-label">答案</div>
-                  <div class="block-content">{{ row.answer }}</div>
+                  <div class="block-label">Answer</div>
+                  <div class="block-content answer-content">{{ row.answer }}</div>
                 </div>
-                <!-- 中文解析 -->
-                <div v-if="row.explanationZh" class="detail-block">
-                  <div class="block-label">解析</div>
-                  <div class="block-content" v-html="row.explanationZh"></div>
-                </div>
-                <!-- 分割线 -->
-                <div v-if="row.explanationEn" class="divider"></div>
                 <!-- 英文解析 -->
                 <div v-if="row.explanationEn" class="detail-block">
                   <div class="block-label">Explanation</div>
-                  <div class="block-content" v-html="row.explanationEn"></div>
+                  <div class="block-content" v-html="formatExplanation(row.explanationEn)"></div>
                 </div>
               </div>
             </div>
@@ -166,7 +174,14 @@
         <el-table-column label="编号" prop="questionNumber" width="80" align="center" />
         <el-table-column label="题目" min-width="400">
           <template #default="{ row }">
-            <div class="question-content-preview" v-html="getContentPreview(row.contentZh)"></div>
+            <div ref="contentPreviewRef" class="question-content-preview">
+              <div v-if="row.contentZh" v-html="getContentPreview(row.contentZh)"></div>
+              <div
+                v-if="row.contentEn"
+                class="en-content"
+                v-html="getContentPreview(row.contentEn)"
+              ></div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="答案" prop="answer" width="100" align="center" />
@@ -214,32 +229,94 @@
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item label="试题题目" prop="contentZh">
-          <WangEditor v-model="formData.contentZh" height="200px" />
-        </el-form-item>
-
-        <el-form-item v-if="formData.type !== 'JUDGE'" label="试题选项" prop="optionsZh" required>
-          <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
-            <span class="option-label">{{ option.label }}</span>
-            <div class="option-editor">
-              <WangEditor v-model="option.value" height="120px" />
-            </div>
-            <el-button
-              v-if="optionsList.length > 2"
-              type="primary"
-              text
-              icon="Delete"
-              class="delete-btn"
-              @click="removeOption(index)"
+        <!-- 中英文内容切换标签页 -->
+        <el-tabs v-model="activeLanguageTab" type="border-card" class="language-tabs">
+          <!-- 中文标签页 -->
+          <el-tab-pane label="中文" name="zh">
+            <el-form-item
+              label="试题题目"
+              :prop="subjectSupportLanguages.includes('zh') ? 'contentZh' : ''"
+              :required="subjectSupportLanguages.includes('zh')"
             >
-              删除
-            </el-button>
-          </div>
-          <el-button style="margin-top: 12px" type="primary" plain @click="addOption">
-            添加选项
-          </el-button>
-        </el-form-item>
+              <WangEditor v-model="formData.contentZh" height="200px" />
+            </el-form-item>
 
+            <el-form-item
+              v-if="formData.type !== 'JUDGE'"
+              label="试题选项"
+              :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
+              :required="subjectSupportLanguages.includes('zh')"
+            >
+              <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
+                <span class="option-label">{{ option.label }}</span>
+                <div class="option-editor">
+                  <WangEditor v-model="option.value" height="120px" />
+                </div>
+                <el-button
+                  v-if="optionsList.length > 2"
+                  type="primary"
+                  text
+                  icon="Delete"
+                  class="delete-btn"
+                  @click="removeOption(index)"
+                >
+                  删除
+                </el-button>
+              </div>
+              <el-button style="margin-top: 12px" type="primary" plain @click="addOption">
+                添加选项
+              </el-button>
+            </el-form-item>
+
+            <el-form-item label="解析">
+              <WangEditor v-model="formData.explanationZh" height="200px" />
+            </el-form-item>
+          </el-tab-pane>
+
+          <!-- 英文标签页 -->
+          <el-tab-pane label="英文" name="en">
+            <el-form-item
+              label="试题题目"
+              :prop="subjectSupportLanguages.includes('en') ? 'contentEn' : ''"
+              :required="subjectSupportLanguages.includes('en')"
+            >
+              <WangEditor v-model="formData.contentEn" height="200px" />
+            </el-form-item>
+
+            <el-form-item
+              v-if="formData.type !== 'JUDGE'"
+              label="试题选项"
+              :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
+              :required="subjectSupportLanguages.includes('en')"
+            >
+              <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
+                <span class="option-label">{{ option.label }}</span>
+                <div class="option-editor">
+                  <WangEditor v-model="option.value" height="120px" />
+                </div>
+                <el-button
+                  v-if="optionsListEn.length > 2"
+                  type="primary"
+                  text
+                  icon="Delete"
+                  class="delete-btn"
+                  @click="removeOptionEn(index)"
+                >
+                  删除
+                </el-button>
+              </div>
+              <el-button style="margin-top: 12px" type="primary" plain @click="addOptionEn">
+                添加选项
+              </el-button>
+            </el-form-item>
+
+            <el-form-item label="解析">
+              <WangEditor v-model="formData.explanationEn" height="200px" />
+            </el-form-item>
+          </el-tab-pane>
+        </el-tabs>
+
+        <!-- 答案（通用，不区分语言） -->
         <el-form-item label="答案" prop="answer">
           <template v-if="formData.type === 'SINGLE'">
             <el-radio-group v-model="formData.answer">
@@ -262,10 +339,6 @@
             </el-radio-group>
           </template>
         </el-form-item>
-
-        <el-form-item label="解析">
-          <WangEditor v-model="formData.explanationZh" height="200px" />
-        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -279,7 +352,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from "vue";
+import { ref, reactive, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRoute } from "vue-router";
 import QuestionAPI, {
@@ -287,6 +360,7 @@ import QuestionAPI, {
   type QuestionVO,
   type QuestionForm,
 } from "@/api/exam/question-api";
+import SubjectAPI from "@/api/exam/subject-api";
 import { formatDateTime } from "@/utils/datetime";
 import WangEditor from "@/components/WangEditor/index.vue";
 
@@ -309,17 +383,31 @@ const queryParams = reactive<QuestionPageQuery>({
 
 const tableData = ref<QuestionVO[]>([]);
 
+// 科目支持的语言
+const subjectSupportLanguages = ref<string>("");
+
 const dialog = reactive({
   title: "",
   visible: false,
 });
 
+// 当前激活的语言标签页
+const activeLanguageTab = ref("zh");
+
 const formData = reactive<QuestionForm>({
   type: "SINGLE",
 });
 
-// 选项列表
+// 选项列表（中文）
 const optionsList = ref<{ label: string; value: string }[]>([
+  { label: "A", value: "" },
+  { label: "B", value: "" },
+  { label: "C", value: "" },
+  { label: "D", value: "" },
+]);
+
+// 选项列表（英文）
+const optionsListEn = ref<{ label: string; value: string }[]>([
   { label: "A", value: "" },
   { label: "B", value: "" },
   { label: "C", value: "" },
@@ -340,12 +428,26 @@ const currentTypeLabel = computed(() => {
   return typeMap[queryParams.type || ""] || "全部题型";
 });
 
-// 表单验证规则
-const rules = {
-  type: [{ required: true, message: "请选择题型", trigger: "change" }],
-  contentZh: [{ required: true, message: "请输入题目内容", trigger: "blur" }],
-  answer: [{ required: true, message: "请选择答案", trigger: "change" }],
-};
+// 表单验证规则 - 根据科目支持的语言动态设置
+const rules = computed(() => {
+  const baseRules: any = {
+    type: [{ required: true, message: "请选择题型", trigger: "change" }],
+    answer: [{ required: true, message: "请选择答案", trigger: "change" }],
+  };
+
+  const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
+
+  // 根据支持的语言动态设置必填规则
+  if (languages.includes("zh")) {
+    baseRules.contentZh = [{ required: true, message: "请输入题目内容（中文）", trigger: "blur" }];
+  }
+
+  if (languages.includes("en")) {
+    baseRules.contentEn = [{ required: true, message: "请输入题目内容（英文）", trigger: "blur" }];
+  }
+
+  return baseRules;
+});
 
 // 监听多选答案变化
 watch(multipleAnswers, (newVal) => {
@@ -390,11 +492,125 @@ function parseOptions(optionsStr: string): { label: string; value: string }[] {
 
 // 获取题目内容预览
 function getContentPreview(content: string): string {
+  if (!content) return "";
   const text = content.replace(/<[^>]+>/g, "");
-  return text.length > 50 ? text.substring(0, 50) + "..." : text;
+
+  // 根据容器宽度动态计算显示字符数
+  // 假设每个字符平均宽度为 14px，留一些边距
+  const containerWidth = window.innerWidth;
+
+  // 根据屏幕宽度计算适合的字符数
+  let maxLength: number;
+  if (containerWidth >= 1920) {
+    maxLength = 100; // 超大屏幕
+  } else if (containerWidth >= 1600) {
+    maxLength = 80; // 大屏幕
+  } else if (containerWidth >= 1366) {
+    maxLength = 60; // 中屏幕
+  } else if (containerWidth >= 1024) {
+    maxLength = 40; // 小屏幕
+  } else {
+    maxLength = 30; // 超小屏幕
+  }
+
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 }
 
-// 添加选项
+// 格式化解析内容，将 \n 转换为 <br>，并处理代码块
+function formatExplanation(content: string): string {
+  if (!content) return "";
+
+  // 首先处理 Markdown 风格的代码块（```language 和 ```）
+  const markdownCodeBlockRegex = /```\w*\n([\s\S]*?)```/g;
+  let hasMarkdownCode = false;
+
+  content = content.replace(markdownCodeBlockRegex, (match, code) => {
+    hasMarkdownCode = true;
+    return "<pre><code>" + escapeHtml(code.trim()) + "</code></pre>";
+  });
+
+  // 如果已经处理了 Markdown 代码块，直接处理剩余的换行
+  if (hasMarkdownCode) {
+    return content
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (trimmed && !line.includes("<pre>") && !line.includes("</pre>")) {
+          return "<p>" + line + "</p>";
+        }
+        return line;
+      })
+      .join("");
+  }
+
+  // 检测代码块：连续的包含 {、}、[ 等字符的行
+  const lines = content.split("\n");
+  let result = "";
+  let inCodeBlock = false;
+  let codeBlockContent = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // 检测是否是代码行（包含 JSON/代码特征）
+    const isCodeLine =
+      /^[{[\]},":]+$|^\s*["={[}\],]+.*["={[}\],]+\s*$|^\s*".*"\s*[,:]*\s*$/.test(trimmedLine) ||
+      trimmedLine.startsWith("{") ||
+      trimmedLine.startsWith("}") ||
+      trimmedLine.startsWith("[") ||
+      trimmedLine.startsWith("]") ||
+      /^\s*"[^"]+"\s*:\s*/.test(trimmedLine);
+
+    if (isCodeLine && !inCodeBlock) {
+      // 开始代码块
+      inCodeBlock = true;
+      codeBlockContent = line;
+    } else if (isCodeLine && inCodeBlock) {
+      // 继续代码块
+      codeBlockContent += "\n" + line;
+    } else if (!isCodeLine && inCodeBlock) {
+      // 结束代码块
+      result += "<pre><code>" + escapeHtml(codeBlockContent) + "</code></pre>";
+      inCodeBlock = false;
+      codeBlockContent = "";
+
+      // 处理当前行
+      if (trimmedLine) {
+        result += "<p>" + line + "</p>";
+      }
+    } else {
+      // 普通文本行
+      if (trimmedLine) {
+        result += "<p>" + line + "</p>";
+      } else if (result && !result.endsWith("</p>")) {
+        result += "<br>";
+      }
+    }
+  }
+
+  // 如果最后还在代码块中，关闭它
+  if (inCodeBlock && codeBlockContent) {
+    result += "<pre><code>" + escapeHtml(codeBlockContent) + "</code></pre>";
+  }
+
+  return (
+    result ||
+    content
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/\n/g, "<br>")
+      .replace(/^(.*)$/, "<p>$1</p>")
+  );
+}
+
+// HTML 转义函数
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// 添加选项（中文）
 function addOption() {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const nextKey = letters[optionsList.value.length];
@@ -403,11 +619,29 @@ function addOption() {
   }
 }
 
-// 删除选项
+// 添加选项（英文）
+function addOptionEn() {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const nextKey = letters[optionsListEn.value.length];
+  if (nextKey) {
+    optionsListEn.value.push({ label: nextKey, value: "" });
+  }
+}
+
+// 删除选项（中文）
 function removeOption(index: number) {
   optionsList.value.splice(index, 1);
   // 重新赋值标签
   optionsList.value.forEach((option, idx) => {
+    option.label = String.fromCharCode(65 + idx);
+  });
+}
+
+// 删除选项（英文）
+function removeOptionEn(index: number) {
+  optionsListEn.value.splice(index, 1);
+  // 重新赋值标签
+  optionsListEn.value.forEach((option, idx) => {
     option.label = String.fromCharCode(65 + idx);
   });
 }
@@ -429,9 +663,19 @@ function handleTypeChange() {
       { label: "A", value: "正确" },
       { label: "B", value: "错误" },
     ];
+    optionsListEn.value = [
+      { label: "A", value: "True" },
+      { label: "B", value: "False" },
+    ];
   } else if (optionsList.value.length === 2) {
     // 从判断题切换回单选/多选，恢复默认选项
     optionsList.value = [
+      { label: "A", value: "" },
+      { label: "B", value: "" },
+      { label: "C", value: "" },
+      { label: "D", value: "" },
+    ];
+    optionsListEn.value = [
       { label: "A", value: "" },
       { label: "B", value: "" },
       { label: "C", value: "" },
@@ -503,9 +747,17 @@ async function handleEdit(row: QuestionVO) {
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
 
-  // 解析选项
+  // 解析中文选项
   if (data.optionsZh) {
     optionsList.value = parseOptions(data.optionsZh);
+  }
+
+  // 解析英文选项
+  if (data.optionsEn) {
+    optionsListEn.value = parseOptions(data.optionsEn);
+  } else {
+    // 如果没有英文选项，初始化为与中文相同数量的空选项
+    optionsListEn.value = optionsList.value.map((opt) => ({ label: opt.label, value: "" }));
   }
 
   // 解析多选答案
@@ -538,14 +790,25 @@ function handleDelete(id?: number) {
 function handleSubmit() {
   dataFormRef.value.validate((valid: boolean) => {
     if (valid) {
-      // 构建选项JSON
+      // 构建中文选项JSON
       if (formData.type !== "JUDGE") {
         formData.optionsZh = JSON.stringify(optionsList.value);
+        // 构建英文选项JSON（如果有内容）
+        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
+        if (hasEnglishOptions) {
+          formData.optionsEn = JSON.stringify(optionsListEn.value);
+        } else {
+          formData.optionsEn = "";
+        }
       } else {
         // 判断题固定选项
         formData.optionsZh = JSON.stringify([
           { label: "A", value: "正确" },
           { label: "B", value: "错误" },
+        ]);
+        formData.optionsEn = JSON.stringify([
+          { label: "A", value: "True" },
+          { label: "B", value: "False" },
         ]);
       }
 
@@ -568,6 +831,7 @@ function handleSubmit() {
 // 关闭对话框
 function handleCloseDialog() {
   dialog.visible = false;
+  activeLanguageTab.value = "zh"; // 重置为中文标签页
   resetForm();
 }
 
@@ -590,6 +854,13 @@ function resetForm() {
     { label: "D", value: "" },
   ];
 
+  optionsListEn.value = [
+    { label: "A", value: "" },
+    { label: "B", value: "" },
+    { label: "C", value: "" },
+    { label: "D", value: "" },
+  ];
+
   multipleAnswers.value = [];
 
   if (dataFormRef.value) {
@@ -602,7 +873,46 @@ onMounted(() => {
     ElMessage.error("缺少科目ID参数");
     return;
   }
+
+  // 获取科目信息，以便确定支持的语言
+  loadSubjectInfo();
   fetchData();
+
+  // 监听窗口大小变化，重新渲染题目预览
+  window.addEventListener("resize", handleResize);
+});
+
+// 加载科目信息
+async function loadSubjectInfo() {
+  try {
+    const subjectInfo = await SubjectAPI.getFormData(queryParams.subjectId);
+    subjectSupportLanguages.value = subjectInfo.supportLanguages || "zh"; // 默认支持中文
+  } catch (error) {
+    console.error("获取科目信息失败", error);
+    subjectSupportLanguages.value = "zh"; // 失败时默认支持中文
+  }
+}
+
+// 处理窗口大小变化
+let resizeTimer: NodeJS.Timeout | null = null;
+function handleResize() {
+  // 使用防抖，避免频繁触发
+  if (resizeTimer) {
+    clearTimeout(resizeTimer);
+  }
+  resizeTimer = setTimeout(() => {
+    // 强制重新渲染表格，触发 getContentPreview 重新计算
+    const temp = tableData.value;
+    tableData.value = [];
+    nextTick(() => {
+      tableData.value = temp;
+    });
+  }, 300);
+}
+
+// 组件卸载时移除监听
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
 });
 </script>
 
@@ -668,18 +978,39 @@ onMounted(() => {
 }
 
 .question-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
   padding: 24px;
   font-size: 14px;
   background-color: #f5f7fa;
 
-  .left-section,
-  .right-section {
+  // 默认单列布局（只有中文）
+  .left-section {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .right-section {
+    display: none;
+  }
+
+  // 双列布局（中英文都有）
+  &.has-both-languages {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+
+    .left-section,
+    .right-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    // 左侧中文内容加边框
+    .left-section {
+      padding-right: 24px;
+      border-right: 2px solid #dcdfe6;
+    }
   }
 
   .divider {
@@ -700,8 +1031,57 @@ onMounted(() => {
     .block-content {
       line-height: 1.8;
       color: #303133;
-      word-break: break-all;
       word-wrap: break-word;
+      overflow-wrap: break-word;
+
+      &.answer-content {
+        font-size: 15px;
+        font-weight: 600;
+        color: #409eff;
+      }
+
+      // 解析内容段落样式
+      :deep(p) {
+        margin: 8px 0;
+        line-height: 1.8;
+      }
+
+      :deep(br) {
+        display: block;
+        margin: 4px 0;
+      }
+
+      // 代码块样式
+      :deep(pre) {
+        padding: 16px;
+        margin: 12px 0;
+        overflow-x: auto;
+        font-family: "Courier New", "Consolas", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f6f8fa;
+        border: 1px solid #e1e4e8;
+        border-radius: 6px;
+
+        code {
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          color: inherit;
+          background-color: transparent;
+          border: none;
+        }
+      }
+
+      :deep(code) {
+        padding: 2px 6px;
+        font-family: "Courier New", "Consolas", monospace;
+        font-size: 90%;
+        color: #d73a49;
+        background-color: #f6f8fa;
+        border-radius: 3px;
+      }
     }
   }
 
@@ -739,6 +1119,14 @@ onMounted(() => {
   line-height: 1.5;
   word-break: break-all;
   white-space: normal;
+
+  .en-content {
+    padding-top: 4px;
+    margin-top: 4px;
+    font-size: 13px;
+    color: #606266;
+    border-top: 1px dashed #dcdfe6;
+  }
 }
 
 .option-editor-item {
@@ -789,6 +1177,20 @@ onMounted(() => {
 
     .el-button {
       font-weight: bold;
+    }
+  }
+
+  // 语言标签页样式
+  .language-tabs {
+    margin-top: 16px;
+
+    :deep(.el-tabs__item) {
+      font-size: 15px;
+      font-weight: 500;
+
+      &.is-active {
+        font-weight: 700;
+      }
     }
   }
 }

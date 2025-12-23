@@ -114,12 +114,6 @@
               </template>
               <!-- 题库操作 -->
               <template v-else>
-                <el-button type="primary" link @click="handleUploadQuestions(scope.row)">
-                  上传题库
-                </el-button>
-                <el-button type="primary" link @click="handleAddQuestion(scope.row)">
-                  添加试题
-                </el-button>
                 <el-button type="primary" link @click="handleManageQuestion(scope.row)">
                   试题管理
                 </el-button>
@@ -306,7 +300,7 @@
                 style="width: 100%"
               >
                 <el-option label="中文" value="zh" />
-                <el-option label="English" value="en" />
+                <el-option label="英文" value="en" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -423,7 +417,7 @@
                 style="width: 100%"
               >
                 <el-option label="中文" value="zh" />
-                <el-option label="English" value="en" />
+                <el-option label="英文" value="en" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -635,9 +629,18 @@ watch(selectedLanguagesForEdit, (val) => {
 // 编辑科目表单验证规则
 const subjectEditRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
-    nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
   };
+
+  // 根据支持语言动态设置必填规则
+  const languages = selectedLanguagesForEdit.value;
+  if (languages.includes("zh")) {
+    rules.nameZh = [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }];
+  }
+  if (languages.includes("en")) {
+    rules.nameEn = [{ required: true, message: "请输入科目名称（英文）", trigger: "blur" }];
+  }
+
   return rules;
 });
 
@@ -670,9 +673,18 @@ watch(selectedLanguagesForCreate, (val) => {
 // 新建科目表单验证规则
 const subjectCreateRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
-    nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
   };
+
+  // 根据支持语言动态设置必填规则
+  const languages = selectedLanguagesForCreate.value;
+  if (languages.includes("zh")) {
+    rules.nameZh = [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }];
+  }
+  if (languages.includes("en")) {
+    rules.nameEn = [{ required: true, message: "请输入科目名称（英文）", trigger: "blur" }];
+  }
+
   return rules;
 });
 
@@ -973,23 +985,6 @@ function handleToolbarUpload() {
   router.push({
     path: "/exam/question-bank/upload",
     query: { activeMenu: "/exam/provider" },
-  });
-}
-
-// 添加试题
-function handleAddQuestion(row: TableRow) {
-  ElMessage.info(`添加试题到: ${row.nameZh}`);
-}
-
-// 上传题库
-function handleUploadQuestions(row: TableRow) {
-  // 跳转到新的题库上传页面，携带科目ID
-  router.push({
-    path: "/exam/question-bank/upload",
-    query: {
-      subjectId: row.id,
-      activeMenu: "/exam/provider",
-    },
   });
 }
 
