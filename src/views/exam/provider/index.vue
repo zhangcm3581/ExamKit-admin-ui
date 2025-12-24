@@ -1002,7 +1002,14 @@ function handleManageQuestion(row: TableRow) {
 
 // 练习
 function handlePractice(row: TableRow) {
-  ElMessage.info(`开始练习: ${row.nameZh}`);
+  router.push({
+    path: "/exam/practice",
+    query: {
+      subjectId: row.id as string,
+      subjectName: row.nameZh || row.nameEn || "",
+      activeMenu: "/exam/provider",
+    },
+  });
 }
 
 // 下载模板
