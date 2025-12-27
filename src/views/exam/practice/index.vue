@@ -130,16 +130,21 @@
 
           <!-- 导航按钮 -->
           <div class="navigation-buttons">
-            <el-button size="small" :disabled="currentIndex === 0" @click="handlePrevious">
+            <el-button
+              class="nav-button prev-button"
+              :disabled="currentIndex === 0"
+              @click="handlePrevious"
+            >
               <el-icon><ArrowLeft /></el-icon>
-              上一题
+              <span>上一题</span>
             </el-button>
             <el-button
-              size="small"
+              class="nav-button next-button"
+              type="primary"
               :disabled="currentIndex === questions.length - 1"
               @click="handleNext"
             >
-              下一题
+              <span>下一题</span>
               <el-icon><ArrowRight /></el-icon>
             </el-button>
           </div>
@@ -213,16 +218,21 @@
 
           <!-- 导航按钮 -->
           <div class="navigation-buttons">
-            <el-button size="small" :disabled="currentIndex === 0" @click="handlePrevious">
+            <el-button
+              class="nav-button prev-button"
+              :disabled="currentIndex === 0"
+              @click="handlePrevious"
+            >
               <el-icon><ArrowLeft /></el-icon>
-              上一题
+              <span>上一题</span>
             </el-button>
             <el-button
-              size="small"
+              class="nav-button next-button"
+              type="primary"
               :disabled="currentIndex === questions.length - 1"
               @click="handleNext"
             >
-              下一题
+              <span>下一题</span>
               <el-icon><ArrowRight /></el-icon>
             </el-button>
           </div>
@@ -716,15 +726,37 @@ onMounted(async () => {
 
 .navigation-buttons {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: center;
-  padding-top: 12px;
-  margin-top: 12px;
+  padding-top: 16px;
+  margin-top: 16px;
   border-top: 1px solid #e4e7ed;
 
-  .el-button {
-    min-width: 80px;
-    font-size: 12px;
+  .nav-button {
+    min-width: 100px;
+    font-size: 14px;
+    font-weight: 600;
+
+    &.prev-button {
+      .el-icon {
+        margin-right: 6px;
+      }
+    }
+
+    &.next-button {
+      .el-icon {
+        margin-left: 6px;
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    span {
+      display: inline-block;
+    }
   }
 }
 </style>

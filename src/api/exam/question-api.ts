@@ -119,12 +119,46 @@ const QuestionAPI = {
   },
 
   /**
-   * 删除试题
+   * 删除试题（单个）
    */
-  deleteByIds(ids: string) {
+  deleteById(id: number, subjectId: string) {
     return request({
-      url: `${QUESTION_BASE_URL}/${ids}`,
+      url: `${QUESTION_BASE_URL}/${id}`,
       method: "delete",
+      params: { subjectId },
+    });
+  },
+
+  /**
+   * 批量删除试题
+   */
+  batchDelete(ids: number[], subjectId: string) {
+    return request({
+      url: `${QUESTION_BASE_URL}/batch-delete`,
+      method: "post",
+      data: { ids, subjectId },
+    });
+  },
+
+  /**
+   * 批量更新试题
+   */
+  batchUpdate(questions: QuestionForm[]) {
+    return request({
+      url: `${QUESTION_BASE_URL}/batch-update`,
+      method: "post",
+      data: questions,
+    });
+  },
+
+  /**
+   * 批量更换题型
+   */
+  batchChangeType(ids: number[], type: string) {
+    return request({
+      url: `${QUESTION_BASE_URL}/batch-change-type`,
+      method: "post",
+      data: { ids, type },
     });
   },
 };

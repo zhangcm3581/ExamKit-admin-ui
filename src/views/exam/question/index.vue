@@ -55,7 +55,7 @@
                 <el-dropdown-item
                   :disabled="ids.length === 0"
                   class="delete-item"
-                  @click="handleDelete"
+                  @click="handleDelete()"
                 >
                   批量删除
                 </el-dropdown-item>
@@ -94,12 +94,9 @@
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column type="expand">
           <template #default="{ row }">
-            <div
-              class="question-detail-grid"
-              :class="{ 'has-both-languages': row.contentEn || row.optionsEn || row.explanationEn }"
-            >
+            <div class="question-detail-grid" :class="{ 'has-both-languages': hasBothLanguages() }">
               <!-- 左侧：中文内容 -->
-              <div class="left-section">
+              <div v-if="subjectSupportLanguages.includes('zh')" class="left-section">
                 <!-- 中文题干 -->
                 <div v-if="row.contentZh" class="detail-block">
                   <div class="block-label">题干</div>
@@ -131,7 +128,7 @@
               </div>
 
               <!-- 右侧：英文内容 -->
-              <div v-if="row.contentEn || row.optionsEn || row.explanationEn" class="right-section">
+              <div v-if="subjectSupportLanguages.includes('en')" class="right-section">
                 <!-- 英文题干 -->
                 <div v-if="row.contentEn" class="detail-block">
                   <div class="block-label">Question</div>
@@ -230,7 +227,13 @@
         </el-form-item>
 
         <!-- 中英文内容切换标签页 -->
-        <el-tabs v-model="activeLanguageTab" type="border-card" class="language-tabs">
+        <!-- 同时支持中英文时显示标签页 -->
+        <el-tabs
+          v-if="hasBothLanguagesForEdit()"
+          v-model="activeLanguageTab"
+          type="border-card"
+          class="language-tabs"
+        >
           <!-- 中文标签页 -->
           <el-tab-pane label="中文" name="zh">
             <el-form-item
@@ -316,6 +319,87 @@
           </el-tab-pane>
         </el-tabs>
 
+        <!-- 单语言时直接显示内容，不使用标签页 -->
+        <template v-else>
+          <!-- 仅中文 -->
+          <template v-if="subjectSupportLanguages.includes('zh')">
+            <el-form-item label="试题题目" prop="contentZh" :required="true">
+              <WangEditor v-model="formData.contentZh" height="200px" />
+            </el-form-item>
+
+            <el-form-item
+              v-if="formData.type !== 'JUDGE'"
+              label="试题选项"
+              prop="optionsZh"
+              :required="true"
+            >
+              <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
+                <span class="option-label">{{ option.label }}</span>
+                <div class="option-editor">
+                  <WangEditor v-model="option.value" height="120px" />
+                </div>
+                <el-button
+                  v-if="optionsList.length > 2"
+                  type="primary"
+                  text
+                  icon="Delete"
+                  class="delete-btn"
+                  @click="removeOption(index)"
+                >
+                  删除
+                </el-button>
+              </div>
+              <el-button style="margin-top: 12px" type="primary" plain @click="addOption">
+                添加选项
+              </el-button>
+            </el-form-item>
+
+            <el-form-item label="解析">
+              <WangEditor v-model="formData.explanationZh" height="200px" />
+            </el-form-item>
+          </template>
+
+          <!-- 仅英文 -->
+          <template
+            v-if="subjectSupportLanguages.includes('en') && !subjectSupportLanguages.includes('zh')"
+          >
+            <el-form-item label="Question" prop="contentEn" :required="true">
+              <WangEditor v-model="formData.contentEn" height="200px" />
+            </el-form-item>
+
+            <el-form-item
+              v-if="formData.type !== 'JUDGE'"
+              label="Options"
+              prop="optionsEn"
+              :required="true"
+            >
+              <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
+                <span class="option-label">{{ option.label }}</span>
+                <div class="option-editor">
+                  <WangEditor v-model="option.value" height="120px" />
+                </div>
+                <el-button
+                  v-if="optionsListEn.length > 2"
+                  type="primary"
+                  text
+                  icon="Delete"
+                  class="delete-btn"
+                  @click="removeOptionEn(index)"
+                >
+                  Delete
+                </el-button>
+              </div>
+              <el-button style="margin-top: 12px" type="primary" plain @click="addOptionEn">
+                Add Option
+              </el-button>
+            </el-form-item>
+
+            <el-form-item label="Explanation">
+              <WangEditor v-model="formData.explanationEn" height="200px" />
+            </el-form-item>
+          </template>
+        </template>
+
         <!-- 答案（通用，不区分语言） -->
         <el-form-item label="答案" prop="answer">
           <template v-if="formData.type === 'SINGLE'">
@@ -354,7 +438,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import QuestionAPI, {
   type QuestionPageQuery,
   type QuestionVO,
@@ -370,6 +454,7 @@ defineOptions({
 });
 
 const route = useRoute();
+const router = useRouter();
 const dataFormRef = ref();
 const loading = ref(false);
 const ids = ref<number[]>([]);
@@ -455,6 +540,18 @@ watch(multipleAnswers, (newVal) => {
     formData.answer = newVal.sort().join("");
   }
 });
+
+// 判断科目是否同时支持中英文
+function hasBothLanguages(): boolean {
+  const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
+  return languages.includes("zh") && languages.includes("en");
+}
+
+// 判断编辑对话框中科目是否同时支持中英文
+function hasBothLanguagesForEdit(): boolean {
+  const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
+  return languages.includes("zh") && languages.includes("en");
+}
 
 // 获取题型文本
 function getQuestionTypeText(type: string): string {
@@ -709,7 +806,14 @@ function handleBatchChangeType() {
     ElMessage.warning("请选择要更换题型的试题");
     return;
   }
-  ElMessage.info("批量更换题型功能待开发");
+  // 跳转到批量编辑页面
+  router.push({
+    path: "/exam/question/batch-edit",
+    query: {
+      ids: ids.value.join(","),
+      subjectId: queryParams.subjectId,
+    },
+  });
 }
 
 // 批量编辑
@@ -718,7 +822,14 @@ function handleBatchEdit() {
     ElMessage.warning("请选择要编辑的试题");
     return;
   }
-  ElMessage.info("批量编辑功能待开发");
+  // 跳转到批量编辑页面
+  router.push({
+    path: "/exam/question/batch-edit",
+    query: {
+      ids: ids.value.join(","),
+      subjectId: queryParams.subjectId,
+    },
+  });
 }
 
 // 查询
@@ -774,12 +885,27 @@ function handleDelete(id?: number) {
     return;
   }
 
-  ElMessageBox.confirm("确认删除选中的试题吗？", "警告", {
+  // 检查科目ID
+  if (!queryParams.subjectId) {
+    ElMessage.error("缺少科目ID参数，无法删除试题");
+    return;
+  }
+
+  const confirmMessage =
+    delIds.length === 1 ? "确认删除该试题吗？" : `确认删除选中的 ${delIds.length} 道试题吗？`;
+
+  ElMessageBox.confirm(confirmMessage, "警告", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    QuestionAPI.deleteByIds(delIds.join(",")).then(() => {
+    // 单个删除使用 DELETE 方法，批量删除使用 POST 方法
+    const deletePromise =
+      delIds.length === 1
+        ? QuestionAPI.deleteById(delIds[0], queryParams.subjectId)
+        : QuestionAPI.batchDelete(delIds, queryParams.subjectId);
+
+    deletePromise.then(() => {
       ElMessage.success("删除成功");
       fetchData();
     });
@@ -948,7 +1074,12 @@ onUnmounted(() => {
   color: #409eff;
 }
 
+:deep(.el-dropdown-menu__item) {
+  font-weight: bold;
+}
+
 :deep(.el-dropdown-menu__item.delete-item) {
+  font-weight: bold;
   color: #f56c6c;
 
   &:not(.is-disabled):hover {

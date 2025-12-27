@@ -101,6 +101,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: "试题管理", icon: "document", hidden: true, activeMenu: "/exam/provider" },
       },
       {
+        path: "exam/question/batch-edit",
+        name: "QuestionBatchEdit",
+        component: () => import("@/views/exam/question/batch-edit.vue"),
+        meta: { title: "批量编辑试题", icon: "edit", hidden: true, activeMenu: "/exam/provider" },
+      },
+      {
         path: "exam/practice",
         name: "PracticeView",
         component: () => import("@/views/exam/practice/index.vue"),
