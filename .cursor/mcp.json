@@ -2,6 +2,14 @@
   "mcpServers": {
     "vue-mcp": {
       "url": "http://localhost:3000/__mcp/sse"
+    },
+    "mysql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-mysql",
+        "mysql://root:123456@localhost:3306/examkit"
+      ]
     }
   }
 }

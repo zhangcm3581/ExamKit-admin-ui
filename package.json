@@ -70,7 +70,8 @@
     "vue-draggable-plus": "^0.6.0",
     "vue-i18n": "^11.1.12",
     "vue-router": "^4.6.3",
-    "vxe-table": "~4.6.25"
+    "vxe-table": "~4.6.25",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
