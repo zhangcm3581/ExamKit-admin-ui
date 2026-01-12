@@ -130,7 +130,7 @@
     <el-dialog
       v-model="publishDialogVisible"
       title="发布到科目"
-      width="600px"
+      width="700px"
       :close-on-click-modal="false"
     >
       <el-form ref="publishFormRef" :model="publishForm" label-width="120px">
@@ -139,33 +139,56 @@
             v-model="publishForm.subjectId"
             placeholder="请选择科目"
             filterable
+            :filter-method="filterSubjects"
             @change="handleSubjectChange"
           >
             <el-option
-              v-for="subject in subjects"
+              v-for="subject in filteredSubjects"
               :key="subject.id"
-              :label="subject.nameZh"
               :value="subject.id"
-            />
+              :label="getSubjectSingleName(subject)"
+            >
+              <template v-if="hasBothLanguages(subject)">
+                <div class="subject-option-bilingual">
+                  <div class="subject-name-primary">{{ subject.nameZh }}</div>
+                  <div class="subject-name-secondary">{{ subject.nameEn }}</div>
+                </div>
+              </template>
+              <template v-else>
+                <span>{{ getSubjectSingleName(subject) }}</span>
+              </template>
+            </el-option>
           </el-select>
         </el-form-item>
 
-        <el-alert v-if="languageCheck.hasLanguage" type="warning" :closable="false" show-icon>
-          <template #title>
-            该科目已存在{{ metadata.language === "zh" ? "中文" : "英文" }}题目（共{{
-              languageCheck.questionCount
-            }}题）， 发布后将
-            <strong>全量替换</strong>
-            该语言的题目内容
-          </template>
-        </el-alert>
+        <!-- 选中科目的详细信息 -->
+        <el-form-item v-if="selectedSubject" label="" class="selected-subject-info">
+          <div class="subject-detail-card">
+            <div class="subject-detail-name">{{ selectedSubject.nameZh }}</div>
+            <div v-if="selectedSubject.nameEn" class="subject-detail-name-en">
+              {{ selectedSubject.nameEn }}
+            </div>
+          </div>
+        </el-form-item>
 
-        <el-alert v-else-if="publishForm.subjectId" type="info" :closable="false" show-icon>
-          <template #title>
-            该科目暂无{{ metadata.language === "zh" ? "中文" : "英文" }}题目，发布后将
-            <strong>全量插入</strong>
-          </template>
-        </el-alert>
+        <el-form-item label="" class="language-check-info">
+          <el-alert v-if="languageCheck.hasLanguage" type="warning" :closable="false" show-icon>
+            <template #title>
+              该科目已存在{{ metadata.language === "zh" ? "中文" : "英文" }}题目（共{{
+                languageCheck.questionCount
+              }}题）， 发布后将
+              <strong>全量替换</strong>
+              该语言的题目内容
+            </template>
+          </el-alert>
+
+          <el-alert v-else-if="publishForm.subjectId" type="info" :closable="false" show-icon>
+            <template #title>
+              该科目暂无{{ metadata.language === "zh" ? "中文" : "英文" }}题目，发布后将
+              <strong>全量插入</strong>
+            </template>
+          </el-alert>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button style="font-weight: bold" @click="publishDialogVisible = false">取消</el-button>
@@ -216,6 +239,9 @@ const metadata = reactive({
 
 const questions = ref<QuestionDraftItemVO[]>([]);
 const subjects = ref<SubjectVO[]>([]);
+const filteredSubjects = ref<SubjectVO[]>([]);
+const filterKeyword = ref("");
+const selectedSubject = ref<SubjectVO | null>(null);
 
 const editForm = reactive({
   id: 0,
@@ -271,6 +297,7 @@ const fetchSubjects = async () => {
   try {
     const res = await SubjectAPI.getPage({ pageNum: 1, pageSize: 1000 });
     subjects.value = res.data || [];
+    filteredSubjects.value = res.data || [];
   } catch (error) {
     console.error("获取科目列表失败", error);
   }
@@ -279,8 +306,12 @@ const fetchSubjects = async () => {
 // 科目选择变化
 const handleSubjectChange = async (subjectId: string) => {
   if (!subjectId) {
+    selectedSubject.value = null;
     return;
   }
+
+  // 设置选中的科目
+  selectedSubject.value = subjects.value.find((s) => s.id === subjectId) || null;
 
   try {
     const result = await QuestionBankAPI.checkLanguage(subjectId, metadata.language);
@@ -288,6 +319,22 @@ const handleSubjectChange = async (subjectId: string) => {
   } catch (error) {
     console.error("检查语言失败", error);
   }
+};
+
+// 自定义过滤方法
+const filterSubjects = (keyword: string) => {
+  filterKeyword.value = keyword;
+  if (!keyword) {
+    filteredSubjects.value = subjects.value;
+    return;
+  }
+
+  const lowerKeyword = keyword.toLowerCase();
+  filteredSubjects.value = subjects.value.filter((subject) => {
+    const nameZh = (subject.nameZh || "").toLowerCase();
+    const nameEn = (subject.nameEn || "").toLowerCase();
+    return nameZh.includes(lowerKeyword) || nameEn.includes(lowerKeyword);
+  });
 };
 
 // 解析选项JSON
@@ -413,6 +460,39 @@ const handleConfirmPublish = async () => {
   }
 };
 
+// 判断科目是否同时支持中英文
+const hasBothLanguages = (subject: SubjectVO) => {
+  if (!subject) return false;
+
+  const supportLanguages = subject.supportLanguages || "";
+  const hasZh = supportLanguages.includes("zh");
+  const hasEn = supportLanguages.includes("en");
+  const hasNameZh = !!(subject.nameZh && subject.nameZh.trim());
+  const hasNameEn = !!(subject.nameEn && subject.nameEn.trim());
+
+  return hasZh && hasEn && hasNameZh && hasNameEn;
+};
+
+// 获取科目单一名称（用于选中后输入框显示）
+const getSubjectSingleName = (subject: SubjectVO) => {
+  const supportLanguages = subject.supportLanguages || "";
+  const hasZh = supportLanguages.includes("zh");
+  const hasEn = supportLanguages.includes("en");
+
+  // 优先显示中文
+  if (hasZh && subject.nameZh) {
+    return subject.nameZh;
+  }
+
+  // 其次显示英文
+  if (hasEn && subject.nameEn) {
+    return subject.nameEn;
+  }
+
+  // 兜底：返回任何可用的名称
+  return subject.nameZh || subject.nameEn || "未命名科目";
+};
+
 // 返回
 const handleBack = () => {
   router.back();
@@ -423,6 +503,107 @@ onMounted(() => {
   fetchSubjects();
 });
 </script>
+
+<style lang="scss">
+/* 科目选项双语显示样式 - 全局样式 */
+.subject-option-bilingual {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  padding: 8px 0 !important;
+  line-height: 1.4 !important;
+
+  .subject-name-primary {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #303133 !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  .subject-name-secondary {
+    padding-top: 6px !important;
+    font-size: 12px !important;
+    color: #909399 !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    border-top: 1px dashed #d9d9d9 !important;
+  }
+}
+
+/* 确保 el-option 有足够的高度和明显的区分 */
+.el-select-dropdown__item {
+  height: auto !important;
+  min-height: 34px !important;
+  padding: 12px 20px !important;
+  margin-bottom: 2px !important;
+  line-height: normal !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e4e7ed !important;
+  border-radius: 4px !important;
+  transition: all 0.2s;
+}
+
+.el-select-dropdown__item:hover {
+  background-color: #f5f7fa !important;
+  border-color: #c0c4cc !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.el-select-dropdown__item.selected {
+  background-color: #ecf5ff !important;
+  border-color: #409eff !important;
+}
+
+/* 下拉菜单内边距调整 */
+.el-select-dropdown__list {
+  padding: 6px !important;
+}
+
+/* 发布弹窗样式优化 */
+.el-dialog {
+  min-height: 400px;
+}
+
+.el-select-dropdown {
+  max-height: 450px !important;
+}
+
+/* 选中科目详情卡片 */
+.selected-subject-info {
+  margin-bottom: 16px !important;
+}
+
+.subject-detail-card {
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.subject-detail-name {
+  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+.subject-detail-name-en {
+  padding-top: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.9);
+  border-top: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+/* 语言检查信息 */
+.language-check-info {
+  margin-bottom: 0 !important;
+}
+</style>
 
 <style scoped lang="scss">
 .app-container {

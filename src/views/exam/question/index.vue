@@ -566,11 +566,11 @@ function getQuestionTypeText(type: string): string {
 // 获取题型颜色
 function getQuestionTypeColor(type: string): string {
   const colorMap: Record<string, string> = {
-    SINGLE: "",
+    SINGLE: "primary",
     MULTIPLE: "success",
     JUDGE: "warning",
   };
-  return colorMap[type] || "";
+  return colorMap[type] || "info";
 }
 
 // 解析选项JSON

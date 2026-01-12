@@ -39,7 +39,11 @@
         class="user-table"
         stripe
       >
-        <el-table-column label="编号" prop="id" width="80" align="center" />
+        <el-table-column label="索引" width="80" align="center">
+          <template #default="scope">
+            {{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}
+          </template>
+        </el-table-column>
         <el-table-column label="头像" width="80" align="center">
           <template #default="scope">
             <el-avatar v-if="scope.row.avatar" :src="scope.row.avatar" :size="40" />

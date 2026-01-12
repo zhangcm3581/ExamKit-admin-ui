@@ -1108,6 +1108,26 @@ function handleSubjectEditDialogClosed() {
 
 // 新建科目
 function handleNewSubject() {
+  // 先重置表单数据，避免显示上次创建的信息
+  subjectCreateForm.nameZh = "";
+  subjectCreateForm.nameEn = "";
+  subjectCreateForm.providerId = undefined;
+  subjectCreateForm.supportLanguages = "";
+  subjectCreateForm.descriptionZh = "";
+  subjectCreateForm.descriptionEn = "";
+  subjectCreateForm.sortOrder = 0;
+  subjectCreateForm.status = 1;
+  subjectCreateForm.examInfoZh = "";
+  subjectCreateForm.examInfoEn = "";
+  selectedLanguagesForCreate.value = [];
+
+  // 清除表单验证状态
+  nextTick(() => {
+    if (subjectCreateFormRef.value) {
+      subjectCreateFormRef.value.clearValidate();
+    }
+  });
+
   subjectCreateDialog.visible = true;
 }
 
