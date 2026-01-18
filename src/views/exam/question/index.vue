@@ -36,6 +36,12 @@
                 >
                   判断题
                 </el-dropdown-item>
+                <el-dropdown-item
+                  :class="{ 'is-active': queryParams.type === 'SHORT_ANSWER' }"
+                  @click="handleTypeFilter('SHORT_ANSWER')"
+                >
+                  简答题
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -103,7 +109,7 @@
                   <div class="block-content" v-html="row.contentZh"></div>
                 </div>
                 <!-- 中文选项 -->
-                <div v-if="row.optionsZh" class="detail-block">
+                <div v-if="row.optionsZh && row.type !== 'SHORT_ANSWER'" class="detail-block">
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsZh)"
@@ -118,7 +124,14 @@
                 <!-- 答案（中文区域总是显示） -->
                 <div class="detail-block">
                   <div class="block-label">答案</div>
-                  <div class="block-content answer-content">{{ row.answer }}</div>
+                  <!-- 简答题显示富文本答案 -->
+                  <div
+                    v-if="row.type === 'SHORT_ANSWER'"
+                    class="block-content"
+                    v-html="row.answer"
+                  ></div>
+                  <!-- 其他题型显示字母答案 -->
+                  <div v-else class="block-content answer-content">{{ row.answer }}</div>
                 </div>
                 <!-- 中文解析 -->
                 <div v-if="row.explanationZh" class="detail-block">
@@ -135,7 +148,7 @@
                   <div class="block-content" v-html="row.contentEn"></div>
                 </div>
                 <!-- 英文选项 -->
-                <div v-if="row.optionsEn" class="detail-block">
+                <div v-if="row.optionsEn && row.type !== 'SHORT_ANSWER'" class="detail-block">
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsEn)"
@@ -150,7 +163,14 @@
                 <!-- 答案（英文区域） -->
                 <div class="detail-block">
                   <div class="block-label">Answer</div>
-                  <div class="block-content answer-content">{{ row.answer }}</div>
+                  <!-- 简答题显示富文本答案 -->
+                  <div
+                    v-if="row.type === 'SHORT_ANSWER'"
+                    class="block-content"
+                    v-html="row.answer"
+                  ></div>
+                  <!-- 其他题型显示字母答案 -->
+                  <div v-else class="block-content answer-content">{{ row.answer }}</div>
                 </div>
                 <!-- 英文解析 -->
                 <div v-if="row.explanationEn" class="detail-block">
@@ -181,7 +201,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="答案" prop="answer" width="100" align="center" />
+        <el-table-column label="答案" width="200" align="center">
+          <template #default="{ row }">
+            <!-- 简答题显示富文本答案预览 -->
+            <div
+              v-if="row.type === 'SHORT_ANSWER'"
+              class="answer-preview"
+              v-html="getContentPreview(row.answer)"
+            ></div>
+            <!-- 其他题型显示字母答案 -->
+            <span v-else>{{ row.answer }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="编辑时间" width="200" align="center">
           <template #default="{ row }">
             {{ formatDateTime(row.updateTime) }}
@@ -223,6 +254,7 @@
             <el-radio label="SINGLE">单选题</el-radio>
             <el-radio label="MULTIPLE">多选题</el-radio>
             <el-radio label="JUDGE">判断题</el-radio>
+            <el-radio label="SHORT_ANSWER">简答题</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -245,7 +277,7 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE'"
+              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
               label="试题选项"
               :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
               :required="subjectSupportLanguages.includes('zh')"
@@ -287,7 +319,7 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE'"
+              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
               label="试题选项"
               :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
               :required="subjectSupportLanguages.includes('en')"
@@ -328,7 +360,7 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE'"
+              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
               label="试题选项"
               prop="optionsZh"
               :required="true"
@@ -368,7 +400,7 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE'"
+              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
               label="Options"
               prop="optionsEn"
               :required="true"
@@ -402,13 +434,19 @@
 
         <!-- 答案（通用，不区分语言） -->
         <el-form-item label="答案" prop="answer">
-          <template v-if="formData.type === 'SINGLE'">
+          <!-- 简答题使用富文本编辑器 -->
+          <template v-if="formData.type === 'SHORT_ANSWER'">
+            <WangEditor v-model="formData.answer" height="200px" />
+          </template>
+          <!-- 单选题 -->
+          <template v-else-if="formData.type === 'SINGLE'">
             <el-radio-group v-model="formData.answer">
               <el-radio v-for="option in optionsList" :key="option.label" :label="option.label">
                 {{ option.label }}
               </el-radio>
             </el-radio-group>
           </template>
+          <!-- 多选题 -->
           <template v-else-if="formData.type === 'MULTIPLE'">
             <el-checkbox-group v-model="multipleAnswers">
               <el-checkbox v-for="option in optionsList" :key="option.label" :label="option.label">
@@ -416,6 +454,7 @@
               </el-checkbox>
             </el-checkbox-group>
           </template>
+          <!-- 判断题 -->
           <template v-else>
             <el-radio-group v-model="formData.answer">
               <el-radio label="A">正确</el-radio>
@@ -468,8 +507,8 @@ const queryParams = reactive<QuestionPageQuery>({
 
 const tableData = ref<QuestionVO[]>([]);
 
-// 科目支持的语言
-const subjectSupportLanguages = ref<string>("");
+// 科目支持的语言（默认中文）
+const subjectSupportLanguages = ref<string>("zh");
 
 const dialog = reactive({
   title: "",
@@ -509,6 +548,7 @@ const currentTypeLabel = computed(() => {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
     JUDGE: "判断题",
+    SHORT_ANSWER: "简答题",
   };
   return typeMap[queryParams.type || ""] || "全部题型";
 });
@@ -559,6 +599,7 @@ function getQuestionTypeText(type: string): string {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
     JUDGE: "判断题",
+    SHORT_ANSWER: "简答题",
   };
   return typeMap[type] || type;
 }
@@ -569,6 +610,7 @@ function getQuestionTypeColor(type: string): string {
     SINGLE: "primary",
     MULTIPLE: "success",
     JUDGE: "warning",
+    SHORT_ANSWER: "info",
   };
   return colorMap[type] || "info";
 }
@@ -754,8 +796,13 @@ function handleTypeChange() {
   formData.answer = "";
   multipleAnswers.value = [];
 
+  // 如果是简答题，清空选项
+  if (formData.type === "SHORT_ANSWER") {
+    optionsList.value = [];
+    optionsListEn.value = [];
+  }
   // 如果是判断题，重置选项
-  if (formData.type === "JUDGE") {
+  else if (formData.type === "JUDGE") {
     optionsList.value = [
       { label: "A", value: "正确" },
       { label: "B", value: "错误" },
@@ -764,8 +811,8 @@ function handleTypeChange() {
       { label: "A", value: "True" },
       { label: "B", value: "False" },
     ];
-  } else if (optionsList.value.length === 2) {
-    // 从判断题切换回单选/多选，恢复默认选项
+  } else if (optionsList.value.length === 0 || optionsList.value.length === 2) {
+    // 从简答题或判断题切换回单选/多选，恢复默认选项
     optionsList.value = [
       { label: "A", value: "" },
       { label: "B", value: "" },
@@ -858,17 +905,23 @@ async function handleEdit(row: QuestionVO) {
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
 
-  // 解析中文选项
-  if (data.optionsZh) {
-    optionsList.value = parseOptions(data.optionsZh);
-  }
-
-  // 解析英文选项
-  if (data.optionsEn) {
-    optionsListEn.value = parseOptions(data.optionsEn);
+  // 简答题不需要解析选项
+  if (data.type === "SHORT_ANSWER") {
+    optionsList.value = [];
+    optionsListEn.value = [];
   } else {
-    // 如果没有英文选项，初始化为与中文相同数量的空选项
-    optionsListEn.value = optionsList.value.map((opt) => ({ label: opt.label, value: "" }));
+    // 解析中文选项
+    if (data.optionsZh) {
+      optionsList.value = parseOptions(data.optionsZh);
+    }
+
+    // 解析英文选项
+    if (data.optionsEn) {
+      optionsListEn.value = parseOptions(data.optionsEn);
+    } else {
+      // 如果没有英文选项，初始化为与中文相同数量的空选项
+      optionsListEn.value = optionsList.value.map((opt) => ({ label: opt.label, value: "" }));
+    }
   }
 
   // 解析多选答案
@@ -916,18 +969,13 @@ function handleDelete(id?: number) {
 function handleSubmit() {
   dataFormRef.value.validate((valid: boolean) => {
     if (valid) {
-      // 构建中文选项JSON
-      if (formData.type !== "JUDGE") {
-        formData.optionsZh = JSON.stringify(optionsList.value);
-        // 构建英文选项JSON（如果有内容）
-        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
-        if (hasEnglishOptions) {
-          formData.optionsEn = JSON.stringify(optionsListEn.value);
-        } else {
-          formData.optionsEn = "";
-        }
-      } else {
-        // 判断题固定选项
+      // 简答题不需要选项
+      if (formData.type === "SHORT_ANSWER") {
+        formData.optionsZh = "[]";
+        formData.optionsEn = "[]";
+      }
+      // 判断题固定选项
+      else if (formData.type === "JUDGE") {
         formData.optionsZh = JSON.stringify([
           { label: "A", value: "正确" },
           { label: "B", value: "错误" },
@@ -936,6 +984,18 @@ function handleSubmit() {
           { label: "A", value: "True" },
           { label: "B", value: "False" },
         ]);
+      }
+      // 单选/多选题
+      else {
+        // 构建中文选项JSON
+        formData.optionsZh = JSON.stringify(optionsList.value);
+        // 构建英文选项JSON（如果有内容）
+        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
+        if (hasEnglishOptions) {
+          formData.optionsEn = JSON.stringify(optionsListEn.value);
+        } else {
+          formData.optionsEn = "";
+        }
       }
 
       // 设置科目ID
@@ -1109,20 +1169,12 @@ onUnmounted(() => {
 }
 
 .question-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 24px;
   font-size: 14px;
   background-color: #f5f7fa;
-
-  // 默认单列布局（只有中文）
-  .left-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .right-section {
-    display: none;
-  }
 
   // 双列布局（中英文都有）
   &.has-both-languages {
@@ -1130,18 +1182,18 @@ onUnmounted(() => {
     grid-template-columns: 1fr 1fr;
     gap: 24px;
 
-    .left-section,
-    .right-section {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
     // 左侧中文内容加边框
     .left-section {
       padding-right: 24px;
       border-right: 2px solid #dcdfe6;
     }
+  }
+
+  .left-section,
+  .right-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .divider {
@@ -1257,6 +1309,24 @@ onUnmounted(() => {
     font-size: 13px;
     color: #606266;
     border-top: 1px dashed #dcdfe6;
+  }
+}
+
+// 简答题答案预览样式
+.answer-preview {
+  display: -webkit-box;
+  max-height: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3;
+  line-height: 1.6;
+  color: #606266;
+  text-align: left;
+  overflow-wrap: break-word;
+  -webkit-box-orient: vertical;
+
+  :deep(p) {
+    margin: 4px 0;
   }
 }
 

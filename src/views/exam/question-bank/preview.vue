@@ -50,8 +50,14 @@
           </el-table-column>
           <el-table-column label="选项" min-width="200">
             <template #default="{ row }">
+              <!-- 简答题显示提示 -->
+              <div v-if="row.type === 'SHORT_ANSWER'" class="short-answer-tip">
+                <el-text type="info" size="small">简答题无选项</el-text>
+              </div>
+              <!-- 其他题型显示选项 -->
               <div
                 v-for="option in parseOptions(row.options)"
+                v-else
                 :key="option.label"
                 class="option-item"
               >
@@ -65,9 +71,16 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="answer" label="答案" width="100" align="center">
+          <el-table-column prop="answer" label="答案" min-width="200">
             <template #default="{ row }">
-              <el-tag type="success">{{ row.answer }}</el-tag>
+              <!-- 简答题显示富文本答案 -->
+              <div
+                v-if="row.type === 'SHORT_ANSWER'"
+                class="answer-content"
+                v-html="formatHtmlContent(row.answer)"
+              ></div>
+              <!-- 其他题型显示字母答案 -->
+              <el-tag v-else type="success">{{ row.answer }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="100" align="center" fixed="right">
@@ -91,10 +104,11 @@
           <el-input v-model="editForm.questionNumber" disabled />
         </el-form-item>
         <el-form-item label="题型">
-          <el-select v-model="editForm.type" style="width: 100%">
+          <el-select v-model="editForm.type" style="width: 100%" @change="handleTypeChange">
             <el-option label="单选题" value="SINGLE" />
             <el-option label="多选题" value="MULTIPLE" />
             <el-option label="判断题" value="JUDGE" />
+            <el-option label="简答题" value="SHORT_ANSWER" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
@@ -102,7 +116,7 @@
         </el-form-item>
 
         <!-- 选项编辑 -->
-        <el-form-item label="选项">
+        <el-form-item v-if="editForm.type !== 'SHORT_ANSWER'" label="选项">
           <div style="width: 100%">
             <div v-for="(option, index) in editOptions" :key="index" style="margin-bottom: 15px">
               <div style="margin-bottom: 5px; font-weight: 500; color: #606266">
@@ -114,7 +128,14 @@
         </el-form-item>
 
         <el-form-item label="答案">
-          <el-input v-model="editForm.answer" placeholder="例如：A 或 ABC" />
+          <!-- 简答题使用富文本编辑器 -->
+          <WangEditor
+            v-if="editForm.type === 'SHORT_ANSWER'"
+            v-model="editForm.answer"
+            :height="200"
+          />
+          <!-- 其他题型使用单行输入 -->
+          <el-input v-else v-model="editForm.answer" placeholder="例如：A 或 ABC" />
         </el-form-item>
         <el-form-item label="答案解析">
           <WangEditor v-model="editForm.explanation" :height="200" />
@@ -357,6 +378,7 @@ const getQuestionTypeText = (type: string) => {
     SINGLE: "单选",
     MULTIPLE: "多选",
     JUDGE: "判断",
+    SHORT_ANSWER: "简答题",
   };
   return typeMap[type] || type;
 };
@@ -367,6 +389,7 @@ const getQuestionTypeColor = (type: string) => {
     SINGLE: "primary",
     MULTIPLE: "success",
     JUDGE: "warning",
+    SHORT_ANSWER: "info",
   };
   return colorMap[type] || "";
 };
@@ -392,9 +415,9 @@ const handleEdit = (row: QuestionDraftItemVO) => {
     explanation: row.explanation || "",
   });
 
-  // 解析选项JSON
+  // 解析选项JSON(简答题无选项)
   try {
-    editOptions.value = JSON.parse(row.options);
+    editOptions.value = row.type === "SHORT_ANSWER" ? [] : JSON.parse(row.options);
   } catch (error) {
     editOptions.value = [];
     console.error("解析选项失败", error);
@@ -403,11 +426,25 @@ const handleEdit = (row: QuestionDraftItemVO) => {
   editDialogVisible.value = true;
 };
 
+// 题型切换处理
+const handleTypeChange = (newType: string) => {
+  if (newType === "SHORT_ANSWER") {
+    // 切换到简答题，清空选项
+    editOptions.value = [];
+  } else if (editOptions.value.length === 0) {
+    // 从简答题切换到其他题型，初始化默认选项
+    editOptions.value = [
+      { label: "A", value: "" },
+      { label: "B", value: "" },
+    ];
+  }
+};
+
 // 保存编辑
 const handleSaveEdit = async () => {
   try {
-    // 将选项数组转为JSON字符串
-    const optionsJson = JSON.stringify(editOptions.value);
+    // 简答题选项为空数组，其他题型将选项数组转为JSON字符串
+    const optionsJson = editForm.type === "SHORT_ANSWER" ? "[]" : JSON.stringify(editOptions.value);
 
     await QuestionBankAPI.updateDraft(editForm.id, {
       type: editForm.type,
@@ -495,7 +532,13 @@ const getSubjectSingleName = (subject: SubjectVO) => {
 
 // 返回
 const handleBack = () => {
-  router.back();
+  // 优先使用activeMenu参数
+  const activeMenu = route.query.activeMenu as string;
+  if (activeMenu) {
+    router.push(activeMenu);
+  } else {
+    router.back();
+  }
 };
 
 onMounted(() => {
@@ -667,6 +710,20 @@ onMounted(() => {
     .el-tag {
       margin-right: 8px;
     }
+  }
+
+  .short-answer-tip {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #909399;
+    background-color: #f4f4f5;
+    border-radius: 4px;
+  }
+
+  .answer-content {
+    line-height: 1.6;
+    color: #606266;
+    overflow-wrap: break-word;
   }
 }
 </style>
