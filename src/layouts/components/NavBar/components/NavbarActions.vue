@@ -32,7 +32,9 @@
     <div class="navbar-actions__item">
       <el-dropdown trigger="click">
         <div class="user-profile">
-          <img class="user-profile__avatar" :src="userStore.userInfo.avatar" />
+          <el-avatar :src="userStore.userInfo.avatar" :size="28" @error="handleAvatarError">
+            {{ userStore.userInfo.username?.substring(0, 1) }}
+          </el-avatar>
           <span class="user-profile__name">{{ userStore.userInfo.username }}</span>
         </div>
         <template #dropdown>
@@ -141,6 +143,14 @@ function logout() {
 function handleSettingsClick() {
   settingStore.settingsVisible = true;
 }
+
+/**
+ * 处理头像加载失败
+ */
+function handleAvatarError() {
+  console.warn("头像加载失败，使用默认头像");
+  return true;
+}
 </script>
 
 <style lang="scss" scoped>
@@ -203,11 +213,8 @@ function handleSettingsClick() {
     height: 100%;
     padding: 0 8px;
 
-    &__avatar {
+    :deep(.el-avatar) {
       flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
     }
 
     &__name {
