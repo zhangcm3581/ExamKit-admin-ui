@@ -37,6 +37,12 @@
                   判断题
                 </el-dropdown-item>
                 <el-dropdown-item
+                  :class="{ 'is-active': queryParams.type === 'FILL_BLANK' }"
+                  @click="handleTypeFilter('FILL_BLANK')"
+                >
+                  填空题
+                </el-dropdown-item>
+                <el-dropdown-item
                   :class="{ 'is-active': queryParams.type === 'SHORT_ANSWER' }"
                   @click="handleTypeFilter('SHORT_ANSWER')"
                 >
@@ -57,6 +63,9 @@
                 </el-dropdown-item>
                 <el-dropdown-item :disabled="ids.length === 0" @click="handleBatchEdit">
                   批量编辑
+                </el-dropdown-item>
+                <el-dropdown-item :disabled="ids.length === 0" @click="handleMoveQuestions">
+                  移动题目
                 </el-dropdown-item>
                 <el-dropdown-item
                   :disabled="ids.length === 0"
@@ -103,13 +112,21 @@
             <div class="question-detail-grid" :class="{ 'has-both-languages': hasBothLanguages() }">
               <!-- 左侧：中文内容 -->
               <div v-if="subjectSupportLanguages.includes('zh')" class="left-section">
+                <!-- 案例背景（中文） -->
+                <div v-if="row.isCase && row.caseContentZh" class="detail-block case-block">
+                  <div class="block-label">案例背景</div>
+                  <div class="block-content" v-html="row.caseContentZh"></div>
+                </div>
                 <!-- 中文题干 -->
                 <div v-if="row.contentZh" class="detail-block">
                   <div class="block-label">题干</div>
                   <div class="block-content" v-html="row.contentZh"></div>
                 </div>
                 <!-- 中文选项 -->
-                <div v-if="row.optionsZh && row.type !== 'SHORT_ANSWER'" class="detail-block">
+                <div
+                  v-if="row.optionsZh && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  class="detail-block"
+                >
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsZh)"
@@ -142,13 +159,21 @@
 
               <!-- 右侧：英文内容 -->
               <div v-if="subjectSupportLanguages.includes('en')" class="right-section">
+                <!-- 案例背景（英文） -->
+                <div v-if="row.isCase && row.caseContentEn" class="detail-block case-block">
+                  <div class="block-label">Case Background</div>
+                  <div class="block-content" v-html="row.caseContentEn"></div>
+                </div>
                 <!-- 英文题干 -->
                 <div v-if="row.contentEn" class="detail-block">
                   <div class="block-label">Question</div>
                   <div class="block-content" v-html="row.contentEn"></div>
                 </div>
                 <!-- 英文选项 -->
-                <div v-if="row.optionsEn && row.type !== 'SHORT_ANSWER'" class="detail-block">
+                <div
+                  v-if="row.optionsEn && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  class="detail-block"
+                >
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsEn)"
@@ -192,6 +217,13 @@
         <el-table-column label="题目" min-width="400">
           <template #default="{ row }">
             <div ref="contentPreviewRef" class="question-content-preview">
+              <div v-if="row.isCase && (row.caseContentZh || row.caseContentEn)" class="case-badge">
+                <el-tag type="warning" size="small" effect="plain">案例题</el-tag>
+                <span
+                  class="case-preview"
+                  v-html="getContentPreview(row.caseContentZh || row.caseContentEn, 50)"
+                ></span>
+              </div>
               <div v-if="row.contentZh" v-html="getContentPreview(row.contentZh)"></div>
               <div
                 v-if="row.contentEn"
@@ -254,6 +286,7 @@
             <el-radio label="SINGLE">单选题</el-radio>
             <el-radio label="MULTIPLE">多选题</el-radio>
             <el-radio label="JUDGE">判断题</el-radio>
+            <el-radio label="FILL_BLANK">填空题</el-radio>
             <el-radio label="SHORT_ANSWER">简答题</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -277,7 +310,11 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
+              v-if="
+                formData.type !== 'JUDGE' &&
+                formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'FILL_BLANK'
+              "
               label="试题选项"
               :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
               :required="subjectSupportLanguages.includes('zh')"
@@ -319,7 +356,11 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
+              v-if="
+                formData.type !== 'JUDGE' &&
+                formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'FILL_BLANK'
+              "
               label="试题选项"
               :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
               :required="subjectSupportLanguages.includes('en')"
@@ -360,7 +401,11 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
+              v-if="
+                formData.type !== 'JUDGE' &&
+                formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'FILL_BLANK'
+              "
               label="试题选项"
               prop="optionsZh"
               :required="true"
@@ -400,7 +445,11 @@
             </el-form-item>
 
             <el-form-item
-              v-if="formData.type !== 'JUDGE' && formData.type !== 'SHORT_ANSWER'"
+              v-if="
+                formData.type !== 'JUDGE' &&
+                formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'FILL_BLANK'
+              "
               label="Options"
               prop="optionsEn"
               :required="true"
@@ -469,6 +518,41 @@
           <el-button @click="handleCloseDialog">取 消</el-button>
           <el-button type="primary" @click="handleSubmit">确 定</el-button>
         </div>
+      </template>
+    </el-dialog>
+
+    <!-- 移动题目对话框 -->
+    <el-dialog v-model="moveDialogVisible" title="移动题目" width="450px" destroy-on-close>
+      <div class="move-info">
+        <p>
+          已选择
+          <strong>{{ ids.length }}</strong>
+          道题目
+        </p>
+        <p class="move-hint">当前题号：{{ moveSelectedNumbers }}</p>
+      </div>
+      <el-form label-width="100px" style="margin-top: 16px">
+        <el-form-item label="目标起始题号">
+          <el-input-number
+            v-model="moveTargetNumber"
+            :min="1"
+            :step="1"
+            controls-position="right"
+            style="width: 180px"
+          />
+        </el-form-item>
+        <el-form-item label="">
+          <div class="move-preview">
+            移动后：题号 {{ moveTargetNumber }} ~
+            {{ moveTargetNumber + ids.length - 1 }}，其余题目自动重新排序
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="moveDialogVisible = false"><b>取消</b></el-button>
+        <el-button type="primary" :loading="moveLoading" @click="confirmMoveQuestions">
+          <b>确认移动</b>
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -548,6 +632,7 @@ const currentTypeLabel = computed(() => {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
     JUDGE: "判断题",
+    FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
   };
   return typeMap[queryParams.type || ""] || "全部题型";
@@ -599,6 +684,7 @@ function getQuestionTypeText(type: string): string {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
     JUDGE: "判断题",
+    FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
   };
   return typeMap[type] || type;
@@ -610,6 +696,7 @@ function getQuestionTypeColor(type: string): string {
     SINGLE: "primary",
     MULTIPLE: "success",
     JUDGE: "warning",
+    FILL_BLANK: "danger",
     SHORT_ANSWER: "info",
   };
   return colorMap[type] || "info";
@@ -630,7 +717,7 @@ function parseOptions(optionsStr: string): { label: string; value: string }[] {
 }
 
 // 获取题目内容预览
-function getContentPreview(content: string): string {
+function getContentPreview(content: string, overrideMaxLength?: number): string {
   if (!content) return "";
   const text = content.replace(/<[^>]+>/g, "");
 
@@ -652,7 +739,8 @@ function getContentPreview(content: string): string {
     maxLength = 30; // 超小屏幕
   }
 
-  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+  const finalMax = overrideMaxLength ?? maxLength;
+  return text.length > finalMax ? text.substring(0, finalMax) + "..." : text;
 }
 
 // 格式化解析内容，将 \n 转换为 <br>，并处理代码块
@@ -848,6 +936,53 @@ function handleTypeFilter(type: string) {
 }
 
 // 批量更换题型
+// ==================== 移动题目 ====================
+const moveDialogVisible = ref(false);
+const moveTargetNumber = ref(1);
+const moveLoading = ref(false);
+
+const moveSelectedNumbers = computed(() => {
+  if (ids.value.length === 0) return "";
+  const selected = tableData.value
+    .filter((q: QuestionVO) => ids.value.includes(q.id))
+    .map((q: QuestionVO) => q.questionNumber)
+    .sort((a: number, b: number) => a - b);
+  return selected.join(", ");
+});
+
+function handleMoveQuestions() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请选择要移动的题目");
+    return;
+  }
+  // 默认目标题号为选中题目中最小的题号
+  const selected = tableData.value
+    .filter((q: QuestionVO) => ids.value.includes(q.id))
+    .map((q: QuestionVO) => q.questionNumber);
+  moveTargetNumber.value = Math.min(...selected);
+  moveDialogVisible.value = true;
+}
+
+async function confirmMoveQuestions() {
+  moveLoading.value = true;
+  try {
+    await QuestionAPI.moveQuestions(
+      queryParams.subjectId,
+      ids.value as number[],
+      moveTargetNumber.value
+    );
+    ElMessage.success(
+      `移动成功！${ids.value.length} 道题目已移至第 ${moveTargetNumber.value} 题开始`
+    );
+    moveDialogVisible.value = false;
+    fetchData();
+  } catch (error: any) {
+    ElMessage.error(error.message || "移动失败");
+  } finally {
+    moveLoading.value = false;
+  }
+}
+
 function handleBatchChangeType() {
   if (ids.value.length === 0) {
     ElMessage.warning("请选择要更换题型的试题");
@@ -1211,6 +1346,13 @@ onUnmounted(() => {
       color: #606266;
     }
 
+    .case-block {
+      padding: 10px 12px;
+      background: #fff7e6;
+      border-left: 3px solid #faad14;
+      border-radius: 4px;
+    }
+
     .block-content {
       line-height: 1.8;
       color: #303133;
@@ -1310,6 +1452,46 @@ onUnmounted(() => {
     color: #606266;
     border-top: 1px dashed #dcdfe6;
   }
+
+  .case-badge {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed #faad14;
+
+    .case-preview {
+      font-size: 12px;
+      color: #e6a23c;
+    }
+  }
+}
+
+// 移动题目对话框
+.move-info {
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #606266;
+  background: #f5f7fa;
+  border-radius: 6px;
+
+  p {
+    margin: 0;
+  }
+
+  .move-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #909399;
+  }
+}
+
+.move-preview {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #909399;
 }
 
 // 简答题答案预览样式

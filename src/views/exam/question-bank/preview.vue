@@ -50,9 +50,12 @@
           </el-table-column>
           <el-table-column label="选项" min-width="200">
             <template #default="{ row }">
-              <!-- 简答题显示提示 -->
+              <!-- 简答题/填空题显示提示 -->
               <div v-if="row.type === 'SHORT_ANSWER'" class="short-answer-tip">
                 <el-text type="info" size="small">简答题无选项</el-text>
+              </div>
+              <div v-else-if="row.type === 'FILL_BLANK'" class="short-answer-tip">
+                <el-text type="info" size="small">填空题（答案见答案列）</el-text>
               </div>
               <!-- 其他题型显示选项 -->
               <div
@@ -108,6 +111,7 @@
             <el-option label="单选题" value="SINGLE" />
             <el-option label="多选题" value="MULTIPLE" />
             <el-option label="判断题" value="JUDGE" />
+            <el-option label="填空题" value="FILL_BLANK" />
             <el-option label="简答题" value="SHORT_ANSWER" />
           </el-select>
         </el-form-item>
@@ -116,7 +120,10 @@
         </el-form-item>
 
         <!-- 选项编辑 -->
-        <el-form-item v-if="editForm.type !== 'SHORT_ANSWER'" label="选项">
+        <el-form-item
+          v-if="editForm.type !== 'SHORT_ANSWER' && editForm.type !== 'FILL_BLANK'"
+          label="选项"
+        >
           <div style="width: 100%">
             <div v-for="(option, index) in editOptions" :key="index" style="margin-bottom: 15px">
               <div style="margin-bottom: 5px; font-weight: 500; color: #606266">
@@ -193,21 +200,44 @@
         </el-form-item>
 
         <el-form-item label="" class="language-check-info">
-          <el-alert v-if="languageCheck.hasLanguage" type="warning" :closable="false" show-icon>
+          <!-- 题号偏移 -->
+          <el-form-item v-if="publishForm.subjectId" label="题号偏移">
+            <el-input-number
+              v-model="publishForm.offset"
+              :min="0"
+              :step="1"
+              controls-position="right"
+              style="width: 180px"
+            />
+            <div class="offset-tip">
+              <span v-if="publishForm.offset > 0">
+                草稿题号 1 → 实际题号 {{ publishForm.offset + 1 }}， 草稿题号
+                {{ metadata.totalCount }} → 实际题号 {{ publishForm.offset + metadata.totalCount }}
+              </span>
+              <span v-else>题号不偏移，草稿题号即实际题号</span>
+            </div>
+          </el-form-item>
+
+          <el-alert
+            v-if="languageCheck.maxQuestionNumber > 0 && publishForm.subjectId"
+            type="info"
+            :closable="false"
+            show-icon
+          >
             <template #title>
-              该科目已存在{{ metadata.language === "zh" ? "中文" : "英文" }}题目（共{{
-                languageCheck.questionCount
-              }}题）， 发布后将
-              <strong>全量替换</strong>
-              该语言的题目内容
+              该科目当前最大题号:
+              <strong>{{ languageCheck.maxQuestionNumber }}</strong>
+              <span v-if="languageCheck.hasLanguage">
+                （已有{{ metadata.language === "zh" ? "中文" : "英文" }}题目{{
+                  languageCheck.questionCount
+                }}道）
+              </span>
+              <span v-if="publishForm.offset === 0">，题号相同的题目将更新对应语言字段</span>
             </template>
           </el-alert>
 
           <el-alert v-else-if="publishForm.subjectId" type="info" :closable="false" show-icon>
-            <template #title>
-              该科目暂无{{ metadata.language === "zh" ? "中文" : "英文" }}题目，发布后将
-              <strong>全量插入</strong>
-            </template>
+            <template #title>该科目暂无题目，将直接插入</template>
           </el-alert>
         </el-form-item>
       </el-form>
@@ -278,11 +308,13 @@ const editOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const publishForm = reactive({
   subjectId: "",
+  offset: 0,
 });
 
 const languageCheck = reactive<LanguageCheckVO>({
   hasLanguage: false,
   questionCount: 0,
+  maxQuestionNumber: 0,
 });
 
 // 获取预览数据
@@ -378,7 +410,8 @@ const getQuestionTypeText = (type: string) => {
     SINGLE: "单选",
     MULTIPLE: "多选",
     JUDGE: "判断",
-    SHORT_ANSWER: "简答题",
+    FILL_BLANK: "填空",
+    SHORT_ANSWER: "简答",
   };
   return typeMap[type] || type;
 };
@@ -389,6 +422,7 @@ const getQuestionTypeColor = (type: string) => {
     SINGLE: "primary",
     MULTIPLE: "success",
     JUDGE: "warning",
+    FILL_BLANK: "danger",
     SHORT_ANSWER: "info",
   };
   return colorMap[type] || "";
@@ -479,10 +513,16 @@ const handleConfirmPublish = async () => {
     const result = await QuestionBankAPI.publish({
       batchId: metadata.batchId,
       subjectId: publishForm.subjectId,
+      offset: publishForm.offset,
     });
 
+    const modeText: Record<string, string> = {
+      insert: "新增",
+      match: "匹配更新",
+      mixed: "新增+匹配",
+    };
     ElMessage.success(
-      `发布成功！已发布 ${result.publishedQuestions} 道题目（${result.mode === "replace" ? "替换模式" : "插入模式"}）`
+      `发布成功！已发布 ${result.publishedQuestions} 道题目（${modeText[result.mode] || result.mode}）`
     );
     publishDialogVisible.value = false;
 
@@ -541,9 +581,9 @@ const handleBack = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchSubjects();
   fetchPreview();
-  fetchSubjects();
 });
 </script>
 
@@ -645,6 +685,13 @@ onMounted(() => {
 /* 语言检查信息 */
 .language-check-info {
   margin-bottom: 0 !important;
+}
+
+.offset-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #909399;
 }
 </style>
 

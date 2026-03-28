@@ -6,18 +6,21 @@ const QuestionBankAPI = {
   /**
    * 上传Excel文件
    */
-  upload(file: File, language: string, isCase: boolean = false) {
+  upload(file: File, language: string, isCase: boolean = false, subjectId?: string) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("language", language);
     formData.append("isCase", String(isCase));
+    if (subjectId) {
+      formData.append("subjectId", subjectId);
+    }
 
     return request({
       url: `${QUESTION_BANK_BASE_URL}/upload`,
       method: "post",
       data: formData,
       headers: {
-        "Content-Type": undefined, // 让浏览器自动设置multipart/form-data带boundary
+        "Content-Type": undefined,
       },
     });
   },
@@ -85,6 +88,17 @@ const QuestionBankAPI = {
       method: "delete",
     });
   },
+
+  /**
+   * 调整草稿题号
+   */
+  adjustDraftNumbers(data: DraftAdjustNumberRequest) {
+    return request({
+      url: `${QUESTION_BANK_BASE_URL}/draft/adjust-numbers`,
+      method: "put",
+      data,
+    });
+  },
 };
 
 export default QuestionBankAPI;
@@ -129,12 +143,14 @@ export interface QuestionDraftUpdateRequest {
 export interface LanguageCheckVO {
   hasLanguage: boolean;
   questionCount: number;
+  maxQuestionNumber: number;
 }
 
 /** 发布请求 */
 export interface QuestionBankPublishRequest {
   batchId: string;
   subjectId: string;
+  offset?: number;
 }
 
 /** 发布结果VO */
@@ -150,6 +166,12 @@ export interface DraftMetadata {
   language: string;
   totalCount: number;
   createTime: string;
+}
+
+/** 草稿题号调整请求 */
+export interface DraftAdjustNumberRequest {
+  batchId: string;
+  adjustments: Array<{ draftId: number; newNumber: number }>;
 }
 
 /** 草稿列表响应 */

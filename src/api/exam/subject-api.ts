@@ -54,6 +54,14 @@ const SubjectAPI = {
       method: "delete",
     });
   },
+
+  /** 删除科目PDF */
+  deletePdf(id: string) {
+    return request({
+      url: `${SUBJECT_BASE_URL}/${id}/pdf`,
+      method: "delete",
+    });
+  },
 };
 
 export default SubjectAPI;
@@ -96,6 +104,8 @@ export interface SubjectVO {
   pdfUrl?: string;
   /** 视频资料URLs */
   videoUrls?: string;
+  /** 科目标签/分类 */
+  tag?: string;
   /** 排序值 */
   sortOrder: number;
   /** 状态 */
@@ -130,6 +140,8 @@ export interface SubjectForm {
   pdfUrl?: string;
   /** 视频资料URLs */
   videoUrls?: string;
+  /** 科目标签/分类 */
+  tag?: string;
   /** 排序值 */
   sortOrder?: number;
   /** 状态 */

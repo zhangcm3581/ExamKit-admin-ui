@@ -19,15 +19,22 @@
             v-model="queryParams.subjectId"
             placeholder="科目"
             clearable
-            style="width: 150px; margin-right: 8px"
+            filterable
+            style="width: 260px; margin-right: 8px"
             @change="handleQuery"
           >
-            <el-option
-              v-for="subject in subjectOptions"
-              :key="subject.id"
-              :label="subject.nameZh"
-              :value="subject.id"
-            />
+            <el-option-group
+              v-for="group in groupedSubjects"
+              :key="group.label"
+              :label="group.label"
+            >
+              <el-option
+                v-for="subject in group.options"
+                :key="subject.id"
+                :label="subject.nameZh || subject.nameEn"
+                :value="subject.id"
+              />
+            </el-option-group>
           </el-select>
           <el-select
             v-model="queryParams.status"
@@ -114,18 +121,29 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="600px"
+      width="700px"
       @close="handleDialogClose"
     >
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
         <el-form-item label="科目" prop="subjectId">
-          <el-select v-model="formData.subjectId" placeholder="请选择科目" style="width: 100%">
-            <el-option
-              v-for="subject in subjectOptions"
-              :key="subject.id"
-              :label="subject.nameZh"
-              :value="subject.id"
-            />
+          <el-select
+            v-model="formData.subjectId"
+            placeholder="请选择科目"
+            filterable
+            style="width: 100%"
+          >
+            <el-option-group
+              v-for="group in groupedSubjects"
+              :key="group.label"
+              :label="group.label"
+            >
+              <el-option
+                v-for="subject in group.options"
+                :key="subject.id"
+                :label="subject.nameZh || subject.nameEn"
+                :value="subject.id"
+              />
+            </el-option-group>
           </el-select>
         </el-form-item>
 
@@ -169,13 +187,24 @@
     <el-dialog v-model="exportDialogVisible" title="导出激活码" width="500px">
       <el-form label-width="80px">
         <el-form-item label="科目">
-          <el-select v-model="exportSubjectId" placeholder="请选择科目" style="width: 100%">
-            <el-option
-              v-for="subject in subjectOptions"
-              :key="subject.id"
-              :label="subject.nameZh"
-              :value="subject.id"
-            />
+          <el-select
+            v-model="exportSubjectId"
+            placeholder="请选择科目"
+            filterable
+            style="width: 100%"
+          >
+            <el-option-group
+              v-for="group in groupedSubjects"
+              :key="group.label"
+              :label="group.label"
+            >
+              <el-option
+                v-for="subject in group.options"
+                :key="subject.id"
+                :label="subject.nameZh || subject.nameEn"
+                :value="subject.id"
+              />
+            </el-option-group>
           </el-select>
         </el-form-item>
       </el-form>
@@ -221,6 +250,16 @@ const queryParams = reactive<ActivationCodePageQuery>({
 
 const tableData = ref<ActivationCodeVO[]>();
 const subjectOptions = ref<SubjectVO[]>([]);
+
+const groupedSubjects = computed(() => {
+  const map = new Map<string, SubjectVO[]>();
+  for (const s of subjectOptions.value) {
+    const group = s.providerName || "其他";
+    if (!map.has(group)) map.set(group, []);
+    map.get(group)!.push(s);
+  }
+  return Array.from(map.entries()).map(([label, options]) => ({ label, options }));
+});
 
 // 对话框相关
 const dialogVisible = ref(false);
@@ -516,8 +555,17 @@ onMounted(() => {
   color: #606266;
   background-color: #f5f7fa !important;
 }
+</style>
 
-// 弹窗样式优化
+<style>
+.el-select-dropdown .el-select-group__title {
+  padding-left: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #409eff;
+}
+
+/* 弹窗样式优化 */
 :deep(.el-dialog) {
   .el-dialog__header {
     .el-dialog__title {

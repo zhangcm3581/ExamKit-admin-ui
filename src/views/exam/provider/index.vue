@@ -80,6 +80,19 @@
             {{ scope.row.isFolder ? "--" : scope.row.totalQuestions || 0 }}
           </template>
         </el-table-column>
+        <el-table-column label="标签" width="120" align="center">
+          <template #default="scope">
+            <el-tag
+              v-if="scope.row.tag"
+              size="small"
+              color="#409eff"
+              style="color: #fff; border: none"
+            >
+              {{ scope.row.tag }}
+            </el-tag>
+            <span v-else-if="!scope.row.isFolder" style="color: #ccc">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="scope">
             <template v-if="scope.row.isFolder">
@@ -129,6 +142,8 @@
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
+                      <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
+                      <el-dropdown-item command="editVideo">编辑视频</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
                       <el-dropdown-item command="delete" divided class="delete-item">
@@ -213,6 +228,114 @@
         </el-form-item>
       </el-form>
     </Dialog>
+
+    <!-- PDF资料弹窗 -->
+    <el-dialog
+      v-model="pdfDialog.visible"
+      :title="'资料管理 - ' + pdfDialog.subjectName"
+      width="520px"
+    >
+      <!-- 已上传文件 -->
+      <div
+        v-if="pdfDialog.currentUrl"
+        class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4"
+      >
+        <div class="flex items-center gap-2 min-w-0">
+          <el-icon class="text-red-500" :size="20"><Document /></el-icon>
+          <span class="text-sm text-gray-700 truncate">{{ pdfDialog.fileName }}</span>
+        </div>
+        <div class="flex-shrink-0">
+          <el-button size="small" type="danger" link @click="handleDeletePdf">删除</el-button>
+        </div>
+      </div>
+      <!-- 上传区 -->
+      <!-- 上传中状态 -->
+      <div
+        v-if="pdfDialog.uploading"
+        class="flex flex-col items-center justify-center py-8 border border-dashed border-gray-300 rounded-lg bg-gray-50"
+      >
+        <el-icon class="is-loading text-blue-500 mb-2" :size="32"><Loading /></el-icon>
+        <span class="text-sm text-gray-500">文件上传中，请稍候...</span>
+      </div>
+      <!-- 上传区 -->
+      <el-upload
+        v-else
+        class="pdf-uploader"
+        drag
+        :action="pdfUploadUrl"
+        :headers="uploadHeaders"
+        :before-upload="beforePdfUpload"
+        :on-progress="handlePdfProgress"
+        :on-success="handlePdfSuccess"
+        :on-error="handlePdfError"
+        :show-file-list="false"
+        accept=".pdf,.zip,.rar,.7z"
+      >
+        <el-icon class="el-icon--upload" :size="40"><UploadFilled /></el-icon>
+        <div class="el-upload__text">
+          {{ pdfDialog.currentUrl ? "重新上传将覆盖当前文件" : "将文件拖到此处" }}，或
+          <em>点击上传</em>
+        </div>
+        <template #tip>
+          <div class="el-upload__tip">支持 .pdf .zip .rar .7z 格式，文件大小不超过 50MB</div>
+        </template>
+      </el-upload>
+      <template #footer>
+        <el-button @click="pdfDialog.visible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 视频资料弹窗 -->
+    <el-dialog
+      v-model="videoDialog.visible"
+      :title="'编辑视频 - ' + videoDialog.subjectName"
+      width="750px"
+    >
+      <el-table :data="videoDialog.items" border size="small" style="width: 100%">
+        <el-table-column label="序号" width="60" align="center">
+          <template #default="scope">{{ scope.$index + 1 }}</template>
+        </el-table-column>
+        <el-table-column label="名称" min-width="180">
+          <template #default="scope">
+            <el-input v-model="scope.row.name" size="small" placeholder="视频名称" />
+          </template>
+        </el-table-column>
+        <el-table-column label="链接" min-width="240">
+          <template #default="scope">
+            <el-input v-model="scope.row.url" size="small" placeholder="COS链接地址" />
+          </template>
+        </el-table-column>
+        <el-table-column label="大小" width="120">
+          <template #default="scope">
+            <el-input v-model="scope.row.size" size="small" placeholder="如 123.45MB" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="60" align="center">
+          <template #default="scope">
+            <el-button
+              type="danger"
+              link
+              size="small"
+              icon="Delete"
+              @click="videoDialog.items.splice(scope.$index, 1)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-button
+        class="mt-3"
+        style="width: 100%"
+        @click="videoDialog.items.push({ name: '', url: '', size: '' })"
+      >
+        + 添加视频
+      </el-button>
+      <template #footer>
+        <el-button @click="videoDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="videoDialog.saving" @click="handleSaveVideos">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 移动至弹窗 -->
     <Dialog
@@ -325,6 +448,11 @@
         </el-form-item>
 
         <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="标签" prop="tag">
+              <el-input v-model="subjectEditForm.tag" placeholder="可选，如：PL 系列" clearable />
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
@@ -500,7 +628,15 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, ArrowLeft, Search } from "@element-plus/icons-vue";
+import {
+  ArrowDown,
+  ArrowLeft,
+  Search,
+  Document,
+  UploadFilled,
+  Loading,
+} from "@element-plus/icons-vue";
+import { AuthStorage } from "@/utils/auth";
 import ProviderAPI, {
   type ProviderPageQuery,
   type ProviderForm,
@@ -542,6 +678,8 @@ interface TableRow {
   status?: number;
   providerId?: number;
   isTop?: boolean;
+  pdfUrl?: string;
+  videoUrls?: string;
 }
 
 const loading = ref(false);
@@ -583,6 +721,76 @@ const moveDialog = reactive({
   subjectId: "" as string,
 });
 
+// PDF资料弹窗
+const pdfDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  subjectName: "" as string,
+  currentUrl: "" as string,
+  fileName: "" as string,
+  uploading: false,
+  progress: 0,
+});
+
+// 视频资料弹窗
+interface VideoItem {
+  name: string;
+  url: string;
+  size: string;
+}
+
+const videoDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  subjectName: "" as string,
+  items: [] as VideoItem[],
+  saving: false,
+});
+
+function handleOpenVideoDialog(row: TableRow) {
+  videoDialog.subjectId = row.id as string;
+  videoDialog.subjectName = row.nameEn || row.nameZh || "";
+  videoDialog.saving = false;
+  // 解析已有视频数据
+  const raw = (row as any).videoUrls;
+  if (raw) {
+    try {
+      videoDialog.items = JSON.parse(raw);
+    } catch {
+      videoDialog.items = [];
+    }
+  } else {
+    videoDialog.items = [];
+  }
+  videoDialog.visible = true;
+}
+
+async function handleSaveVideos() {
+  videoDialog.saving = true;
+  try {
+    // 过滤空行
+    const validItems = videoDialog.items.filter((v) => v.name.trim() || v.url.trim());
+    await SubjectAPI.update(videoDialog.subjectId, {
+      videoUrls: validItems.length > 0 ? JSON.stringify(validItems) : "",
+    });
+    ElMessage.success("保存成功");
+    videoDialog.visible = false;
+    fetchData();
+  } catch {
+    ElMessage.error("保存失败");
+  } finally {
+    videoDialog.saving = false;
+  }
+}
+
+const pdfUploadUrl = computed(() => {
+  return `${import.meta.env.VITE_APP_BASE_API}/v1/subjects/${pdfDialog.subjectId}/pdf`;
+});
+
+const uploadHeaders = computed(() => {
+  return { Authorization: `Bearer ${AuthStorage.getAccessToken()}` };
+});
+
 // 重命名弹窗
 const renameDialog = reactive({
   visible: false,
@@ -612,6 +820,7 @@ const subjectEditForm = reactive({
   supportLanguages: "",
   descriptionZh: "",
   descriptionEn: "",
+  tag: "",
   sortOrder: 0,
   status: 1,
   examInfoZh: "",
@@ -714,10 +923,13 @@ async function fetchData() {
         nameEn: s.nameEn,
         supportLanguages: s.supportLanguages,
         totalQuestions: s.totalQuestions,
+        tag: s.tag,
         createTime: s.createTime,
         sortOrder: s.sortOrder,
         status: s.status,
         providerId: s.providerId,
+        pdfUrl: s.pdfUrl,
+        videoUrls: s.videoUrls,
       }));
       total.value = subjectRes.total || 0;
 
@@ -740,10 +952,13 @@ async function fetchData() {
         supportLanguages: item.supportLanguages,
         logo: item.logo,
         totalQuestions: item.totalQuestions,
+        tag: (item as any).tag,
         createTime: item.createTime,
         sortOrder: item.sortOrder,
         status: item.status,
         providerId: item.providerId,
+        pdfUrl: (item as any).pdfUrl,
+        videoUrls: (item as any).videoUrls,
       }));
 
       total.value = bankItemRes.total || 0;
@@ -837,9 +1052,82 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "examTemplate":
       ElMessage.info("配置模拟考试模板功能开发中");
       break;
+    case "uploadPdf":
+      handleOpenPdfDialog(row);
+      break;
+    case "editVideo":
+      handleOpenVideoDialog(row);
+      break;
     case "delete":
       handleDeleteSubject(row);
       break;
+  }
+}
+
+// PDF资料管理
+function handleOpenPdfDialog(row: TableRow) {
+  pdfDialog.subjectId = row.id as string;
+  pdfDialog.subjectName = row.nameZh || row.nameEn || "";
+  pdfDialog.currentUrl = row.pdfUrl || "";
+  pdfDialog.fileName = pdfDialog.currentUrl
+    ? decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件")
+    : "";
+  pdfDialog.uploading = false;
+  pdfDialog.progress = 0;
+  pdfDialog.visible = true;
+}
+
+function beforePdfUpload(file: File) {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  const allowedExts = ["pdf", "zip", "rar", "7z"];
+  if (!allowedExts.includes(ext || "")) {
+    ElMessage.error("仅支持 pdf、zip、rar、7z 格式");
+    return false;
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.error("文件大小不能超过50MB");
+    return false;
+  }
+  pdfDialog.uploading = true;
+  pdfDialog.progress = 0;
+  return true;
+}
+
+function handlePdfProgress(event: any) {
+  pdfDialog.progress = Math.round(event.percent || 0);
+}
+
+function handlePdfSuccess(response: any) {
+  pdfDialog.uploading = false;
+  pdfDialog.progress = 100;
+  if (response.success) {
+    pdfDialog.currentUrl = response.data.url;
+    pdfDialog.fileName = decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件");
+    ElMessage.success("上传成功");
+    fetchData();
+  } else {
+    ElMessage.error(response.message || "上传失败");
+  }
+}
+
+function handlePdfError() {
+  pdfDialog.uploading = false;
+  pdfDialog.progress = 0;
+  ElMessage.error("上传失败");
+}
+
+async function handleDeletePdf() {
+  try {
+    await ElMessageBox.confirm("确认删除该PDF资料吗？", "提示", {
+      type: "warning",
+    });
+    await SubjectAPI.deletePdf(pdfDialog.subjectId);
+    pdfDialog.currentUrl = "";
+    pdfDialog.fileName = "";
+    ElMessage.success("删除成功");
+    fetchData();
+  } catch {
+    // cancelled
   }
 }
 
@@ -1036,6 +1324,7 @@ function handleEditSubject(row: TableRow) {
     subjectEditForm.supportLanguages = data.supportLanguages || "";
     subjectEditForm.descriptionZh = data.descriptionZh || "";
     subjectEditForm.descriptionEn = data.descriptionEn || "";
+    subjectEditForm.tag = data.tag || "";
     subjectEditForm.sortOrder = data.sortOrder || 0;
     subjectEditForm.status = data.status !== undefined ? data.status : 1;
     subjectEditForm.examInfoZh = data.examInfoZh || "";
@@ -1063,6 +1352,7 @@ function handleSubmitSubjectEdit() {
         supportLanguages: subjectEditForm.supportLanguages,
         descriptionZh: subjectEditForm.descriptionZh,
         descriptionEn: subjectEditForm.descriptionEn,
+        tag: subjectEditForm.tag,
         sortOrder: subjectEditForm.sortOrder,
         status: subjectEditForm.status,
         examInfoZh: subjectEditForm.examInfoZh,

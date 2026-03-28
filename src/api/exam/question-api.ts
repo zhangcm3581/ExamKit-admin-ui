@@ -28,6 +28,10 @@ export interface QuestionVO {
   isCase: boolean;
   /** 案例ID */
   caseId?: number;
+  /** 案例背景(中文) */
+  caseContentZh?: string;
+  /** 案例背景(英文) */
+  caseContentEn?: string;
   /** 题型 */
   type: string;
   /** 题目内容(中文) */
@@ -159,6 +163,17 @@ const QuestionAPI = {
       url: `${QUESTION_BASE_URL}/batch-change-type`,
       method: "post",
       data: { ids, type },
+    });
+  },
+
+  /**
+   * 移动题目到指定位置
+   */
+  moveQuestions(subjectId: string, ids: number[], targetNumber: number) {
+    return request({
+      url: `${QUESTION_BASE_URL}/move`,
+      method: "post",
+      data: { subjectId, ids, targetNumber },
     });
   },
 };

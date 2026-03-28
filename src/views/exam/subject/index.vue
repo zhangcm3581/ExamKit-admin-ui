@@ -93,6 +93,12 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
+        <el-table-column label="标签" prop="tag" width="120" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.tag" size="small" type="info">{{ scope.row.tag }}</el-tag>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="排序" prop="sortOrder" width="80" align="center" />
         <el-table-column label="状态" prop="status" width="100" align="center">
           <template #default="scope">
@@ -210,6 +216,11 @@
 
         <el-row :gutter="20">
           <el-col :span="12">
+            <el-form-item label="标签" prop="tag">
+              <el-input v-model="formData.tag" placeholder="可选，如：PL 系列" clearable />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="formData.sortOrder"
@@ -220,15 +231,14 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态">
-              <el-radio-group v-model="formData.status">
-                <el-radio :value="1">启用</el-radio>
-                <el-radio :value="0">禁用</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
         </el-row>
+
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
 
         <el-form-item label="中文考试信息">
           <WangEditor v-model:model-value="formData.examInfoZh" height="300px" />
@@ -375,6 +385,7 @@ function handleEditClick(id: string) {
     formData.supportLanguages = data.supportLanguages || "";
     formData.examInfoZh = data.examInfoZh || "";
     formData.examInfoEn = data.examInfoEn || "";
+    formData.tag = data.tag || "";
     formData.sortOrder = data.sortOrder || 0;
     formData.status = data.status !== undefined ? data.status : 1;
 
@@ -439,6 +450,7 @@ function handleDialogClosed() {
     formData.supportLanguages = undefined;
     formData.examInfoZh = undefined;
     formData.examInfoEn = undefined;
+    formData.tag = undefined;
     formData.sortOrder = 0;
     formData.status = 1;
     selectedLanguages.value = [];
