@@ -96,14 +96,12 @@ const fileList = ref<UploadUserFile[]>([]);
  * 删除图片
  */
 function handleRemove(imageUrl: string) {
-  FileAPI.delete(imageUrl).then(() => {
-    const index = modelValue.value.indexOf(imageUrl);
-    if (index !== -1) {
-      // 直接修改数组避免触发整体更新
-      modelValue.value.splice(index, 1);
-      fileList.value.splice(index, 1); // 同步更新 fileList
-    }
-  });
+  const index = modelValue.value.indexOf(imageUrl);
+  if (index !== -1) {
+    // 直接修改数组避免触发整体更新
+    modelValue.value.splice(index, 1);
+    fileList.value.splice(index, 1); // 同步更新 fileList
+  }
 }
 
 /**

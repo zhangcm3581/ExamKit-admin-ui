@@ -233,18 +233,16 @@ const handleError = (_error: any) => {
  * 删除文件
  */
 function handleRemove(fileUrl: string) {
-  FileAPI.delete(fileUrl).then(() => {
-    modelValue.value = modelValue.value.filter((file) => file.url !== fileUrl);
-  });
+  modelValue.value = modelValue.value.filter((file) => file.url !== fileUrl);
 }
 
 /**
  * 下载文件
  */
 function handleDownload(file: UploadUserFile) {
-  const { url, name } = file;
+  const { url } = file;
   if (url) {
-    FileAPI.download(url, name);
+    window.open(url, "_blank");
   }
 }
 

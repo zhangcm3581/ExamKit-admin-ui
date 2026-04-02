@@ -34,7 +34,7 @@
           <el-table-column prop="questionNumber" label="题号" width="80" align="center" />
           <el-table-column label="题型" width="100" align="center">
             <template #default="{ row }">
-              <el-tag :type="getQuestionTypeColor(row.type)">
+              <el-tag :type="getQuestionTypeColor(row.type) as any">
                 {{ getQuestionTypeText(row.type) }}
               </el-tag>
             </template>
@@ -116,7 +116,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
-          <WangEditor v-model="editForm.content" :height="250" />
+          <WangEditor v-model="editForm.content" height="250px" />
         </el-form-item>
 
         <!-- 选项编辑 -->
@@ -129,7 +129,7 @@
               <div style="margin-bottom: 5px; font-weight: 500; color: #606266">
                 选项 {{ option.label }}
               </div>
-              <WangEditor v-model="option.value" :height="150" />
+              <WangEditor v-model="option.value" height="150px" />
             </div>
           </div>
         </el-form-item>
@@ -139,13 +139,13 @@
           <WangEditor
             v-if="editForm.type === 'SHORT_ANSWER'"
             v-model="editForm.answer"
-            :height="200"
+            height="200px"
           />
           <!-- 其他题型使用单行输入 -->
           <el-input v-else v-model="editForm.answer" placeholder="例如：A 或 ABC" />
         </el-form-item>
         <el-form-item label="答案解析">
-          <WangEditor v-model="editForm.explanation" :height="200" />
+          <WangEditor v-model="editForm.explanation" height="200px" />
         </el-form-item>
       </el-form>
       <template #footer>

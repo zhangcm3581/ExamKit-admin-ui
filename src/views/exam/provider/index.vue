@@ -102,7 +102,10 @@
             <template v-else>
               <el-switch
                 :model-value="scope.row.status === 1"
-                @change="(val: boolean) => handleSubjectStatusChange(scope.row, val)"
+                @change="
+                  (val: string | number | boolean) =>
+                    handleSubjectStatusChange(scope.row, val as boolean)
+                "
               />
             </template>
           </template>

@@ -316,7 +316,8 @@ function getQuestionTypeColor(type: string): "success" | "info" | "warning" | "d
 }
 
 // 解析选项JSON
-function parseOptions(optionsStr: string): { label: string; value: string }[] {
+function parseOptions(optionsStr: string | undefined): { label: string; value: string }[] {
+  if (!optionsStr) return [];
   try {
     const parsed = JSON.parse(optionsStr);
     return parsed.map((opt: any) => ({
@@ -335,7 +336,7 @@ function isCorrectOption(optionLabel: string): boolean {
 }
 
 // 格式化解析内容
-function formatExplanation(content: string): string {
+function formatExplanation(content: string | undefined): string {
   if (!content) return "";
 
   // 处理 Markdown 风格的代码块

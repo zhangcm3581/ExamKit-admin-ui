@@ -5,7 +5,7 @@ const FILE_BASE_URL = "/v1/files";
 const FileManageAPI = {
   /** 获取文件分页列表 */
   getPage(queryParams: FilePageQuery) {
-    return request<any, PageResult<FileVO>>({
+    return request<any, PageResult<FileVO[]>>({
       url: `${FILE_BASE_URL}/page`,
       method: "get",
       params: queryParams,
@@ -89,7 +89,7 @@ const FileManageAPI = {
 
   /** 按文件夹获取文件分页列表 */
   getPageByFolder(queryParams: FilePageQuery & { folder?: string }) {
-    return request<any, PageResult<FileVO>>({
+    return request<any, PageResult<FileVO[]>>({
       url: `${FILE_BASE_URL}/page`,
       method: "get",
       params: queryParams,
@@ -98,7 +98,7 @@ const FileManageAPI = {
 
   /** 获取图片列表(用于图片选择器) */
   getImages(queryParams: FilePageQuery & { folder?: string }) {
-    return request<any, PageResult<FileVO>>({
+    return request<any, PageResult<FileVO[]>>({
       url: `${FILE_BASE_URL}/page`,
       method: "get",
       params: {
@@ -111,6 +111,14 @@ const FileManageAPI = {
 };
 
 export default FileManageAPI;
+
+/** 文件信息（用于上传组件） */
+export interface FileInfo {
+  /** 文件名 */
+  name?: string;
+  /** 文件URL */
+  url: string;
+}
 
 /** 文件查询参数 */
 export interface FilePageQuery extends PageQuery {

@@ -154,7 +154,6 @@
 </template>
 
 <script setup lang="ts">
-import type { TagProps } from "element-plus";
 import DictAPI, { DictItemPageQuery, DictItemPageVO, DictItemForm } from "@/api/system/dict-api";
 
 const route = useRoute();
@@ -183,7 +182,7 @@ const dialog = reactive({
 const formData = reactive<DictItemForm>({});
 
 // 标签类型
-const tagType: TagProps["type"][] = ["primary", "success", "info", "warning", "danger"];
+const tagType = ["primary", "success", "info", "warning", "danger"] as const;
 
 const computedRules = computed(() => {
   const rules: Partial<Record<string, any>> = {

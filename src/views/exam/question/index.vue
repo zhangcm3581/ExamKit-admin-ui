@@ -208,7 +208,7 @@
         </el-table-column>
         <el-table-column label="题型" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getQuestionTypeColor(row.type)" size="small">
+            <el-tag :type="getQuestionTypeColor(row.type) as any" size="small">
               {{ getQuestionTypeText(row.type) }}
             </el-tag>
           </template>

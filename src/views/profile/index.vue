@@ -451,7 +451,9 @@ const handleFileChange = async (event: Event) => {
   if (file) {
     // 调用文件上传API
     try {
-      const data = await FileAPI.uploadFile(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      const data = await FileAPI.upload(formData);
       // 更新用户信息
       await UserAPI.updateProfile({
         avatar: data.url,

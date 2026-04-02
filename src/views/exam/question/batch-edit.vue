@@ -656,8 +656,8 @@ async function loadQuestions(ids: number[]) {
 
     tableData.value = results.map((data) => {
       // 简答题不需要解析选项
-      const optionsZh = data.type === "SHORT_ANSWER" ? [] : parseOptions(data.optionsZh);
-      const optionsEn = data.type === "SHORT_ANSWER" ? [] : parseOptions(data.optionsEn);
+      const optionsZh = data.type === "SHORT_ANSWER" ? [] : parseOptions(data.optionsZh ?? "");
+      const optionsEn = data.type === "SHORT_ANSWER" ? [] : parseOptions(data.optionsEn ?? "");
 
       // 检测题目实际拥有的语言
       const hasZh = !!(data.contentZh && stripHtml(data.contentZh).trim());
@@ -666,8 +666,8 @@ async function loadQuestions(ids: number[]) {
       return {
         id: data.id,
         type: data.type,
-        contentZh: stripHtml(data.contentZh),
-        contentEn: stripHtml(data.contentEn),
+        contentZh: stripHtml(data.contentZh ?? ""),
+        contentEn: stripHtml(data.contentEn ?? ""),
         optionA: optionsZh[0]?.value || "",
         optionA_en: optionsEn[0]?.value || "",
         optionB: optionsZh[1]?.value || "",
@@ -685,8 +685,8 @@ async function loadQuestions(ids: number[]) {
         optionH: optionsZh[7]?.value || "",
         optionH_en: optionsEn[7]?.value || "",
         answer: data.answer,
-        explanationZh: stripHtml(data.explanationZh),
-        explanationEn: stripHtml(data.explanationEn),
+        explanationZh: stripHtml(data.explanationZh ?? ""),
+        explanationEn: stripHtml(data.explanationEn ?? ""),
         subjectId: data.subjectId,
         hasZh,
         hasEn,
