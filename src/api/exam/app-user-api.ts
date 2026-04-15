@@ -49,6 +49,10 @@ export interface AppUserVO {
   lastLoginAt?: string;
   /** 最后登录设备 */
   lastLoginDevice?: string;
+  /** 最后登录IP */
+  lastLoginIp?: string;
+  /** 最后登录地区 */
+  lastLoginRegion?: string;
   /** 语言偏好 */
   locale?: string;
   /** 创建时间 */

@@ -67,6 +67,22 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
+        <el-table-column label="登录IP" min-width="140" align="center" show-overflow-tooltip>
+          <template #default="scope">
+            <span v-if="scope.row.lastLoginIp" style="font-family: monospace; font-size: 13px">
+              {{ scope.row.lastLoginIp }}
+            </span>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="登录地区" min-width="140" align="center" show-overflow-tooltip>
+          <template #default="scope">
+            <span v-if="scope.row.lastLoginRegion">
+              {{ scope.row.lastLoginRegion }}
+            </span>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="scope">
             <el-tag
