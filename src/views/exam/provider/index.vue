@@ -399,7 +399,7 @@
           <el-input v-model="subjectEditForm.nameEn" placeholder="请输入科目名称（英文）" />
         </el-form-item>
 
-        <el-form-item label="小程序名称" prop="miniappDisplayName">
+        <el-form-item label="小程序名" prop="miniappDisplayName">
           <el-input
             v-model="subjectEditForm.miniappDisplayName"
             placeholder="可选，如：PL-200（小程序优先显示此名称）"
@@ -529,7 +529,7 @@
           <el-input v-model="subjectCreateForm.nameEn" placeholder="请输入科目名称（英文）" />
         </el-form-item>
 
-        <el-form-item label="小程序名称" prop="miniappDisplayName">
+        <el-form-item label="小程序名" prop="miniappDisplayName">
           <el-input
             v-model="subjectCreateForm.miniappDisplayName"
             placeholder="可选，如：PL-200（小程序优先显示此名称）"
