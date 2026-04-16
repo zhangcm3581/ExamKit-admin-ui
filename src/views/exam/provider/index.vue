@@ -399,6 +399,14 @@
           <el-input v-model="subjectEditForm.nameEn" placeholder="请输入科目名称（英文）" />
         </el-form-item>
 
+        <el-form-item label="小程序名称" prop="miniappDisplayName">
+          <el-input
+            v-model="subjectEditForm.miniappDisplayName"
+            placeholder="可选，如：PL-200（小程序优先显示此名称）"
+            clearable
+          />
+        </el-form-item>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="供应商">
@@ -519,6 +527,14 @@
 
         <el-form-item label="英文名称" prop="nameEn">
           <el-input v-model="subjectCreateForm.nameEn" placeholder="请输入科目名称（英文）" />
+        </el-form-item>
+
+        <el-form-item label="小程序名称" prop="miniappDisplayName">
+          <el-input
+            v-model="subjectCreateForm.miniappDisplayName"
+            placeholder="可选，如：PL-200（小程序优先显示此名称）"
+            clearable
+          />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -1323,6 +1339,7 @@ function handleEditSubject(row: TableRow) {
     // 先设置表单数据
     subjectEditForm.nameZh = data.nameZh || "";
     subjectEditForm.nameEn = data.nameEn || "";
+    subjectEditForm.miniappDisplayName = data.miniappDisplayName || "";
     subjectEditForm.providerId = data.providerId;
     subjectEditForm.supportLanguages = data.supportLanguages || "";
     subjectEditForm.descriptionZh = data.descriptionZh || "";
@@ -1351,6 +1368,7 @@ function handleSubmitSubjectEdit() {
       const updateData = {
         nameZh: subjectEditForm.nameZh,
         nameEn: subjectEditForm.nameEn,
+        miniappDisplayName: subjectEditForm.miniappDisplayName,
         providerId: subjectEditForm.providerId,
         supportLanguages: subjectEditForm.supportLanguages,
         descriptionZh: subjectEditForm.descriptionZh,
@@ -1387,6 +1405,7 @@ function handleSubjectEditDialogClosed() {
 
     subjectEditForm.nameZh = "";
     subjectEditForm.nameEn = "";
+    subjectEditForm.miniappDisplayName = "";
     subjectEditForm.providerId = undefined;
     subjectEditForm.supportLanguages = "";
     subjectEditForm.descriptionZh = "";
