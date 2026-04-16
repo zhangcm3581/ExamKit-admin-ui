@@ -835,6 +835,7 @@ const subjectEditDialog = reactive({
 const subjectEditForm = reactive({
   nameZh: "",
   nameEn: "",
+  miniappDisplayName: "",
   providerId: undefined as number | undefined,
   supportLanguages: "",
   descriptionZh: "",
@@ -880,6 +881,7 @@ const subjectCreateDialog = reactive({
 const subjectCreateForm = reactive({
   nameZh: "",
   nameEn: "",
+  miniappDisplayName: "",
   providerId: undefined as number | undefined,
   supportLanguages: "",
   descriptionZh: "",
