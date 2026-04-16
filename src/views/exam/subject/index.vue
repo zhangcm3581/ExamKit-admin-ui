@@ -163,6 +163,14 @@
           <el-input v-model="formData.nameEn" placeholder="请输入科目名称（英文）" />
         </el-form-item>
 
+        <el-form-item label="小程序名称" prop="miniappDisplayName">
+          <el-input
+            v-model="formData.miniappDisplayName"
+            placeholder="可选，如：PL-200（小程序优先显示此名称）"
+            clearable
+          />
+        </el-form-item>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="供应商">
@@ -380,6 +388,7 @@ function handleEditClick(id: string) {
     formData.providerId = data.providerId;
     formData.nameZh = data.nameZh || "";
     formData.nameEn = data.nameEn || "";
+    formData.miniappDisplayName = data.miniappDisplayName || "";
     formData.descriptionZh = data.descriptionZh || "";
     formData.descriptionEn = data.descriptionEn || "";
     formData.supportLanguages = data.supportLanguages || "";
@@ -445,6 +454,7 @@ function handleDialogClosed() {
     formData.providerId = undefined;
     formData.nameZh = undefined;
     formData.nameEn = undefined;
+    formData.miniappDisplayName = undefined;
     formData.descriptionZh = undefined;
     formData.descriptionEn = undefined;
     formData.supportLanguages = undefined;

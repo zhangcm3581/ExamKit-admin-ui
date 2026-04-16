@@ -88,6 +88,8 @@ export interface SubjectVO {
   nameZh: string;
   /** 科目名称(英文) */
   nameEn?: string;
+  /** 小程序显示名称 */
+  miniappDisplayName?: string;
   /** 科目描述(中文) */
   descriptionZh?: string;
   /** 科目描述(英文) */
@@ -126,6 +128,8 @@ export interface SubjectForm {
   nameZh?: string;
   /** 科目名称(英文) */
   nameEn?: string;
+  /** 小程序显示名称 */
+  miniappDisplayName?: string;
   /** 科目描述(中文) */
   descriptionZh?: string;
   /** 科目描述(英文) */
