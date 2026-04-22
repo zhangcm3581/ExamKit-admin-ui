@@ -39,8 +39,8 @@
         :row-key="(row) => row.id"
         @row-click="handleRowClick"
       >
-        <el-table-column label="编号" type="index" width="50" align="center" />
-        <el-table-column label="名称" min-width="465">
+        <el-table-column label="编号" type="index" width="60" align="center" />
+        <el-table-column label="名称" min-width="515">
           <template #default="scope">
             <div class="name-cell">
               <!-- 文件夹(Provider) -->
@@ -78,12 +78,12 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="80" align="center">
+        <el-table-column label="数量" width="70" align="center">
           <template #default="scope">
             {{ scope.row.isFolder ? "--" : scope.row.totalQuestions || 0 }}
           </template>
         </el-table-column>
-        <el-table-column label="标签" width="120" align="center">
+        <el-table-column label="标签" width="90" align="center">
           <template #default="scope">
             <el-tag
               v-if="scope.row.tag"
@@ -96,7 +96,7 @@
             <span v-else-if="!scope.row.isFolder" style="color: #ccc">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="80" align="center">
           <template #default="scope">
             <template v-if="scope.row.isFolder">
               <el-tag v-if="scope.row.status === 1" type="success">启用</el-tag>
