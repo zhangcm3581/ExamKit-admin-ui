@@ -360,7 +360,7 @@ const computedRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
-    price: [{ required: true, message: "请输入价格", trigger: "blur" }],
+    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
   return rules;
 });
