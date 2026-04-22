@@ -228,12 +228,12 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="标签" prop="tag">
               <el-input v-model="formData.tag" placeholder="可选，如：PL 系列" clearable />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="formData.sortOrder"
@@ -244,7 +244,9 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="价格" prop="price">
               <el-input-number
                 v-model="priceYuan"

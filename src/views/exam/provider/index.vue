@@ -459,12 +459,12 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="6">
+          <el-col :span="12">
             <el-form-item label="标签" prop="tag">
-              <el-input v-model="subjectEditForm.tag" placeholder="可选" clearable />
+              <el-input v-model="subjectEditForm.tag" placeholder="可选，如：PL 系列" clearable />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="subjectEditForm.sortOrder"
@@ -475,7 +475,9 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="价格" prop="price">
               <el-input-number
                 v-model="priceYuanEdit"
@@ -489,7 +491,7 @@
               <span style="margin-left: 8px; color: #909399">元</span>
             </el-form-item>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectEditForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -603,7 +605,7 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="subjectCreateForm.sortOrder"
@@ -614,7 +616,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
             <el-form-item label="价格" prop="price">
               <el-input-number
                 v-model="priceYuanCreate"
@@ -628,7 +630,9 @@
               <span style="margin-left: 8px; color: #909399">元</span>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectCreateForm.status">
                 <el-radio :value="1">启用</el-radio>
