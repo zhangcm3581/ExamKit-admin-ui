@@ -78,6 +78,11 @@
         <el-table-column label="科目名称(英文)" prop="nameEn" min-width="180" />
         <el-table-column label="供应商" prop="providerName" width="120" />
         <el-table-column label="题目数量" prop="totalQuestions" width="100" align="center" />
+        <el-table-column label="价格" prop="price" width="100" align="center">
+          <template #default="scope">
+            {{ scope.row.price != null ? (scope.row.price / 100).toFixed(2) + " 元" : "-" }}
+          </template>
+        </el-table-column>
         <el-table-column label="支持语言" width="140" align="center">
           <template #default="scope">
             <template v-if="scope.row.supportLanguages">
@@ -223,12 +228,12 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="标签" prop="tag">
               <el-input v-model="formData.tag" placeholder="可选，如：PL 系列" clearable />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="formData.sortOrder"
@@ -237,6 +242,20 @@
                 controls-position="right"
                 style="width: 100%"
               />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="价格" prop="price">
+              <el-input-number
+                v-model="priceYuan"
+                :min="1"
+                :max="999"
+                :precision="2"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+              <span style="margin-left: 8px; color: #909399">元</span>
             </el-form-item>
           </el-col>
         </el-row>
@@ -313,6 +332,20 @@ const dialog = reactive({
 const formData = reactive<SubjectForm>({
   sortOrder: 0,
   status: 1,
+  price: 9800,
+});
+
+// 元 ↔ 分单位转换：表单内部用元（两位小数），与后端交互用分（整数）
+// getter 除以 100 转元；setter 乘 100 + Math.round 避免 JS 浮点误差
+const priceYuan = computed({
+  get: () => (formData.price != null ? formData.price / 100 : 98),
+  set: (yuan: number | null | undefined) => {
+    if (yuan == null || Number.isNaN(yuan)) {
+      formData.price = undefined;
+    } else {
+      formData.price = Math.round(yuan * 100);
+    }
+  },
 });
 
 // 支持语言多选
@@ -327,6 +360,7 @@ const computedRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     nameZh: [{ required: true, message: "请输入科目名称（中文）", trigger: "blur" }],
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
+    price: [{ required: true, message: "请输入价格", trigger: "blur" }],
   };
   return rules;
 });
@@ -397,6 +431,7 @@ function handleEditClick(id: string) {
     formData.tag = data.tag || "";
     formData.sortOrder = data.sortOrder || 0;
     formData.status = data.status !== undefined ? data.status : 1;
+    formData.price = data.price != null ? data.price : 9800;
 
     // 解析支持语言到多选数组
     if (data.supportLanguages) {
@@ -463,6 +498,7 @@ function handleDialogClosed() {
     formData.tag = undefined;
     formData.sortOrder = 0;
     formData.status = 1;
+    formData.price = 9800;
     selectedLanguages.value = [];
   });
 }
