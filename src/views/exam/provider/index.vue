@@ -39,8 +39,8 @@
         :row-key="(row) => row.id"
         @row-click="handleRowClick"
       >
-        <el-table-column label="编号" type="index" width="70" align="center" />
-        <el-table-column label="名称" min-width="460">
+        <el-table-column label="编号" type="index" width="50" align="center" />
+        <el-table-column label="名称" min-width="465">
           <template #default="scope">
             <div class="name-cell">
               <!-- 文件夹(Provider) -->
@@ -70,7 +70,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="110" align="center">
+        <el-table-column label="添加时间" width="125" align="center">
           <template #default="scope">
             <div class="datetime-cell">
               <div>{{ formatDate(scope.row.createTime) }}</div>
@@ -1886,9 +1886,13 @@ onMounted(() => {
   color: #909399;
 }
 
-/* 添加时间双行样式：日期主 + 时间副灰色 */
+/* 添加时间双行样式：日期主 + 时间副灰色，强制每行不换行 */
 .datetime-cell {
   line-height: 1.4;
+
+  > div {
+    white-space: nowrap;
+  }
 }
 .datetime-cell-time {
   font-size: 12px;
