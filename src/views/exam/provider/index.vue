@@ -1767,6 +1767,13 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   align-items: center;
+  min-width: 0;
+
+  // 文件夹行：.name-text 直接作为 flex 子项，约束宽度以允许 ellipsis
+  > .name-text {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .folder-icon-img {
@@ -1792,8 +1799,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 600; // 名称列加粗
-  overflow-wrap: break-word;
-  white-space: normal;
+  white-space: nowrap; // 强制单行，超出 ellipsis 裁剪，防止行高被撑大
 }
 
 .action-buttons {
@@ -1880,8 +1886,10 @@ onMounted(() => {
 /* 科目名称样式 */
 .subject-name-wrapper {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
+  min-width: 0; // 允许内部 .name-text 按 wrapper 宽度 ellipsis
 }
 
 .subject-name-secondary {
