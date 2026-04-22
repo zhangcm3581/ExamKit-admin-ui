@@ -60,12 +60,12 @@
         class="code-table"
         stripe
       >
-        <el-table-column label="序号" width="80" align="center">
+        <el-table-column label="序号" width="60" align="center">
           <template #default="scope">
             {{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="激活码" prop="code" min-width="150" show-overflow-tooltip>
+        <el-table-column label="激活码" prop="code" width="150" show-overflow-tooltip>
           <template #default="scope">
             <span class="code-text">{{ scope.row.code }}</span>
             <el-icon class="copy-icon" @click="handleCopy(scope.row.code)">
@@ -73,8 +73,8 @@
             </el-icon>
           </template>
         </el-table-column>
-        <el-table-column label="科目" prop="subjectName" min-width="200" show-overflow-tooltip />
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="科目" prop="subjectName" min-width="370" show-overflow-tooltip />
+        <el-table-column label="状态" width="80" align="center">
           <template #default="scope">
             <el-tag
               :type="
@@ -87,23 +87,27 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="使用者" prop="usedByName" min-width="120" show-overflow-tooltip>
+        <el-table-column label="使用者" prop="usedByName" width="100" show-overflow-tooltip>
           <template #default="scope">
             <span v-if="scope.row.usedByName">{{ scope.row.usedByName }}</span>
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="使用时间" min-width="180" align="center">
+        <el-table-column label="使用时间" width="125" align="center">
           <template #default="scope">
-            <span v-if="scope.row.usedAt" class="login-time">
-              {{ formatDateTime(scope.row.usedAt) }}
-            </span>
+            <div v-if="scope.row.usedAt" class="datetime-cell">
+              <div>{{ formatDate(scope.row.usedAt) }}</div>
+              <div class="datetime-cell-time">{{ formatTime(scope.row.usedAt) }}</div>
+            </div>
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" min-width="180" align="center">
+        <el-table-column label="创建时间" width="125" align="center">
           <template #default="scope">
-            {{ formatDateTime(scope.row.createTime) }}
+            <div class="datetime-cell">
+              <div>{{ formatDate(scope.row.createTime) }}</div>
+              <div class="datetime-cell-time">{{ formatTime(scope.row.createTime) }}</div>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -236,7 +240,7 @@ import ActivationCodeAPI, {
   type CustomCreateRequest,
 } from "@/api/exam/activation-code-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDate, formatDateTime, formatTime } from "@/utils/datetime";
 
 const formRef = ref();
 const loading = ref(false);
@@ -532,6 +536,19 @@ onMounted(() => {
 .login-time {
   font-size: 14px;
   color: #606266;
+}
+
+/* 日期时间双行：日期主 + 时间副灰色，强制不换行 */
+.datetime-cell {
+  line-height: 1.4;
+
+  > div {
+    white-space: nowrap;
+  }
+}
+.datetime-cell-time {
+  font-size: 12px;
+  color: #909399;
 }
 
 .text-secondary {
