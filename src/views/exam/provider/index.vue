@@ -389,7 +389,7 @@
         ref="subjectEditFormRef"
         :model="subjectEditForm"
         :rules="subjectEditRules"
-        label-width="80px"
+        label-width="90px"
       >
         <el-form-item label="中文名称" prop="nameZh">
           <el-input v-model="subjectEditForm.nameZh" placeholder="请输入科目名称（中文）" />
@@ -534,7 +534,7 @@
         ref="subjectCreateFormRef"
         :model="subjectCreateForm"
         :rules="subjectCreateRules"
-        label-width="80px"
+        label-width="90px"
       >
         <el-form-item label="中文名称" prop="nameZh">
           <el-input v-model="subjectCreateForm.nameZh" placeholder="请输入科目名称（中文）" />

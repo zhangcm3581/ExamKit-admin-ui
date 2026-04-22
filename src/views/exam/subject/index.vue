@@ -159,7 +159,7 @@
       class="subject-dialog"
       @closed="handleDialogClosed"
     >
-      <el-form ref="dataFormRef" :model="formData" :rules="computedRules" label-width="80px">
+      <el-form ref="dataFormRef" :model="formData" :rules="computedRules" label-width="90px">
         <el-form-item label="中文名称" prop="nameZh">
           <el-input v-model="formData.nameZh" placeholder="请输入科目名称（中文）" />
         </el-form-item>
