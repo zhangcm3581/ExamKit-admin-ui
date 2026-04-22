@@ -40,7 +40,7 @@
         @row-click="handleRowClick"
       >
         <el-table-column label="编号" type="index" width="70" align="center" />
-        <el-table-column label="名称" min-width="200">
+        <el-table-column label="名称" min-width="290">
           <template #default="scope">
             <div class="name-cell">
               <!-- 文件夹(Provider) -->
@@ -110,7 +110,7 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="350" align="left">
+        <el-table-column label="操作" width="260" align="left">
           <template #default="scope">
             <div class="action-buttons">
               <!-- 文件夹操作 -->
