@@ -459,12 +459,12 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="6">
             <el-form-item label="标签" prop="tag">
-              <el-input v-model="subjectEditForm.tag" placeholder="可选，如：PL 系列" clearable />
+              <el-input v-model="subjectEditForm.tag" placeholder="可选" clearable />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="6">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="subjectEditForm.sortOrder"
@@ -475,7 +475,21 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="6">
+            <el-form-item label="价格" prop="price">
+              <el-input-number
+                v-model="priceYuanEdit"
+                :min="1"
+                :max="999"
+                :precision="2"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+              <span style="margin-left: 8px; color: #909399">元</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectEditForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -589,7 +603,7 @@
         </el-form-item>
 
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="subjectCreateForm.sortOrder"
@@ -600,7 +614,21 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
+            <el-form-item label="价格" prop="price">
+              <el-input-number
+                v-model="priceYuanCreate"
+                :min="1"
+                :max="999"
+                :precision="2"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+              <span style="margin-left: 8px; color: #909399">元</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectCreateForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -843,8 +871,21 @@ const subjectEditForm = reactive({
   tag: "",
   sortOrder: 0,
   status: 1,
+  price: 9800 as number | undefined,
   examInfoZh: "",
   examInfoEn: "",
+});
+
+// 编辑 form 的元↔分转换（与 views/exam/subject/index.vue 的 priceYuan 同样模式）
+const priceYuanEdit = computed({
+  get: () => (subjectEditForm.price != null ? subjectEditForm.price / 100 : 98),
+  set: (yuan: number | null | undefined) => {
+    if (yuan == null || Number.isNaN(yuan)) {
+      subjectEditForm.price = undefined;
+    } else {
+      subjectEditForm.price = Math.round(yuan * 100);
+    }
+  },
 });
 
 // 支持语言多选
@@ -859,6 +900,7 @@ watch(selectedLanguagesForEdit, (val) => {
 const subjectEditRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
+    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
 
   // 根据支持语言动态设置必填规则
@@ -888,8 +930,21 @@ const subjectCreateForm = reactive({
   descriptionEn: "",
   sortOrder: 0,
   status: 1,
+  price: 9800 as number | undefined,
   examInfoZh: "",
   examInfoEn: "",
+});
+
+// 新建 form 的元↔分转换
+const priceYuanCreate = computed({
+  get: () => (subjectCreateForm.price != null ? subjectCreateForm.price / 100 : 98),
+  set: (yuan: number | null | undefined) => {
+    if (yuan == null || Number.isNaN(yuan)) {
+      subjectCreateForm.price = undefined;
+    } else {
+      subjectCreateForm.price = Math.round(yuan * 100);
+    }
+  },
 });
 
 // 新建科目 - 支持语言多选
@@ -904,6 +959,7 @@ watch(selectedLanguagesForCreate, (val) => {
 const subjectCreateRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
+    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
 
   // 根据支持语言动态设置必填规则
@@ -1349,6 +1405,7 @@ function handleEditSubject(row: TableRow) {
     subjectEditForm.tag = data.tag || "";
     subjectEditForm.sortOrder = data.sortOrder || 0;
     subjectEditForm.status = data.status !== undefined ? data.status : 1;
+    subjectEditForm.price = data.price != null ? data.price : 9800;
     subjectEditForm.examInfoZh = data.examInfoZh || "";
     subjectEditForm.examInfoEn = data.examInfoEn || "";
 
@@ -1378,6 +1435,7 @@ function handleSubmitSubjectEdit() {
         tag: subjectEditForm.tag,
         sortOrder: subjectEditForm.sortOrder,
         status: subjectEditForm.status,
+        price: subjectEditForm.price,
         examInfoZh: subjectEditForm.examInfoZh,
         examInfoEn: subjectEditForm.examInfoEn,
       };
@@ -1414,6 +1472,7 @@ function handleSubjectEditDialogClosed() {
     subjectEditForm.descriptionEn = "";
     subjectEditForm.sortOrder = 0;
     subjectEditForm.status = 1;
+    subjectEditForm.price = 9800;
     subjectEditForm.examInfoZh = "";
     subjectEditForm.examInfoEn = "";
     selectedLanguagesForEdit.value = [];
@@ -1431,6 +1490,7 @@ function handleNewSubject() {
   subjectCreateForm.descriptionEn = "";
   subjectCreateForm.sortOrder = 0;
   subjectCreateForm.status = 1;
+  subjectCreateForm.price = 9800;
   subjectCreateForm.examInfoZh = "";
   subjectCreateForm.examInfoEn = "";
   selectedLanguagesForCreate.value = [];
@@ -1458,6 +1518,7 @@ function handleSubmitSubjectCreate() {
         descriptionEn: subjectCreateForm.descriptionEn,
         sortOrder: subjectCreateForm.sortOrder,
         status: subjectCreateForm.status,
+        price: subjectCreateForm.price,
         examInfoZh: subjectCreateForm.examInfoZh,
         examInfoEn: subjectCreateForm.examInfoEn,
       };
@@ -1493,6 +1554,7 @@ function handleSubjectCreateDialogClosed() {
     subjectCreateForm.descriptionEn = "";
     subjectCreateForm.sortOrder = 0;
     subjectCreateForm.status = 1;
+    subjectCreateForm.price = 9800;
     subjectCreateForm.examInfoZh = "";
     subjectCreateForm.examInfoEn = "";
     selectedLanguagesForCreate.value = [];
