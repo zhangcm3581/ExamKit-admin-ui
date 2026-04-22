@@ -73,7 +73,7 @@
             </el-icon>
           </template>
         </el-table-column>
-        <el-table-column label="科目" prop="subjectName" min-width="420" show-overflow-tooltip />
+        <el-table-column label="科目" prop="subjectName" min-width="410" show-overflow-tooltip />
         <el-table-column label="状态" width="80" align="center">
           <template #default="scope">
             <el-tag
@@ -93,7 +93,7 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="使用时间" width="180" align="center">
+        <el-table-column label="使用时间" width="190" align="center">
           <template #default="scope">
             <span v-if="scope.row.usedAt" class="login-time">
               {{ formatDateTime(scope.row.usedAt) }}
@@ -527,6 +527,7 @@ onMounted(() => {
 .login-time {
   font-size: 14px;
   color: #606266;
+  white-space: nowrap; // 禁止在日期-时间中间空格断行
 }
 
 .text-secondary {
