@@ -478,7 +478,7 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="价格" prop="price">
+            <el-form-item label="价格（元）" prop="price">
               <el-input-number
                 v-model="priceYuanEdit"
                 :min="1"
@@ -488,7 +488,6 @@
                 controls-position="right"
                 style="width: 100%"
               />
-              <span style="margin-left: 8px; color: #909399">元</span>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -617,7 +616,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="价格" prop="price">
+            <el-form-item label="价格（元）" prop="price">
               <el-input-number
                 v-model="priceYuanCreate"
                 :min="1"
@@ -627,7 +626,6 @@
                 controls-position="right"
                 style="width: 100%"
               />
-              <span style="margin-left: 8px; color: #909399">元</span>
             </el-form-item>
           </el-col>
         </el-row>
