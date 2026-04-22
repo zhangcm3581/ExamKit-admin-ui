@@ -98,6 +98,8 @@ export interface SubjectVO {
   supportLanguages?: string;
   /** 题目总数 */
   totalQuestions: number;
+  /** 价格（分），如 9800 表示 98.00 元 */
+  price: number;
   /** 考试信息-中文 */
   examInfoZh?: string;
   /** 考试信息-英文 */
@@ -150,4 +152,6 @@ export interface SubjectForm {
   sortOrder?: number;
   /** 状态 */
   status?: number;
+  /** 价格（分），如 9800 表示 98.00 元 */
+  price?: number;
 }
