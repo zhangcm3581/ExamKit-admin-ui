@@ -40,7 +40,7 @@
         @row-click="handleRowClick"
       >
         <el-table-column label="编号" type="index" width="70" align="center" />
-        <el-table-column label="名称" min-width="290">
+        <el-table-column label="名称" min-width="460">
           <template #default="scope">
             <div class="name-cell">
               <!-- 文件夹(Provider) -->
@@ -70,12 +70,15 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="200" align="center">
+        <el-table-column label="添加时间" width="110" align="center">
           <template #default="scope">
-            {{ formatDateTime(scope.row.createTime) }}
+            <div class="datetime-cell">
+              <div>{{ formatDate(scope.row.createTime) }}</div>
+              <div class="datetime-cell-time">{{ formatTime(scope.row.createTime) }}</div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="题目数量" width="120" align="center">
+        <el-table-column label="数量" width="80" align="center">
           <template #default="scope">
             {{ scope.row.isFolder ? "--" : scope.row.totalQuestions || 0 }}
           </template>
@@ -110,7 +113,7 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" align="left">
+        <el-table-column label="操作" width="220" align="left">
           <template #default="scope">
             <div class="action-buttons">
               <!-- 文件夹操作 -->
@@ -696,7 +699,7 @@ import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import WangEditor from "@/components/WangEditor/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDate, formatTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
 
@@ -1880,6 +1883,15 @@ onMounted(() => {
 .empty-tip {
   margin-bottom: 20px;
   font-size: 14px;
+  color: #909399;
+}
+
+/* 添加时间双行样式：日期主 + 时间副灰色 */
+.datetime-cell {
+  line-height: 1.4;
+}
+.datetime-cell-time {
+  font-size: 12px;
   color: #909399;
 }
 
