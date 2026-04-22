@@ -280,7 +280,7 @@
           <em>点击上传</em>
         </div>
         <template #tip>
-          <div class="el-upload__tip">支持 .pdf .zip .rar .7z 格式，文件大小不超过 50MB</div>
+          <div class="el-upload__tip">支持 .pdf .zip .rar .7z 格式，文件大小不超过 100MB</div>
         </template>
       </el-upload>
       <template #footer>
@@ -1105,8 +1105,8 @@ function beforePdfUpload(file: File) {
     ElMessage.error("仅支持 pdf、zip、rar、7z 格式");
     return false;
   }
-  if (file.size > 50 * 1024 * 1024) {
-    ElMessage.error("文件大小不能超过50MB");
+  if (file.size > 100 * 1024 * 1024) {
+    ElMessage.error("文件大小不能超过100MB");
     return false;
   }
   pdfDialog.uploading = true;
