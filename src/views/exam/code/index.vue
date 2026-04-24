@@ -165,6 +165,12 @@
           </div>
         </el-form-item>
 
+        <el-form-item label="有效天数" prop="validDays">
+          <el-input-number v-model="formData.validDays" :min="1" :max="3650" style="width: 200px" />
+          <span style="margin-left: 12px; font-size: 12px; color: #909399">
+            默认 365 天（1 年），可自定义，设为 1 方便测试
+          </span>
+        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" />
         </el-form-item>
@@ -266,7 +272,7 @@ const codesText = ref("");
 const formData = reactive<any>({
   subjectId: "",
   count: 10,
-  validDays: 3650,
+  validDays: 365,
   remark: "",
 });
 
@@ -391,7 +397,7 @@ function handleDialogClose() {
   formRef.value?.resetFields();
   formData.subjectId = "";
   formData.count = 10;
-  formData.validDays = 3650;
+  formData.validDays = 365;
   formData.remark = "";
   codesText.value = "";
   generateType.value = "batch";
