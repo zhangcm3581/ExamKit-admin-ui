@@ -94,8 +94,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center" fixed="right">
+        <el-table-column label="操作" width="220" align="center" fixed="right">
           <template #default="scope">
+            <el-button type="primary" link size="small" @click.stop="openAuthDialog(scope.row)">
+              题库权限
+            </el-button>
             <el-button
               v-if="!scope.row.emailVerified"
               type="primary"
@@ -121,11 +124,21 @@
         @pagination="fetchData"
       />
     </el-card>
+
+    <el-dialog
+      v-model="authDialogVisible"
+      :title="authDialogUser ? `${authDialogUser.nickname} - 题库权限` : '题库权限'"
+      width="960px"
+      destroy-on-close
+    >
+      <SubjectAuthTab :user-id="authDialogUser?.id" />
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { CircleCheck, Search } from "@element-plus/icons-vue";
+import SubjectAuthTab from "./components/SubjectAuthTab.vue";
 
 defineOptions({
   name: "AppUser",
@@ -157,6 +170,14 @@ function fetchData() {
     .finally(() => {
       loading.value = false;
     });
+}
+
+const authDialogVisible = ref(false);
+const authDialogUser = ref<AppUserVO | null>(null);
+
+function openAuthDialog(row: AppUserVO) {
+  authDialogUser.value = row;
+  authDialogVisible.value = true;
 }
 
 // 搜索
