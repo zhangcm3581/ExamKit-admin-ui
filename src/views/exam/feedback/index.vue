@@ -220,11 +220,11 @@ function typeLabel(t: string): string {
 
 function typeTagType(t: string): "primary" | "success" | "warning" | "info" | "danger" {
   const map: Record<string, "primary" | "success" | "warning" | "info" | "danger"> = {
-    ACCOUNT: "info",
+    ACCOUNT: "primary",
     SUGGESTION: "success",
     OTHER: "warning",
   };
-  return map[t] || "info";
+  return map[t] || "primary";
 }
 
 function statusLabel(s: string): string {
