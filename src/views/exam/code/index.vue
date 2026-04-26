@@ -74,6 +74,12 @@
             </el-icon>
           </template>
         </el-table-column>
+        <el-table-column label="天数" prop="validDays" width="80" align="center">
+          <template #default="scope">
+            <span v-if="scope.row.validDays">{{ scope.row.validDays }}</span>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="scope">
             <el-tag

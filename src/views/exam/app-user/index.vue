@@ -128,7 +128,7 @@
     <el-dialog
       v-model="authDialogVisible"
       :title="authDialogUser ? `${authDialogUser.nickname} - 题库权限` : '题库权限'"
-      width="960px"
+      width="1000px"
       destroy-on-close
     >
       <SubjectAuthTab :user-id="authDialogUser?.id" />
