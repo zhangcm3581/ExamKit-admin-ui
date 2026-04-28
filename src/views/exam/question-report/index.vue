@@ -283,6 +283,7 @@ import QuestionReportAPI, {
 import QuestionAPI, { type QuestionVO } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
 import QuestionEditPanel from "@/components/QuestionEditPanel/index.vue";
+import { formatRichText } from "@/utils/rich-text";
 
 const loading = ref(false);
 const tableData = ref<ReportVO[]>([]);
@@ -323,7 +324,7 @@ const parsedOptions = computed(() => {
     // 兼容两种格式: {key, text, correct} 或 {label, value}
     return arr.map((item: any) => ({
       key: item.key || item.label || "",
-      text: item.text || item.value || "",
+      text: formatRichText(item.text || item.value || ""),
       correct:
         item.correct || (questionDetail.value?.answer || "").includes(item.key || item.label || ""),
     }));
@@ -334,16 +335,20 @@ const parsedOptions = computed(() => {
 
 const questionContent = computed(() => {
   if (!questionDetail.value) return "";
-  return questionLocale.value === "zh"
-    ? questionDetail.value.contentZh || questionDetail.value.contentEn
-    : questionDetail.value.contentEn || questionDetail.value.contentZh;
+  const raw =
+    questionLocale.value === "zh"
+      ? questionDetail.value.contentZh || questionDetail.value.contentEn
+      : questionDetail.value.contentEn || questionDetail.value.contentZh;
+  return formatRichText(raw);
 });
 
 const questionExplanation = computed(() => {
   if (!questionDetail.value) return "";
-  return questionLocale.value === "zh"
-    ? questionDetail.value.explanationZh || questionDetail.value.explanationEn
-    : questionDetail.value.explanationEn || questionDetail.value.explanationZh;
+  const raw =
+    questionLocale.value === "zh"
+      ? questionDetail.value.explanationZh || questionDetail.value.explanationEn
+      : questionDetail.value.explanationEn || questionDetail.value.explanationZh;
+  return formatRichText(raw);
 });
 
 const hasBilingual = computed(() => {
