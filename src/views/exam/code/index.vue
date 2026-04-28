@@ -126,25 +126,54 @@
       @close="handleDialogClose"
     >
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
+        <el-form-item label="供应商">
+          <el-select
+            v-model="formProviderId"
+            placeholder="请选择供应商（可选，用于过滤科目）"
+            clearable
+            filterable
+            style="width: 100%"
+            @change="onFormProviderChange"
+          >
+            <el-option
+              v-for="p in providerOptions"
+              :key="p.value"
+              :label="p.label"
+              :value="p.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="科目" prop="subjectId">
           <el-select
             v-model="formData.subjectId"
-            placeholder="请选择科目"
+            :placeholder="
+              formProviderId ? '请选择科目' : '请选择科目（未选供应商时显示全部，按供应商分组）'
+            "
             filterable
             style="width: 100%"
           >
-            <el-option-group
-              v-for="group in groupedSubjects"
-              :key="group.label"
-              :label="group.label"
-            >
+            <template v-if="formProviderId">
               <el-option
-                v-for="subject in group.options"
+                v-for="subject in formSubjectsByProvider"
                 :key="subject.id"
                 :label="subject.nameZh || subject.nameEn"
                 :value="subject.id"
               />
-            </el-option-group>
+            </template>
+            <template v-else>
+              <el-option-group
+                v-for="group in groupedSubjects"
+                :key="group.label"
+                :label="group.label"
+              >
+                <el-option
+                  v-for="subject in group.options"
+                  :key="subject.id"
+                  :label="subject.nameZh || subject.nameEn"
+                  :value="subject.id"
+                />
+              </el-option-group>
+            </template>
           </el-select>
         </el-form-item>
 
@@ -191,27 +220,56 @@
     </el-dialog>
 
     <!-- 导出对话框 -->
-    <el-dialog v-model="exportDialogVisible" title="导出激活码" width="500px">
+    <el-dialog v-model="exportDialogVisible" title="导出激活码" width="700px">
       <el-form label-width="80px">
+        <el-form-item label="供应商">
+          <el-select
+            v-model="exportProviderId"
+            placeholder="请选择供应商（可选，用于过滤科目）"
+            clearable
+            filterable
+            style="width: 100%"
+            @change="onExportProviderChange"
+          >
+            <el-option
+              v-for="p in providerOptions"
+              :key="p.value"
+              :label="p.label"
+              :value="p.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="科目">
           <el-select
             v-model="exportSubjectId"
-            placeholder="请选择科目"
+            :placeholder="
+              exportProviderId ? '请选择科目' : '请选择科目（未选供应商时显示全部，按供应商分组）'
+            "
             filterable
             style="width: 100%"
           >
-            <el-option-group
-              v-for="group in groupedSubjects"
-              :key="group.label"
-              :label="group.label"
-            >
+            <template v-if="exportProviderId">
               <el-option
-                v-for="subject in group.options"
+                v-for="subject in exportSubjectsByProvider"
                 :key="subject.id"
                 :label="subject.nameZh || subject.nameEn"
                 :value="subject.id"
               />
-            </el-option-group>
+            </template>
+            <template v-else>
+              <el-option-group
+                v-for="group in groupedSubjects"
+                :key="group.label"
+                :label="group.label"
+              >
+                <el-option
+                  v-for="subject in group.options"
+                  :key="subject.id"
+                  :label="subject.nameZh || subject.nameEn"
+                  :value="subject.id"
+                />
+              </el-option-group>
+            </template>
           </el-select>
         </el-form-item>
       </el-form>
@@ -242,6 +300,7 @@ import ActivationCodeAPI, {
   type BatchGenerateRequest,
   type CustomCreateRequest,
 } from "@/api/exam/activation-code-api";
+import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import { formatDateTime } from "@/utils/datetime";
 
@@ -257,6 +316,7 @@ const queryParams = reactive<ActivationCodePageQuery>({
 
 const tableData = ref<ActivationCodeVO[]>();
 const subjectOptions = ref<SubjectVO[]>([]);
+const providerOptions = ref<ProviderOptionVO[]>([]);
 
 const groupedSubjects = computed(() => {
   const map = new Map<string, SubjectVO[]>();
@@ -274,6 +334,7 @@ const dialogTitle = ref("生成激活码");
 const generateType = ref<"batch" | "custom">("batch");
 const submitLoading = ref(false);
 const codesText = ref("");
+const formProviderId = ref<number | undefined>(undefined);
 
 const formData = reactive<any>({
   subjectId: "",
@@ -281,6 +342,16 @@ const formData = reactive<any>({
   validDays: 365,
   remark: "",
 });
+
+// 生成弹窗：按已选供应商过滤的科目列表（未选则返回全部，按供应商分组展示）
+const formSubjectsByProvider = computed<SubjectVO[]>(() => {
+  if (!formProviderId.value) return subjectOptions.value;
+  return subjectOptions.value.filter((s) => s.providerId === formProviderId.value);
+});
+
+function onFormProviderChange() {
+  formData.subjectId = "";
+}
 
 const formRules = {
   subjectId: [{ required: true, message: "请选择科目", trigger: "change" }],
@@ -290,6 +361,16 @@ const formRules = {
 // 导出对话框
 const exportDialogVisible = ref(false);
 const exportSubjectId = ref("");
+const exportProviderId = ref<number | undefined>(undefined);
+
+const exportSubjectsByProvider = computed<SubjectVO[]>(() => {
+  if (!exportProviderId.value) return subjectOptions.value;
+  return subjectOptions.value.filter((s) => s.providerId === exportProviderId.value);
+});
+
+function onExportProviderChange() {
+  exportSubjectId.value = "";
+}
 
 // 获取数据
 function fetchData() {
@@ -308,6 +389,13 @@ function fetchData() {
 function loadSubjectOptions() {
   SubjectAPI.getPage({ pageNum: 1, pageSize: 1000, status: 1 }).then((data) => {
     subjectOptions.value = data.data;
+  });
+}
+
+// 加载供应商选项
+function loadProviderOptions() {
+  ProviderAPI.getOptions().then((data) => {
+    providerOptions.value = data;
   });
 }
 
@@ -407,10 +495,13 @@ function handleDialogClose() {
   formData.remark = "";
   codesText.value = "";
   generateType.value = "batch";
+  formProviderId.value = undefined;
 }
 
 // 导出
 function handleExport() {
+  exportProviderId.value = undefined;
+  exportSubjectId.value = "";
   exportDialogVisible.value = true;
 }
 
@@ -454,6 +545,7 @@ function handleCopy(code: string) {
 
 onMounted(() => {
   loadSubjectOptions();
+  loadProviderOptions();
   handleQuery();
 });
 </script>
