@@ -278,8 +278,13 @@ onMounted(() => {
   display: inline-flex;
   gap: 4px;
   align-items: center;
+  // 与同列 el-button size="small" 的高度一致，避免与「题库权限」错位
+  height: 24px;
+  margin-left: 12px;
   font-size: 13px;
   font-weight: 500;
+  line-height: 24px;
+  vertical-align: middle;
   color: #67c23a;
 }
 
