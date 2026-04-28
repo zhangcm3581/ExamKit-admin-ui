@@ -1,270 +1,264 @@
 <template>
-  <div class="practice-container">
-    <el-card v-loading="loading" class="practice-card">
-      <!-- 顶部导航栏 -->
-      <div class="top-bar">
-        <div v-if="subjectInfo" class="subject-title">
-          <div class="subject-title-zh">{{ subjectInfo.nameZh }}</div>
-          <div v-if="subjectInfo.nameEn" class="subject-title-en">{{ subjectInfo.nameEn }}</div>
+  <div
+    class="practice-page min-h-[calc(100vh-90px)] py-3 px-4 overflow-auto"
+    :class="eyeProtection ? 'bg-eye-protection' : 'bg-[#f9fafb]'"
+  >
+    <!-- 加载中 -->
+    <div
+      v-if="loading"
+      class="flex items-center justify-center h-[60vh] gap-3 text-gray-500 text-sm"
+    >
+      <span class="loading-spinner"></span>
+      <span>加载中...</span>
+    </div>
+
+    <!-- 主体两栏 -->
+    <div v-else class="max-w-7xl mx-auto flex gap-4">
+      <!-- 左：question-panel -->
+      <div class="flex-1 min-w-0 bg-white rounded-lg overflow-hidden">
+        <!-- 顶栏：科目信息 + 中/EN 胶囊 -->
+        <div class="flex items-center justify-between gap-2 border-b border-gray-200 px-5 h-11">
+          <div class="flex items-center gap-3 min-w-0">
+            <div
+              class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded bg-gradient-to-br from-blue-400 to-blue-500 text-white"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-sm font-medium text-gray-700 truncate">
+                {{ subjectInfo?.nameZh || subjectInfo?.nameEn || "题目练习" }}
+              </span>
+              <span class="text-xs text-gray-400">|</span>
+              <span class="text-xs text-gray-400">背题模式</span>
+            </div>
+          </div>
+          <div
+            v-if="hasEnglishContent && currentBilingual"
+            class="flex items-center bg-gray-100 rounded-full p-0.5 flex-shrink-0"
+          >
+            <button
+              class="px-2.5 py-0.5 text-xs rounded-full transition-colors cursor-pointer"
+              :class="
+                questionLocale === 'zh'
+                  ? 'bg-white text-blue-600 shadow-sm font-medium'
+                  : 'text-gray-400 hover:text-gray-600'
+              "
+              @click="questionLocale = 'zh'"
+            >
+              中
+            </button>
+            <button
+              class="px-2.5 py-0.5 text-xs rounded-full transition-colors cursor-pointer"
+              :class="
+                questionLocale === 'en'
+                  ? 'bg-white text-blue-600 shadow-sm font-medium'
+                  : 'text-gray-400 hover:text-gray-600'
+              "
+              @click="questionLocale = 'en'"
+            >
+              EN
+            </button>
+          </div>
+        </div>
+
+        <!-- 题目区 -->
+        <div v-if="questions.length > 0" class="px-5 py-5">
+          <!-- 案例背景 -->
+          <div
+            v-if="displayCaseContent"
+            class="mb-4 p-3 bg-blue-50/70 border border-blue-100 rounded-lg"
+          >
+            <div class="flex items-center gap-1.5 mb-2">
+              <span class="text-xs font-medium text-blue-600 px-1.5 py-0.5 bg-blue-100 rounded">
+                案例题
+              </span>
+              <span class="text-xs text-blue-400">案例背景</span>
+            </div>
+            <div class="text-sm text-gray-700 leading-relaxed" v-html="displayCaseContent"></div>
+          </div>
+
+          <!-- 题号 + 题型 + 题干 -->
+          <div class="mb-5 select-none">
+            <div class="text-gray-800 leading-relaxed break-words" :class="fontSizeClass">
+              <span
+                class="inline-block rounded-sm text-white align-text-bottom"
+                style="
+                  padding: 0 4px;
+                  margin-right: 4px;
+                  font-size: 12px;
+                  line-height: 18px;
+                  background-color: #198cff;
+                "
+              >
+                {{ getQuestionTypeText(currentQuestion.type) }}
+              </span>
+              <span class="font-semibold">{{ currentIndex + 1 }}/{{ questions.length }}、</span>
+              <span v-html="displayContent"></span>
+            </div>
+          </div>
+
+          <!-- 选项列表 -->
+          <div v-if="displayOptions.length > 0" class="space-y-2 mb-4" :class="fontSizeClass">
+            <div
+              v-for="opt in displayOptions"
+              :key="opt.label"
+              class="w-full text-left px-3 py-2 rounded border transition-all"
+              :class="
+                isCorrectOption(opt.label)
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 bg-white'
+              "
+            >
+              <div class="flex items-start gap-2 select-none">
+                <span class="flex-shrink-0 font-medium text-gray-700">{{ opt.label }}.</span>
+                <span class="flex-1 text-gray-700" v-html="opt.value"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上一题 / 下一题 -->
+          <div class="flex items-center gap-2 py-3">
+            <button
+              class="h-7 px-4 text-xs rounded border transition-colors cursor-pointer"
+              :class="
+                currentIndex > 0
+                  ? 'text-[#1a8cff] border-[#1a8cff] bg-white hover:bg-blue-50'
+                  : 'text-gray-300 border-gray-200 bg-gray-50 cursor-not-allowed'
+              "
+              :disabled="currentIndex <= 0"
+              @click="handlePrevious"
+            >
+              上一题
+            </button>
+            <button
+              class="h-7 px-4 text-xs rounded border transition-colors cursor-pointer"
+              :class="
+                currentIndex < questions.length - 1
+                  ? 'text-white bg-blue-500 border-blue-500 hover:bg-blue-600'
+                  : 'text-gray-300 border-gray-200 bg-gray-50 cursor-not-allowed'
+              "
+              :disabled="currentIndex >= questions.length - 1"
+              @click="handleNext"
+            >
+              下一题
+            </button>
+          </div>
+
+          <!-- 解析卡 -->
+          <div class="mt-4 border border-blue-100 rounded-lg bg-blue-50 p-4">
+            <div class="flex items-center mb-3 text-sm">
+              <span>
+                正确答案:
+                <span class="font-medium text-green-600 ml-1">
+                  {{ currentQuestion.answer || "" }}
+                </span>
+              </span>
+            </div>
+            <div>
+              <div class="font-medium text-gray-700 mb-2 text-sm">答案解析:</div>
+              <div
+                v-if="displayExplanation"
+                class="text-sm text-gray-600 leading-relaxed break-words explanation-content"
+                v-html="formatExplanation(displayExplanation)"
+              ></div>
+              <div v-else class="text-sm text-gray-400">暂无解析</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空态 -->
+        <div v-else class="flex items-center justify-center h-64 text-gray-400 text-sm">
+          暂无题目
         </div>
       </div>
 
-      <el-divider style="margin: 12px 0" />
-
-      <!-- 主体内容区 -->
-      <div class="content-wrapper">
-        <!-- 左侧题目区域：有双语内容时显示 Tab 切换 -->
-        <div v-if="hasEnglishContent" class="question-area">
-          <!-- 中英文切换 Tab -->
-          <el-tabs v-model="activeLanguageTab" type="border-card" class="content-tabs">
-            <!-- 中文 Tab -->
-            <el-tab-pane label="中文" name="zh">
-              <!-- 题型标签 -->
-              <div v-if="currentQuestion.type" class="question-type-tag">
-                <el-tag
-                  :type="getQuestionTypeColor(currentQuestion.type) || undefined"
-                  size="small"
-                >
-                  {{ getQuestionTypeText(currentQuestion.type) }}
-                </el-tag>
-              </div>
-
-              <!-- 题目内容 -->
-              <div v-if="currentQuestion.contentZh" class="question-content">
-                <div v-html="currentQuestion.contentZh"></div>
-              </div>
-
-              <!-- 选项列表 -->
-              <div v-if="currentQuestion.optionsZh" class="options-section">
-                <div class="options-list">
-                  <div
-                    v-for="option in parseOptions(currentQuestion.optionsZh)"
-                    :key="'zh-' + option.label"
-                    class="option-item"
-                    :class="{ 'is-answer': isCorrectOption(option.label) }"
-                  >
-                    <span class="option-label">{{ option.label }}</span>
-                    <span class="option-text" v-html="option.value"></span>
-                    <el-icon
-                      v-if="isCorrectOption(option.label)"
-                      class="answer-icon"
-                      color="#67c23a"
-                    >
-                      <CircleCheck />
-                    </el-icon>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 答案 -->
-              <div class="answer-section">
-                <span class="section-label">答案：</span>
-                <span class="answer-content">{{ currentQuestion.answer }}</span>
-              </div>
-
-              <!-- 解析 -->
-              <div v-if="currentQuestion.explanationZh" class="explanation-section">
-                <div class="section-label">解析：</div>
-                <div
-                  class="explanation-content"
-                  v-html="formatExplanation(currentQuestion.explanationZh)"
-                ></div>
-              </div>
-            </el-tab-pane>
-
-            <!-- 英文 Tab -->
-            <el-tab-pane label="英文" name="en">
-              <!-- 题型标签 -->
-              <div v-if="currentQuestion.type" class="question-type-tag">
-                <el-tag
-                  :type="getQuestionTypeColor(currentQuestion.type) || undefined"
-                  size="small"
-                >
-                  {{ getQuestionTypeText(currentQuestion.type) }}
-                </el-tag>
-              </div>
-
-              <!-- 题目内容 -->
-              <div v-if="currentQuestion.contentEn" class="question-content">
-                <div v-html="currentQuestion.contentEn"></div>
-              </div>
-
-              <!-- 选项列表 -->
-              <div v-if="currentQuestion.optionsEn" class="options-section">
-                <div class="options-list">
-                  <div
-                    v-for="option in parseOptions(currentQuestion.optionsEn)"
-                    :key="'en-' + option.label"
-                    class="option-item"
-                    :class="{ 'is-answer': isCorrectOption(option.label) }"
-                  >
-                    <span class="option-label">{{ option.label }}</span>
-                    <span class="option-text" v-html="option.value"></span>
-                    <el-icon
-                      v-if="isCorrectOption(option.label)"
-                      class="answer-icon"
-                      color="#67c23a"
-                    >
-                      <CircleCheck />
-                    </el-icon>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 答案 -->
-              <div class="answer-section">
-                <span class="section-label">Answer:</span>
-                <span class="answer-content">{{ currentQuestion.answer }}</span>
-              </div>
-
-              <!-- 解析 -->
-              <div v-if="currentQuestion.explanationEn" class="explanation-section">
-                <div class="section-label">Explanation:</div>
-                <div
-                  class="explanation-content"
-                  v-html="formatExplanation(currentQuestion.explanationEn)"
-                ></div>
-              </div>
-            </el-tab-pane>
-          </el-tabs>
-
-          <!-- 导航按钮 -->
-          <div class="navigation-buttons">
-            <el-button
-              class="nav-button prev-button"
-              :disabled="currentIndex === 0"
-              @click="handlePrevious"
-            >
-              <el-icon><ArrowLeft /></el-icon>
-              <span>上一题</span>
-            </el-button>
-            <el-button
-              class="nav-button next-button"
-              type="primary"
-              :disabled="currentIndex === questions.length - 1"
-              @click="handleNext"
-            >
-              <span>下一题</span>
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
+      <!-- 右：answer-card + settings -->
+      <div class="hidden sm:block w-60 lg:w-64 flex-shrink-0 space-y-4">
+        <!-- 答题卡 -->
+        <div class="bg-white rounded-lg overflow-hidden">
+          <div class="flex items-center px-3 h-11 border-b border-gray-200">
+            <h3 class="text-xs font-bold text-gray-900">答题卡</h3>
           </div>
-        </div>
-
-        <!-- 左侧题目区域：只有单语内容时不显示 Tab -->
-        <div v-else class="question-area">
-          <div class="single-language-content">
-            <!-- 题型标签 -->
-            <div v-if="currentQuestion.type" class="question-type-tag">
-              <el-tag :type="getQuestionTypeColor(currentQuestion.type) || undefined" size="small">
-                {{ getQuestionTypeText(currentQuestion.type) }}
-              </el-tag>
-            </div>
-
-            <!-- 题目内容 -->
-            <div
-              v-if="currentQuestion.contentZh || currentQuestion.contentEn"
-              class="question-content"
-            >
-              <div v-html="currentQuestion.contentZh || currentQuestion.contentEn"></div>
-            </div>
-
-            <!-- 选项列表 -->
-            <div
-              v-if="currentQuestion.optionsZh || currentQuestion.optionsEn"
-              class="options-section"
-            >
-              <div class="options-list">
-                <div
-                  v-for="option in parseOptions(
-                    currentQuestion.optionsZh || currentQuestion.optionsEn
-                  )"
-                  :key="option.label"
-                  class="option-item"
-                  :class="{ 'is-answer': isCorrectOption(option.label) }"
-                >
-                  <span class="option-label">{{ option.label }}</span>
-                  <span class="option-text" v-html="option.value"></span>
-                  <el-icon v-if="isCorrectOption(option.label)" class="answer-icon" color="#67c23a">
-                    <CircleCheck />
-                  </el-icon>
-                </div>
-              </div>
-            </div>
-
-            <!-- 答案 -->
-            <div class="answer-section">
-              <span class="section-label">
-                {{ currentQuestion.contentZh ? "答案：" : "Answer: " }}
-              </span>
-              <span class="answer-content">{{ currentQuestion.answer }}</span>
-            </div>
-
-            <!-- 解析 -->
-            <div
-              v-if="currentQuestion.explanationZh || currentQuestion.explanationEn"
-              class="explanation-section"
-            >
-              <div class="section-label">
-                {{ currentQuestion.contentZh ? "解析：" : "Explanation: " }}
-              </div>
-              <div
-                class="explanation-content"
-                v-html="
-                  formatExplanation(currentQuestion.explanationZh || currentQuestion.explanationEn)
-                "
-              ></div>
-            </div>
-          </div>
-
-          <!-- 导航按钮 -->
-          <div class="navigation-buttons">
-            <el-button
-              class="nav-button prev-button"
-              :disabled="currentIndex === 0"
-              @click="handlePrevious"
-            >
-              <el-icon><ArrowLeft /></el-icon>
-              <span>上一题</span>
-            </el-button>
-            <el-button
-              class="nav-button next-button"
-              type="primary"
-              :disabled="currentIndex === questions.length - 1"
-              @click="handleNext"
-            >
-              <span>下一题</span>
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
-          </div>
-        </div>
-
-        <!-- 右侧答题卡 -->
-        <div class="answer-sheet">
-          <div class="sheet-title">答题卡</div>
-
-          <!-- 题目序号网格 -->
-          <div class="number-grid">
-            <div
+          <div
+            ref="cardGrid"
+            class="grid grid-cols-5 gap-1.5 max-h-[276px] overflow-y-auto px-3 pt-2 pb-2 answer-card-scroll"
+          >
+            <button
               v-for="(q, index) in questions"
               :key="q.id"
-              class="number-item"
-              :class="{ active: currentIndex === index }"
+              class="w-full h-8 flex items-center justify-center text-xs rounded font-semibold cursor-pointer transition-colors"
+              :class="
+                currentIndex === index
+                  ? 'bg-[#228be6] text-white !ring-2 !ring-offset-1 !ring-[#228be6]'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              "
               @click="handleSelectQuestion(index)"
             >
               {{ index + 1 }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 设置面板 -->
+        <div class="bg-white rounded-lg overflow-hidden">
+          <h3
+            class="text-xs font-bold text-gray-900 px-3 h-11 flex items-center border-b border-gray-200"
+          >
+            设置
+          </h3>
+          <div class="space-y-2 px-3 py-2">
+            <!-- 护眼模式 -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-600">护眼模式</span>
+              <button
+                class="relative w-9 h-5 rounded-full transition-colors cursor-pointer"
+                :class="eyeProtection ? 'bg-blue-500' : 'bg-gray-300'"
+                @click="eyeProtection = !eyeProtection"
+              >
+                <span
+                  class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+                  :class="{ 'translate-x-4': eyeProtection }"
+                ></span>
+              </button>
+            </div>
+
+            <!-- 字体大小 -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-600">字体大小</span>
+              <div class="flex items-center gap-1">
+                <button
+                  v-for="size in fontSizes"
+                  :key="size.value"
+                  class="text-xs px-3 py-1 rounded transition-colors cursor-pointer"
+                  :class="
+                    fontSize === size.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  "
+                  @click="fontSize = size.value"
+                >
+                  {{ size.label }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { ArrowLeft, ArrowRight, CircleCheck } from "@element-plus/icons-vue";
 import QuestionAPI, { type QuestionVO, type QuestionPageQuery } from "@/api/exam/question-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 
@@ -275,28 +269,56 @@ defineOptions({
 
 const route = useRoute();
 const router = useRouter();
+
+type FontSize = "small" | "medium" | "large";
+
 const loading = ref(false);
 const questions = ref<QuestionVO[]>([]);
 const currentIndex = ref(0);
-const activeLanguageTab = ref("zh");
+const questionLocale = ref<"zh" | "en">("zh");
 const subjectInfo = ref<SubjectVO | null>(null);
+const cardGrid = ref<HTMLElement | null>(null);
 
-// 当前题目
-const currentQuestion = computed(() => {
-  return questions.value[currentIndex.value] || {};
+// 阅读偏好
+const eyeProtection = ref(false);
+const fontSize = ref<FontSize>("medium");
+
+const fontSizes: { label: string; value: FontSize }[] = [
+  { label: "较小", value: "small" },
+  { label: "标准", value: "medium" },
+  { label: "较大", value: "large" },
+];
+
+const fontSizeClass = computed(() => {
+  const map: Record<FontSize, string> = {
+    small: "text-xs",
+    medium: "text-sm",
+    large: "text-base",
+  };
+  return map[fontSize.value] || "text-sm";
 });
 
-// 是否支持英文（仅根据科目的 supportLanguages 字段判断）
+// 当前题目（空对象兜底）
+const currentQuestion = computed(
+  () => (questions.value[currentIndex.value] || {}) as Partial<QuestionVO>
+);
+
+// 科目是否支持双语
 const hasEnglishContent = computed(() => {
-  if (!subjectInfo.value || !subjectInfo.value.supportLanguages) {
-    return false;
-  }
+  if (!subjectInfo.value || !subjectInfo.value.supportLanguages) return false;
   const languages = subjectInfo.value.supportLanguages.toLowerCase();
   return languages.includes("zh") && languages.includes("en");
 });
 
-// 获取题型文本
-function getQuestionTypeText(type: string): string {
+// 当前题是否双语都有内容
+const currentBilingual = computed(() => {
+  const q = currentQuestion.value;
+  return !!(q && q.contentZh && q.contentEn);
+});
+
+// 题型映射
+function getQuestionTypeText(type?: string): string {
+  if (!type) return "";
   const typeMap: Record<string, string> = {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
@@ -305,49 +327,85 @@ function getQuestionTypeText(type: string): string {
   return typeMap[type] || type;
 }
 
-// 获取题型颜色
-function getQuestionTypeColor(type: string): "success" | "info" | "warning" | "danger" | "" {
-  const colorMap: Record<string, "success" | "info" | "warning" | "danger" | ""> = {
-    SINGLE: "",
-    MULTIPLE: "success",
-    JUDGE: "warning",
-  };
-  return colorMap[type] || "";
-}
-
-// 解析选项JSON
+// 选项 JSON 解析（兼容 label/value 与 key/text 两套字段）
 function parseOptions(optionsStr: string | undefined): { label: string; value: string }[] {
   if (!optionsStr) return [];
   try {
     const parsed = JSON.parse(optionsStr);
+    if (!Array.isArray(parsed)) return [];
     return parsed.map((opt: any) => ({
-      label: opt.label || opt.key,
-      value: opt.value || opt.text,
+      label: opt.label || opt.key || "",
+      value: opt.value || opt.text || "",
     }));
   } catch {
     return [];
   }
 }
 
-// 判断是否是正确选项
-function isCorrectOption(optionLabel: string): boolean {
-  const answer = currentQuestion.value.answer || "";
-  return answer.includes(optionLabel);
+// 题干（按 questionLocale + 单语回退）
+const displayContent = computed(() => {
+  const q = currentQuestion.value;
+  if (!q) return "";
+  const { contentZh, contentEn } = q;
+  if (contentZh && !contentEn) return contentZh;
+  if (contentEn && !contentZh) return contentEn;
+  if (questionLocale.value === "zh") return contentZh || contentEn || "";
+  return contentEn || contentZh || "";
+});
+
+// 选项
+const displayOptions = computed(() => {
+  const q = currentQuestion.value;
+  if (!q) return [];
+  const { optionsZh, optionsEn } = q;
+  const hasZh = !!optionsZh && optionsZh !== "[]";
+  const hasEn = !!optionsEn && optionsEn !== "[]";
+  let str: string | undefined;
+  if (questionLocale.value === "zh") {
+    str = hasZh ? optionsZh : hasEn ? optionsEn : undefined;
+  } else {
+    str = hasEn ? optionsEn : hasZh ? optionsZh : undefined;
+  }
+  return parseOptions(str);
+});
+
+// 解析
+const displayExplanation = computed(() => {
+  const q = currentQuestion.value;
+  if (!q) return "";
+  const { explanationZh, explanationEn } = q;
+  if (explanationZh && !explanationEn) return explanationZh;
+  if (explanationEn && !explanationZh) return explanationEn;
+  if (questionLocale.value === "zh") return explanationZh || explanationEn || "";
+  return explanationEn || explanationZh || "";
+});
+
+// 案例背景
+const displayCaseContent = computed(() => {
+  const q = currentQuestion.value;
+  if (!q || !q.isCase) return "";
+  const { caseContentZh, caseContentEn } = q;
+  if (caseContentZh && !caseContentEn) return caseContentZh;
+  if (caseContentEn && !caseContentZh) return caseContentEn;
+  if (questionLocale.value === "zh") return caseContentZh || caseContentEn || "";
+  return caseContentEn || caseContentZh || "";
+});
+
+// 是否为正确选项
+function isCorrectOption(label: string): boolean {
+  const ans = currentQuestion.value.answer || "";
+  return ans.includes(label);
 }
 
-// 格式化解析内容
+// 解析格式化（沿用原实现）
 function formatExplanation(content: string | undefined): string {
   if (!content) return "";
-
-  // 处理 Markdown 风格的代码块
   const markdownCodeBlockRegex = /```\w*\n([\s\S]*?)```/g;
   let hasMarkdownCode = false;
-
-  content = content.replace(markdownCodeBlockRegex, (match, code) => {
+  content = content.replace(markdownCodeBlockRegex, (_match, code) => {
     hasMarkdownCode = true;
     return "<pre><code>" + escapeHtml(code.trim()) + "</code></pre>";
   });
-
   if (hasMarkdownCode) {
     return content
       .split("\n")
@@ -360,65 +418,73 @@ function formatExplanation(content: string | undefined): string {
       })
       .join("");
   }
-
-  // 简单的换行处理
   return content
     .split("\n")
     .map((line) => (line.trim() ? "<p>" + line + "</p>" : ""))
     .join("");
 }
 
-// HTML 转义函数
 function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
 
-// 上一题
+// 翻页 / 跳转
 function handlePrevious() {
-  if (currentIndex.value > 0) {
-    currentIndex.value--;
-  }
+  if (currentIndex.value > 0) currentIndex.value--;
 }
-
-// 下一题
 function handleNext() {
-  if (currentIndex.value < questions.value.length - 1) {
-    currentIndex.value++;
-  }
+  if (currentIndex.value < questions.value.length - 1) currentIndex.value++;
 }
-
-// 选择题目
 function handleSelectQuestion(index: number) {
   currentIndex.value = index;
 }
 
-// 获取科目详情
+// 当前题号超出可视区时滚入答题卡中央
+function scrollCurrentIntoView() {
+  nextTick(() => {
+    const grid = cardGrid.value;
+    if (!grid) return;
+    const btn = grid.children[currentIndex.value] as HTMLElement | undefined;
+    if (!btn) return;
+    const gridRect = grid.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    if (btnRect.top < gridRect.top || btnRect.bottom > gridRect.bottom) {
+      btn.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  });
+}
+
+watch(currentIndex, scrollCurrentIntoView);
+watch(
+  () => questions.value.length,
+  (len) => {
+    if (len > 0) scrollCurrentIntoView();
+  }
+);
+
+// 数据加载
 async function fetchSubjectInfo() {
   try {
     const subjectId = route.query.subjectId as string;
     const res = await SubjectAPI.getFormData(subjectId);
-
-    // 响应拦截器已经处理过了，直接使用 res 而不是 res.data
-    subjectInfo.value = res as any;
+    subjectInfo.value = res;
   } catch (error) {
     console.error("获取科目信息失败:", error);
   }
 }
 
-// 获取题目数据
 async function fetchData() {
   loading.value = true;
   try {
     const queryParams: QuestionPageQuery = {
       subjectId: route.query.subjectId as string,
       pageNum: 1,
-      pageSize: 1000, // 获取所有题目
+      pageSize: 1000,
     };
     const res = await QuestionAPI.getPage(queryParams);
     questions.value = res.data || [];
-
     if (questions.value.length === 0) {
       ElMessage.warning("该科目暂无题目");
     }
@@ -435,329 +501,59 @@ onMounted(async () => {
     router.back();
     return;
   }
-  // 先获取科目信息，再获取题目
   await fetchSubjectInfo();
   await fetchData();
 });
 </script>
 
-<style lang="scss" scoped>
-.practice-container {
-  height: calc(100vh - 90px);
-  padding: 12px;
-  overflow-y: auto;
+<style scoped>
+.bg-eye-protection {
+  background-color: rgb(220, 230, 221);
+}
 
-  .practice-card {
-    :deep(.el-card__body) {
-      padding: 16px;
-    }
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: practice-spin 0.8s linear infinite;
+}
+@keyframes practice-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.top-bar {
-  margin-bottom: 16px;
-
-  .subject-title {
-    padding: 12px 16px;
-    background-color: #f5f7fa;
-    border: 1px solid #e4e7ed;
-    border-radius: 8px;
-
-    .subject-title-zh {
-      margin-bottom: 2px;
-      font-size: 16px;
-      font-weight: 600;
-      line-height: 1.5;
-      color: #303133;
-    }
-
-    .subject-title-en {
-      font-size: 13px;
-      font-weight: 400;
-      line-height: 1.4;
-      color: #606266;
-    }
-  }
+.answer-card-scroll {
+  scrollbar-color: #d1d5db transparent;
+  scrollbar-width: thin;
+}
+.answer-card-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.answer-card-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.answer-card-scroll::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+.answer-card-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
 }
 
-.content-wrapper {
-  display: flex;
-  gap: 16px;
-
-  .question-area {
-    flex: 1;
-  }
-
-  .answer-sheet {
-    flex-shrink: 0;
-    width: 240px;
-    padding: 12px;
-    background-color: #f8f9fa;
-    border-radius: 6px;
-
-    .sheet-title {
-      margin-bottom: 12px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #303133;
-      text-align: center;
-    }
-
-    .number-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 5px;
-      max-height: 670px;
-      padding-right: 5px;
-      overflow-y: auto;
-
-      /* 美化滚动条 */
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background-color: #f1f1f1;
-        border-radius: 3px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: #c1c1c1;
-        border-radius: 3px;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #a8a8a8;
-        }
-      }
-
-      .number-item {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 28px;
-        font-size: 11px;
-        font-weight: 500;
-        color: #606266;
-        cursor: pointer;
-        background-color: #fff;
-        border: 1px solid #dcdfe6;
-        border-radius: 3px;
-        transition: all 0.2s;
-
-        &:hover {
-          color: #409eff;
-          background-color: #ecf5ff;
-          border-color: #409eff;
-        }
-
-        &.active {
-          color: #fff;
-          background-color: #409eff;
-          border-color: #409eff;
-        }
-      }
-    }
-  }
+.explanation-content :deep(p) {
+  margin: 4px 0;
 }
-
-.content-tabs {
-  :deep(.el-tabs__header) {
-    padding-left: 0;
-    margin-bottom: 10px;
-  }
-
-  :deep(.el-tabs__item) {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-
-    &.is-active {
-      font-weight: 600;
-    }
-  }
-
-  :deep(.el-tabs__content) {
-    padding: 0;
-  }
-
-  :deep(.el-tab-pane) {
-    padding: 10px 0;
-  }
-}
-
-.single-language-content {
-  padding: 10px 0;
-}
-
-.question-type-tag {
-  padding-left: 10px;
-  margin-bottom: 10px;
-}
-
-.question-content {
-  padding-left: 10px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #303133;
-}
-
-.options-section {
-  padding-left: 10px;
-  margin-bottom: 12px;
-
-  .options-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-    .option-item {
-      position: relative;
-      display: flex;
-      align-items: center;
-      min-height: 26px;
-      padding: 4px 8px;
-      font-size: 12px;
-      border: 1px solid #e4e7ed;
-      border-radius: 3px;
-      transition: all 0.2s;
-
-      &.is-answer {
-        background-color: #f0f9ff;
-        border-color: #67c23a;
-      }
-
-      .option-label {
-        flex-shrink: 0;
-        width: 18px;
-        height: 18px;
-        margin-right: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        line-height: 18px;
-        color: #fff;
-        text-align: center;
-        background-color: #909399;
-        border-radius: 50%;
-      }
-
-      &.is-answer .option-label {
-        background-color: #67c23a;
-      }
-
-      .option-text {
-        flex: 1;
-        line-height: 1.3;
-        color: #303133;
-
-        :deep(p) {
-          margin: 0;
-          line-height: 1.3;
-        }
-
-        :deep(br) {
-          display: none;
-        }
-      }
-
-      .answer-icon {
-        flex-shrink: 0;
-        margin-left: 6px;
-        font-size: 14px;
-      }
-    }
-  }
-}
-
-.answer-section {
-  padding: 8px 10px;
-  margin-bottom: 12px;
-  margin-left: 10px;
+.explanation-content :deep(pre) {
+  padding: 8px;
+  margin: 4px 0;
+  overflow-x: auto;
+  font-family: "Courier New", Consolas, monospace;
   font-size: 12px;
-  background-color: #f0f9ff;
-  border-left: 2px solid #67c23a;
+  background-color: #fff;
+  border: 1px solid #dcdfe6;
   border-radius: 3px;
-
-  .section-label {
-    font-weight: 600;
-    color: #606266;
-  }
-
-  .answer-content {
-    font-size: 13px;
-    font-weight: 600;
-    color: #67c23a;
-  }
-}
-
-.explanation-section {
-  padding: 10px;
-  margin-left: 10px;
-  font-size: 12px;
-  background-color: #fafafa;
-  border-radius: 3px;
-
-  .section-label {
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: #606266;
-  }
-
-  .explanation-content {
-    line-height: 1.5;
-    color: #606266;
-
-    :deep(p) {
-      margin: 4px 0;
-    }
-
-    :deep(pre) {
-      padding: 8px;
-      margin: 4px 0;
-      overflow-x: auto;
-      font-family: "Courier New", Consolas, monospace;
-      font-size: 11px;
-      background-color: #fff;
-      border: 1px solid #dcdfe6;
-      border-radius: 3px;
-    }
-  }
-}
-
-.navigation-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  padding-top: 16px;
-  margin-top: 16px;
-  border-top: 1px solid #e4e7ed;
-
-  .nav-button {
-    min-width: 100px;
-    font-size: 14px;
-    font-weight: 600;
-
-    &.prev-button {
-      .el-icon {
-        margin-right: 6px;
-      }
-    }
-
-    &.next-button {
-      .el-icon {
-        margin-left: 6px;
-      }
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    span {
-      display: inline-block;
-    }
-  }
 }
 </style>
