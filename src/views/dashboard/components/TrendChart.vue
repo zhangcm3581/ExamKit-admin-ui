@@ -74,6 +74,8 @@ function render() {
     yAxis: {
       type: "value",
       splitNumber: 3,
+      // 用户数都是整数，强制刻度步长 ≥ 1，避免 0.3/0.6/0.9 这类小数标签
+      minInterval: 1,
       splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } },
       axisLabel: {
         color: "#94a3b8",
