@@ -143,6 +143,9 @@
           >
             <b>编辑题目</b>
           </el-button>
+          <el-button v-else type="primary" link @click="onCancelEdit">
+            <b>返回查看</b>
+          </el-button>
         </div>
 
         <!-- 题目信息（预览态） -->
