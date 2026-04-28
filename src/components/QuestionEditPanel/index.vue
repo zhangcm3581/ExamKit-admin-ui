@@ -264,7 +264,16 @@ async function onSave() {
   saving.value = true;
   try {
     await QuestionAPI.update(form.id, buildPayload());
-    const updated = await QuestionAPI.getFormData(form.id);
+    let updated: QuestionVO;
+    try {
+      updated = await QuestionAPI.getFormData(form.id);
+    } catch {
+      updated = {
+        ...props.question,
+        ...form,
+        id: form.id,
+      } as QuestionVO;
+    }
     ElMessage.success("题目已更新");
     dirty.value = false;
     emit("saved", updated);
