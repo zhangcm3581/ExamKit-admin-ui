@@ -276,7 +276,7 @@
     <el-dialog
       v-model="dialog.visible"
       :title="dialog.title"
-      width="900px"
+      width="1000px"
       class="question-dialog"
       @close="handleCloseDialog"
     >
@@ -306,7 +306,7 @@
               :prop="subjectSupportLanguages.includes('zh') ? 'contentZh' : ''"
               :required="subjectSupportLanguages.includes('zh')"
             >
-              <WangEditor v-model="formData.contentZh" height="200px" />
+              <RichTextField v-model="formData.contentZh" />
             </el-form-item>
 
             <el-form-item
@@ -322,7 +322,7 @@
               <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
                 <span class="option-label">{{ option.label }}</span>
                 <div class="option-editor">
-                  <WangEditor v-model="option.value" height="120px" />
+                  <RichTextField v-model="option.value" min-height="60px" />
                 </div>
                 <el-button
                   v-if="optionsList.length > 2"
@@ -341,7 +341,7 @@
             </el-form-item>
 
             <el-form-item label="解析">
-              <WangEditor v-model="formData.explanationZh" height="200px" />
+              <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </el-tab-pane>
 
@@ -352,7 +352,7 @@
               :prop="subjectSupportLanguages.includes('en') ? 'contentEn' : ''"
               :required="subjectSupportLanguages.includes('en')"
             >
-              <WangEditor v-model="formData.contentEn" height="200px" />
+              <RichTextField v-model="formData.contentEn" />
             </el-form-item>
 
             <el-form-item
@@ -368,7 +368,7 @@
               <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
                 <span class="option-label">{{ option.label }}</span>
                 <div class="option-editor">
-                  <WangEditor v-model="option.value" height="120px" />
+                  <RichTextField v-model="option.value" min-height="60px" />
                 </div>
                 <el-button
                   v-if="optionsListEn.length > 2"
@@ -387,7 +387,7 @@
             </el-form-item>
 
             <el-form-item label="解析">
-              <WangEditor v-model="formData.explanationEn" height="200px" />
+              <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </el-tab-pane>
         </el-tabs>
@@ -397,7 +397,7 @@
           <!-- 仅中文 -->
           <template v-if="subjectSupportLanguages.includes('zh')">
             <el-form-item label="试题题目" prop="contentZh" :required="true">
-              <WangEditor v-model="formData.contentZh" height="200px" />
+              <RichTextField v-model="formData.contentZh" />
             </el-form-item>
 
             <el-form-item
@@ -413,7 +413,7 @@
               <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
                 <span class="option-label">{{ option.label }}</span>
                 <div class="option-editor">
-                  <WangEditor v-model="option.value" height="120px" />
+                  <RichTextField v-model="option.value" min-height="60px" />
                 </div>
                 <el-button
                   v-if="optionsList.length > 2"
@@ -432,7 +432,7 @@
             </el-form-item>
 
             <el-form-item label="解析">
-              <WangEditor v-model="formData.explanationZh" height="200px" />
+              <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </template>
 
@@ -441,7 +441,7 @@
             v-if="subjectSupportLanguages.includes('en') && !subjectSupportLanguages.includes('zh')"
           >
             <el-form-item label="Question" prop="contentEn" :required="true">
-              <WangEditor v-model="formData.contentEn" height="200px" />
+              <RichTextField v-model="formData.contentEn" />
             </el-form-item>
 
             <el-form-item
@@ -457,7 +457,7 @@
               <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
                 <span class="option-label">{{ option.label }}</span>
                 <div class="option-editor">
-                  <WangEditor v-model="option.value" height="120px" />
+                  <RichTextField v-model="option.value" min-height="60px" />
                 </div>
                 <el-button
                   v-if="optionsListEn.length > 2"
@@ -476,7 +476,7 @@
             </el-form-item>
 
             <el-form-item label="Explanation">
-              <WangEditor v-model="formData.explanationEn" height="200px" />
+              <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </template>
         </template>
@@ -485,7 +485,7 @@
         <el-form-item label="答案" prop="answer">
           <!-- 简答题使用富文本编辑器 -->
           <template v-if="formData.type === 'SHORT_ANSWER'">
-            <WangEditor v-model="formData.answer" height="200px" />
+            <RichTextField v-model="formData.answer" />
           </template>
           <!-- 单选题 -->
           <template v-else-if="formData.type === 'SINGLE'">
@@ -569,7 +569,7 @@ import QuestionAPI, {
 } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
 import { formatDateTime } from "@/utils/datetime";
-import WangEditor from "@/components/WangEditor/index.vue";
+import RichTextField from "@/components/RichTextField/index.vue";
 
 defineOptions({
   name: "QuestionManagement",

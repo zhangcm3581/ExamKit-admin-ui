@@ -118,7 +118,7 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/question-api";
-import RichTextField from "./RichTextField.vue";
+import RichTextField from "@/components/RichTextField/index.vue";
 
 interface Props {
   question: QuestionVO;
