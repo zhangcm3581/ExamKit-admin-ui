@@ -5,36 +5,36 @@
       <el-tab-pane label="中文" name="zh">
         <el-form label-position="top">
           <el-form-item label="题目内容">
-            <WangEditor v-model="form.contentZh" height="180px" />
+            <RichTextField v-model="form.contentZh" />
           </el-form-item>
           <el-form-item v-if="hasOptions" label="选项文本">
             <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
               <span class="qep-option-label">{{ opt.label }}</span>
               <div class="qep-option-editor">
-                <WangEditor v-model="optionsZh[idx].value" height="100px" />
+                <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
               </div>
             </div>
           </el-form-item>
           <el-form-item label="解析">
-            <WangEditor v-model="form.explanationZh" height="180px" />
+            <RichTextField v-model="form.explanationZh" />
           </el-form-item>
         </el-form>
       </el-tab-pane>
       <el-tab-pane label="English" name="en">
         <el-form label-position="top">
           <el-form-item label="Question">
-            <WangEditor v-model="form.contentEn" height="180px" />
+            <RichTextField v-model="form.contentEn" />
           </el-form-item>
           <el-form-item v-if="hasOptions" label="Options">
             <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
               <span class="qep-option-label">{{ opt.label }}</span>
               <div class="qep-option-editor">
-                <WangEditor v-model="optionsEn[idx].value" height="100px" />
+                <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
               </div>
             </div>
           </el-form-item>
           <el-form-item label="Explanation">
-            <WangEditor v-model="form.explanationEn" height="180px" />
+            <RichTextField v-model="form.explanationEn" />
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -43,36 +43,36 @@
     <!-- 单语：仅中文 -->
     <el-form v-else-if="onlyZh" label-position="top">
       <el-form-item label="题目内容">
-        <WangEditor v-model="form.contentZh" height="180px" />
+        <RichTextField v-model="form.contentZh" />
       </el-form-item>
       <el-form-item v-if="hasOptions" label="选项文本">
         <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
           <span class="qep-option-label">{{ opt.label }}</span>
           <div class="qep-option-editor">
-            <WangEditor v-model="optionsZh[idx].value" height="100px" />
+            <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
           </div>
         </div>
       </el-form-item>
       <el-form-item label="解析">
-        <WangEditor v-model="form.explanationZh" height="180px" />
+        <RichTextField v-model="form.explanationZh" />
       </el-form-item>
     </el-form>
 
     <!-- 单语：仅英文 -->
     <el-form v-else-if="onlyEn" label-position="top">
       <el-form-item label="Question">
-        <WangEditor v-model="form.contentEn" height="180px" />
+        <RichTextField v-model="form.contentEn" />
       </el-form-item>
       <el-form-item v-if="hasOptions" label="Options">
         <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
           <span class="qep-option-label">{{ opt.label }}</span>
           <div class="qep-option-editor">
-            <WangEditor v-model="optionsEn[idx].value" height="100px" />
+            <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
           </div>
         </div>
       </el-form-item>
       <el-form-item label="Explanation">
-        <WangEditor v-model="form.explanationEn" height="180px" />
+        <RichTextField v-model="form.explanationEn" />
       </el-form-item>
     </el-form>
 
@@ -80,7 +80,7 @@
     <el-form label-position="top" class="qep-answer">
       <el-form-item label="答案">
         <template v-if="form.type === 'SHORT_ANSWER'">
-          <WangEditor v-model="form.answer" height="180px" />
+          <RichTextField v-model="form.answer" />
         </template>
         <template v-else-if="form.type === 'SINGLE'">
           <el-radio-group v-model="form.answer">
@@ -118,6 +118,7 @@
 import { ref, reactive, computed, watch, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/question-api";
+import RichTextField from "./RichTextField.vue";
 
 interface Props {
   question: QuestionVO;

@@ -20,7 +20,7 @@
     <!-- 编辑器 -->
     <Editor
       v-model="modelValue"
-      :style="{ height: height, overflowY: 'hidden' }"
+      :style="editorStyle"
       :default-config="editorConfig"
       mode="simple"
       @on-created="handleCreated"
@@ -39,12 +39,27 @@ import FileManageAPI from "@/api/file-api";
 // 上传图片回调函数类型
 type InsertFnType = (_url: string, _alt: string, _href: string) => void;
 
-defineProps({
+const props = defineProps({
   height: {
     type: String,
     default: "500px",
   },
+  toolbarKeys: {
+    type: Array as () => string[],
+    default: undefined,
+  },
+  autoHeight: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+// 高度策略：autoHeight=true 时让内容自然撑高，仅设最小高度避免空内容塌缩
+const editorStyle = computed(() =>
+  props.autoHeight
+    ? { height: "auto", minHeight: props.height, overflowY: "hidden" as const }
+    : { height: props.height, overflowY: "hidden" as const }
+);
 // 双向绑定
 const modelValue = defineModel("modelValue", {
   type: String,
@@ -54,8 +69,10 @@ const modelValue = defineModel("modelValue", {
 // 编辑器实例，必须用 shallowRef，重要！
 const editorRef = shallowRef();
 
-// 工具栏配置
-const toolbarConfig = ref<Partial<IToolbarConfig>>({});
+// 工具栏配置：toolbarKeys 提供白名单时收窄菜单
+const toolbarConfig = computed<Partial<IToolbarConfig>>(() =>
+  props.toolbarKeys ? { toolbarKeys: props.toolbarKeys } : {}
+);
 
 // 编辑器配置
 const editorConfig = ref<Partial<IEditorConfig>>({
