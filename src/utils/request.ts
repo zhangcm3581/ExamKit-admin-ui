@@ -76,6 +76,11 @@ httpRequest.interceptors.response.use(
     return Promise.reject(new Error(msg || "Business Error"));
   },
   async (error) => {
+    // 主动取消的请求（如切换筛选条件 abort）静默放行，避免触发"网络连接失败"提示
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     console.error("Response interceptor error:", error);
 
     const { config, response } = error;

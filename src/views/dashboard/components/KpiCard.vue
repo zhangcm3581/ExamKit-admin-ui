@@ -49,6 +49,11 @@ const formattedValue = computed(() => props.value.toLocaleString("en-US"));
 
 function renderChart() {
   if (!sparkRef.value || !props.trend || props.trend.length === 0) return;
+  // 错误恢复后 v-if 会重建 DOM，旧 chart 实例绑死被销毁的元素，需重置
+  if (chart && chart.getDom() !== sparkRef.value) {
+    chart.dispose();
+    chart = null;
+  }
   if (!chart) {
     chart = echarts.init(sparkRef.value);
   }

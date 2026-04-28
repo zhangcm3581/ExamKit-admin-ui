@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import { WarningFilled, ChatDotRound } from "@element-plus/icons-vue";
 import DashboardAPI, { type DashboardOverviewVO } from "@/api/dashboard-api";
@@ -99,6 +99,7 @@ const debouncedLoad = useDebounceFn(loadData, 200);
 
 onMounted(loadData);
 watch(range, () => debouncedLoad());
+onBeforeUnmount(() => abortController?.abort());
 
 // sparkline 数据派生
 const newUsersSpark = computed(() => overview.value?.newUsersTrend.map((p) => p.count) ?? []);

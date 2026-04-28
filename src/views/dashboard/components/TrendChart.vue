@@ -37,6 +37,11 @@ let chart: echarts.ECharts | null = null;
 
 function render() {
   if (!chartRef.value) return;
+  // 错误恢复后 v-if 会重建 DOM，旧 chart 实例绑死被销毁的元素，需重置
+  if (chart && chart.getDom() !== chartRef.value) {
+    chart.dispose();
+    chart = null;
+  }
   if (!chart) chart = echarts.init(chartRef.value);
   chart.setOption({
     grid: { left: 40, right: 16, top: 16, bottom: 32 },
