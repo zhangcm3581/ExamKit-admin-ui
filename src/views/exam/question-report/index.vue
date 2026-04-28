@@ -121,8 +121,17 @@
     <!-- 处理对话框 -->
     <el-dialog v-model="processDialogVisible" title="纠错处理" width="700px" destroy-on-close>
       <div v-if="currentReport" v-loading="questionLoading">
-        <!-- 题目信息 -->
-        <div v-if="questionDetail" class="question-panel">
+        <!-- 题目区域工具栏 -->
+        <div v-if="questionDetail" class="question-toolbar">
+          <span v-if="!editing" class="qt-hint">点击右侧按钮可直接修改本题</span>
+          <span v-else class="qt-hint qt-hint-editing">编辑模式</span>
+          <el-button v-if="!editing" type="primary" link @click="editing = true">
+            <b>编辑题目</b>
+          </el-button>
+        </div>
+
+        <!-- 题目信息（预览态） -->
+        <div v-if="questionDetail && !editing" class="question-panel">
           <!-- 题型标签 + 语言切换 -->
           <div class="qp-header">
             <span class="qp-type-tag">{{ questionTypeLabel(questionDetail.type) }}</span>
@@ -172,6 +181,17 @@
               <div class="qp-explanation-content" v-html="questionExplanation"></div>
             </div>
           </div>
+        </div>
+
+        <!-- 题目信息（编辑态） -->
+        <div v-if="questionDetail && editing" class="question-edit-wrapper">
+          <QuestionEditPanel
+            ref="editPanelRef"
+            :question="questionDetail"
+            :subject-support-languages="subjectSupportLanguages"
+            @saved="onQuestionSaved"
+            @cancel="onCancelEdit"
+          />
         </div>
 
         <!-- 纠错信息 -->
@@ -240,12 +260,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import QuestionReportAPI, {
   type ReportVO,
   type ReportPageQuery,
 } from "@/api/exam/question-report-api";
 import QuestionAPI, { type QuestionVO } from "@/api/exam/question-api";
+import SubjectAPI from "@/api/exam/subject-api";
+import QuestionEditPanel from "@/components/QuestionEditPanel/index.vue";
 
 const loading = ref(false);
 const tableData = ref<ReportVO[]>([]);
@@ -270,6 +292,9 @@ const processForm = reactive({
 });
 
 const questionLocale = ref<"zh" | "en">("zh");
+const editing = ref(false);
+const subjectSupportLanguages = ref<string>("zh");
+const editPanelRef = ref<InstanceType<typeof QuestionEditPanel> | null>(null);
 
 const parsedOptions = computed(() => {
   if (!questionDetail.value) return [];
@@ -410,18 +435,43 @@ async function handleProcess(row: ReportVO) {
   processForm.handlerRemark = row.handlerRemark || "";
   questionDetail.value = null;
   questionLocale.value = "zh";
+  editing.value = false;
+  subjectSupportLanguages.value = "zh";
   processDialogVisible.value = true;
 
-  // 加载题目详情
   questionLoading.value = true;
   try {
-    const data = await QuestionAPI.getFormData(row.questionId);
-    questionDetail.value = data;
+    const [q, s] = await Promise.all([
+      QuestionAPI.getFormData(row.questionId),
+      SubjectAPI.getFormData(row.subjectId),
+    ]);
+    questionDetail.value = q;
+    subjectSupportLanguages.value = s.supportLanguages || "zh";
   } catch {
     questionDetail.value = null;
   } finally {
     questionLoading.value = false;
   }
+}
+
+function onQuestionSaved(updated: QuestionVO) {
+  questionDetail.value = updated;
+  editing.value = false;
+}
+
+async function onCancelEdit() {
+  if (editPanelRef.value?.isDirty()) {
+    try {
+      await ElMessageBox.confirm("有未保存的修改，确定取消编辑？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "继续编辑",
+        type: "warning",
+      });
+    } catch {
+      return;
+    }
+  }
+  editing.value = false;
 }
 
 async function submitProcess() {
@@ -645,5 +695,25 @@ async function submitProcess() {
 .report-row .label {
   font-weight: 500;
   color: #303133;
+}
+
+.question-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+}
+
+.qt-hint {
+  font-size: 12px;
+  color: #909399;
+}
+
+.qt-hint-editing {
+  color: #3b82f6;
+}
+
+.question-edit-wrapper {
+  margin-bottom: 16px;
 }
 </style>
