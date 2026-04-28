@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed, watch, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/question-api";
 
@@ -203,6 +203,7 @@ watch(multipleAnswers, (newVal) => {
 });
 
 const dirty = ref(false);
+let watcherArmed = false;
 
 watch(
   () => [
@@ -215,9 +216,15 @@ watch(
     JSON.stringify(optionsEn.value),
   ],
   () => {
+    if (!watcherArmed) return;
     dirty.value = true;
   }
 );
+
+onMounted(async () => {
+  await nextTick();
+  watcherArmed = true;
+});
 
 defineExpose({ isDirty: () => dirty.value });
 
