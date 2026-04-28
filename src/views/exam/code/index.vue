@@ -107,6 +107,22 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="110" fixed="right" align="center">
+          <template #default="scope">
+            <el-button
+              v-if="scope.row.canRecycle"
+              type="danger"
+              size="small"
+              text
+              bg
+              :icon="CircleClose"
+              @click="onRecycle(scope.row)"
+            >
+              回收
+            </el-button>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
       </el-table>
 
       <pagination
@@ -285,8 +301,8 @@
 </template>
 
 <script setup lang="ts">
-import { DocumentCopy } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+import { CircleClose, DocumentCopy } from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import * as XLSX from "xlsx";
 
 defineOptions({
@@ -541,6 +557,22 @@ function handleCopy(code: string) {
   navigator.clipboard.writeText(code).then(() => {
     ElMessage.success("复制成功");
   });
+}
+
+// 回收激活码
+async function onRecycle(row: ActivationCodeVO) {
+  try {
+    await ElMessageBox.confirm(
+      `确认回收激活码「${row.code}」吗？该用户对应的题库权限将立即失效。`,
+      "回收确认",
+      { type: "warning", confirmButtonText: "确定回收", cancelButtonText: "取消" }
+    );
+  } catch {
+    return;
+  }
+  await ActivationCodeAPI.recycle(row.id);
+  ElMessage.success("已回收");
+  fetchData();
 }
 
 onMounted(() => {
