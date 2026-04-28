@@ -3,6 +3,34 @@
     "dashboard": "Dashboard",
     "document": "Document"
   },
+  "dashboard": {
+    "title": "Dashboard",
+    "range": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    },
+    "kpi": {
+      "newUsers": "New Users",
+      "codeUsed": "Codes Used",
+      "totalUsers": "Total Users"
+    },
+    "trend": {
+      "title": "New Users Trend",
+      "empty": "No data"
+    },
+    "todo": {
+      "title": "Todo",
+      "pendingReports": "Unresolved Reports",
+      "pendingFeedbacks": "Unresolved Feedback",
+      "unit": "",
+      "goHandle": "Handle"
+    },
+    "error": {
+      "loadFailed": "Load failed",
+      "retry": "Retry"
+    }
+  },
   "login": {
     "themeToggle": "Theme Switch",
     "languageToggle": "Language Switch",

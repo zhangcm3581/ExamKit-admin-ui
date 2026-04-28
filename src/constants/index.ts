@@ -33,6 +33,8 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const ROLE_ROOT = "ROOT"; // 超级管理员角色
+export const ROLE_ADMIN = "ADMIN"; // 系统管理员角色
+export const DASHBOARD_ROLES = [ROLE_ROOT, ROLE_ADMIN]; // 看板可见角色
 
 // 分组键集合（便于批量操作）
 export const AUTH_KEYS = {

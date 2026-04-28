@@ -3,6 +3,34 @@
     "dashboard": "首页",
     "document": "项目文档"
   },
+  "dashboard": {
+    "title": "数据看板",
+    "range": {
+      "7d": "近 7 天",
+      "30d": "近 30 天",
+      "90d": "近 90 天"
+    },
+    "kpi": {
+      "newUsers": "新增用户",
+      "codeUsed": "激活码使用",
+      "totalUsers": "总用户"
+    },
+    "trend": {
+      "title": "新增用户趋势",
+      "empty": "暂无数据"
+    },
+    "todo": {
+      "title": "待办事项",
+      "pendingReports": "未处理纠错",
+      "pendingFeedbacks": "未处理用户反馈",
+      "unit": "条",
+      "goHandle": "前往处理"
+    },
+    "error": {
+      "loadFailed": "加载失败",
+      "retry": "重试"
+    }
+  },
   "login": {
     "themeToggle": "主题切换",
     "languageToggle": "语言切换",
