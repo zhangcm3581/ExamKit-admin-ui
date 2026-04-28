@@ -46,6 +46,7 @@
             <el-option label="未使用" :value="0" />
             <el-option label="已使用" :value="1" />
             <el-option label="已过期" :value="2" />
+            <el-option label="已回收" :value="3" />
           </el-select>
           <el-button type="primary" icon="Search" @click="handleSearch" />
           <el-button icon="Refresh" @click="handleReset" />
@@ -80,20 +81,14 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="80" align="center">
+        <el-table-column label="状态" width="90" align="center">
           <template #default="scope">
-            <el-tag
-              :type="
-                scope.row.status === 0 ? 'success' : scope.row.status === 1 ? 'info' : 'warning'
-              "
-              size="small"
-              effect="plain"
-            >
-              {{ scope.row.status === 0 ? "未使用" : scope.row.status === 1 ? "已使用" : "已过期" }}
+            <el-tag :type="statusTagType(scope.row.status)" size="small" effect="plain">
+              {{ statusLabel(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="使用者" prop="usedByName" width="100" show-overflow-tooltip>
+        <el-table-column label="用户" prop="usedByName" width="140" show-overflow-tooltip>
           <template #default="scope">
             <span v-if="scope.row.usedByName">{{ scope.row.usedByName }}</span>
             <span v-else class="text-secondary">-</span>
@@ -557,6 +552,24 @@ function handleCopy(code: string) {
   navigator.clipboard.writeText(code).then(() => {
     ElMessage.success("复制成功");
   });
+}
+
+// 状态标签：0=未使用 1=已使用 2=已过期 3=已回收
+function statusLabel(status: number): string {
+  return (
+    ({ 0: "未使用", 1: "已使用", 2: "已过期", 3: "已回收" } as Record<number, string>)[status] ||
+    "-"
+  );
+}
+function statusTagType(status: number): "success" | "info" | "warning" | "danger" {
+  return (
+    (
+      { 0: "success", 1: "info", 2: "warning", 3: "danger" } as Record<
+        number,
+        "success" | "info" | "warning" | "danger"
+      >
+    )[status] || "info"
+  );
 }
 
 // 回收激活码
