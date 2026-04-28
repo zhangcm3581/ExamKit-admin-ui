@@ -202,6 +202,25 @@ watch(multipleAnswers, (newVal) => {
   }
 });
 
+const dirty = ref(false);
+
+watch(
+  () => [
+    form.contentZh,
+    form.contentEn,
+    form.explanationZh,
+    form.explanationEn,
+    form.answer,
+    JSON.stringify(optionsZh.value),
+    JSON.stringify(optionsEn.value),
+  ],
+  () => {
+    dirty.value = true;
+  }
+);
+
+defineExpose({ isDirty: () => dirty.value });
+
 function onCancel() {
   emit("cancel");
 }
@@ -240,6 +259,7 @@ async function onSave() {
     await QuestionAPI.update(form.id, buildPayload());
     const updated = await QuestionAPI.getFormData(form.id);
     ElMessage.success("题目已更新");
+    dirty.value = false;
     emit("saved", updated);
   } finally {
     saving.value = false;
