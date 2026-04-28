@@ -153,7 +153,7 @@ onBeforeUnmount(() => abortController?.abort());
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    padding: 4px 4px 0;
+    padding: 0 4px;
   }
 
   &__head-text {
