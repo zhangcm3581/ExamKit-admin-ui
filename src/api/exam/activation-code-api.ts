@@ -38,6 +38,14 @@ const ActivationCodeAPI = {
       params: { subjectId },
     });
   },
+
+  /** 回收激活码：强制过期对应题库授权 */
+  recycle(id: number) {
+    return request<any, void>({
+      url: `${ACTIVATION_CODE_BASE_URL}/${id}/recycle`,
+      method: "post",
+    });
+  },
 };
 
 export default ActivationCodeAPI;
@@ -80,6 +88,8 @@ export interface ActivationCodeVO {
   createTime: string;
   /** 更新时间 */
   updateTime: string;
+  /** 是否可回收：状态为已使用且关联授权未过期 */
+  canRecycle?: boolean;
 }
 
 /** 批量生成请求 */
