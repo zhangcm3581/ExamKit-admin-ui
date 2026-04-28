@@ -50,15 +50,31 @@ const rootEl = ref<HTMLElement | null>(null);
 
 const formatted = computed(() => formatRichText(modelValue.value));
 
-// 用户实际想要保留的工具栏：标题、加粗、有序列表、对齐、图片
+// 工具栏白名单（wangEditor-next v5 menu key），用 "|" 做视觉分组
 const TOOLBAR_KEYS = [
   "headerSelect",
+  "|",
   "bold",
+  "italic",
+  "underline",
+  "through",
+  "color",
+  "bgColor",
+  "|",
+  "bulletedList",
   "numberedList",
+  "|",
   "justifyLeft",
   "justifyCenter",
   "justifyRight",
+  "|",
+  "insertLink",
   "uploadImage",
+  "codeBlock",
+  "|",
+  "undo",
+  "redo",
+  "clearStyle",
 ];
 
 /**

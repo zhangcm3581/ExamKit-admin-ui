@@ -122,7 +122,7 @@
     <el-dialog
       v-model="processDialogVisible"
       title="纠错处理"
-      width="700px"
+      width="1000px"
       destroy-on-close
       :before-close="handleDialogBeforeClose"
     >
