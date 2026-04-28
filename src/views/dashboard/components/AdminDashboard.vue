@@ -34,11 +34,23 @@
       <!-- 主面板：3 列 KPI 上半 + hairline + 趋势图下半 -->
       <section v-loading="loading" class="dash__panel dash__main">
         <div class="dash__kpis">
-          <KpiCard :title="$t('dashboard.kpi.newUsers')" :value="overview?.newUsers ?? 0" />
-          <KpiCard :title="$t('dashboard.kpi.codeUsed')" :value="overview?.codeUsed ?? 0" />
+          <KpiCard
+            :title="$t('dashboard.kpi.newUsers')"
+            :value="overview?.newUsers ?? 0"
+            :icon="User"
+            tone="indigo"
+          />
+          <KpiCard
+            :title="$t('dashboard.kpi.codeUsed')"
+            :value="overview?.codeUsed ?? 0"
+            :icon="Key"
+            tone="emerald"
+          />
           <KpiCard
             :title="$t('dashboard.kpi.totalUsers')"
             :value="overview?.totalUsers ?? 0"
+            :icon="UserFilled"
+            tone="slate"
             last
           />
         </div>
@@ -53,14 +65,19 @@
           :icon="WarningFilled"
           :title="$t('dashboard.todo.pendingReports')"
           :count="overview?.pendingReports ?? 0"
-          action-to="/exam/question-report"
+          :candidates="[
+            '/exam/question-report',
+            'QuestionReport',
+            '/question-report',
+            'questionreport',
+          ]"
         />
         <TodoCard
           accent="amber"
           :icon="ChatDotRound"
           :title="$t('dashboard.todo.pendingFeedbacks')"
           :count="overview?.pendingFeedbacks ?? 0"
-          action-to="/exam/feedback"
+          :candidates="['/exam/feedback', 'Feedback', '/feedback', 'feedback']"
         />
       </section>
     </template>
@@ -71,7 +88,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import { useI18n } from "vue-i18n";
-import { WarningFilled, ChatDotRound } from "@element-plus/icons-vue";
+import { WarningFilled, ChatDotRound, UserFilled, Key, User } from "@element-plus/icons-vue";
 import DashboardAPI, { type DashboardOverviewVO } from "@/api/dashboard-api";
 import KpiCard from "./KpiCard.vue";
 import TrendChart from "./TrendChart.vue";

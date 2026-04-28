@@ -17,18 +17,47 @@
 
 <script setup lang="ts">
 import { ArrowRight } from "@element-plus/icons-vue";
-import { useRouter, type RouteLocationRaw } from "vue-router";
+import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
 interface Props {
   title: string;
   count: number;
   accent: "red" | "amber";
   icon: any;
-  actionTo: RouteLocationRaw;
+  // 候选 name 或 path 列表，按顺序解析；任何一个匹配到已注册路由即跳转
+  // 设计目的：菜单是后端动态下发的，避免在看板硬编码路径导致 404
+  candidates: string[];
 }
+
 const props = defineProps<Props>();
 const router = useRouter();
-const onClick = () => router.push(props.actionTo);
+
+function resolveTarget(): string | null {
+  const routes = router.getRoutes();
+  // 1) 精确匹配 name 或 path
+  for (const c of props.candidates) {
+    const hit = routes.find((r) => r.path === c || r.name === c);
+    if (hit) return hit.path;
+  }
+  // 2) 模糊匹配 name（去掉斜杠/连字符/下划线后包含）
+  const norm = (s: string) => s.toLowerCase().replace(/[/\-_]/g, "");
+  for (const c of props.candidates) {
+    const target = norm(c);
+    const hit = routes.find((r) => typeof r.name === "string" && norm(r.name).includes(target));
+    if (hit) return hit.path;
+  }
+  return null;
+}
+
+const onClick = () => {
+  const target = resolveTarget();
+  if (target) {
+    router.push(target);
+  } else {
+    ElMessage.warning("找不到对应页面，请从侧边栏进入");
+  }
+};
 </script>
 
 <style lang="scss" scoped>
