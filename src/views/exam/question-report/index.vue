@@ -129,9 +129,18 @@
       <div v-if="currentReport" v-loading="questionLoading">
         <!-- 题目区域工具栏 -->
         <div v-if="questionDetail" class="question-toolbar">
-          <span v-if="!editing" class="qt-hint">点击右侧按钮可直接修改本题</span>
+          <span v-if="!editing && questionDetail?.type === 'FILL_BLANK'" class="qt-hint">
+            填空题暂不支持在此处编辑，请前往「试题管理」修改
+          </span>
+          <span v-else-if="!editing" class="qt-hint">点击右侧按钮可直接修改本题</span>
           <span v-else class="qt-hint qt-hint-editing">编辑模式</span>
-          <el-button v-if="!editing" type="primary" link @click="editing = true">
+          <el-button
+            v-if="!editing"
+            type="primary"
+            link
+            :disabled="questionDetail?.type === 'FILL_BLANK'"
+            @click="editing = true"
+          >
             <b>编辑题目</b>
           </el-button>
         </div>
@@ -384,6 +393,7 @@ function questionTypeLabel(type: string): string {
     SINGLE: "单选题",
     MULTIPLE: "多选题",
     JUDGE: "判断题",
+    FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
   };
   return map[type] || type;
