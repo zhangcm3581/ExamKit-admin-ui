@@ -117,7 +117,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
-import type { QuestionVO, QuestionForm } from "@/api/exam/question-api";
+import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/question-api";
 
 interface Props {
   question: QuestionVO;
@@ -206,11 +206,44 @@ function onCancel() {
   emit("cancel");
 }
 
-function onSave() {
-  // 真正的保存逻辑在 Task 3 实现
-  ElMessage.info("保存逻辑未实现");
-  void saving.value;
-  void emit;
+function buildPayload(): QuestionForm {
+  const payload: QuestionForm = { ...form };
+
+  if (form.type === "SHORT_ANSWER") {
+    payload.optionsZh = "[]";
+    payload.optionsEn = "[]";
+  } else if (form.type === "JUDGE") {
+    payload.optionsZh = JSON.stringify([
+      { label: "A", value: "正确" },
+      { label: "B", value: "错误" },
+    ]);
+    payload.optionsEn = JSON.stringify([
+      { label: "A", value: "True" },
+      { label: "B", value: "False" },
+    ]);
+  } else if (form.type === "SINGLE" || form.type === "MULTIPLE") {
+    payload.optionsZh = JSON.stringify(optionsZh.value);
+    const hasEnText = optionsEn.value.some((o) => (o.value || "").trim() !== "");
+    payload.optionsEn = hasEnText ? JSON.stringify(optionsEn.value) : "";
+  }
+
+  return payload;
+}
+
+async function onSave() {
+  if (!form.id) {
+    ElMessage.error("缺少题目 ID");
+    return;
+  }
+  saving.value = true;
+  try {
+    await QuestionAPI.update(form.id, buildPayload());
+    const updated = await QuestionAPI.getFormData(form.id);
+    ElMessage.success("题目已更新");
+    emit("saved", updated);
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
