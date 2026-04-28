@@ -25,6 +25,8 @@ const canViewDashboard = computed(() =>
 
 <style lang="scss" scoped>
 .dashboard-container {
-  padding: 24px;
+  min-height: calc(100vh - 64px);
+  padding: 28px 32px;
+  background: #fafafa;
 }
 </style>

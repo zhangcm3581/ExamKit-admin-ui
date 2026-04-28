@@ -1,13 +1,16 @@
 <template>
-  <div class="trend-chart">
-    <div class="trend-chart__title">{{ $t("dashboard.trend.title") }}</div>
-    <div v-if="loading" v-loading="true" class="trend-chart__placeholder"></div>
+  <div class="trend">
+    <div class="trend__head">
+      <div class="trend__title">{{ $t("dashboard.trend.title") }}</div>
+    </div>
+    <div v-if="loading" v-loading="true" class="trend__placeholder"></div>
     <el-empty
       v-else-if="!data || data.length === 0"
       :description="$t('dashboard.trend.empty')"
-      class="trend-chart__placeholder"
+      :image-size="80"
+      class="trend__placeholder"
     />
-    <div v-else ref="chartRef" class="trend-chart__canvas"></div>
+    <div v-else ref="chartRef" class="trend__canvas"></div>
   </div>
 </template>
 
@@ -37,43 +40,62 @@ let chart: echarts.ECharts | null = null;
 
 function render() {
   if (!chartRef.value) return;
-  // 错误恢复后 v-if 会重建 DOM，旧 chart 实例绑死被销毁的元素，需重置
   if (chart && chart.getDom() !== chartRef.value) {
     chart.dispose();
     chart = null;
   }
   if (!chart) chart = echarts.init(chartRef.value);
+
+  const STROKE = "#1e3a8a";
+  const FILL_TOP = "rgb(30 58 138 / 14%)";
+  const FILL_BOTTOM = "rgb(30 58 138 / 0%)";
+
   chart.setOption({
-    grid: { left: 40, right: 16, top: 16, bottom: 32 },
+    grid: { left: 32, right: 8, top: 12, bottom: 28 },
     tooltip: {
       trigger: "axis",
-      axisPointer: { type: "line", lineStyle: { color: "#cbd5e1" } },
+      backgroundColor: "rgb(11 18 32 / 92%)",
+      borderColor: "transparent",
+      textStyle: { color: "#fff", fontSize: 12 },
+      padding: [8, 12],
+      axisPointer: {
+        type: "line",
+        lineStyle: { color: "#cbd5e1", width: 1, type: "dashed" },
+      },
     },
     xAxis: {
       type: "category",
       boundaryGap: false,
       data: props.data.map((p) => p.date.slice(5)),
-      axisLine: { lineStyle: { color: "#e2e8f0" } },
-      axisLabel: { color: "#64748b", fontSize: 11 },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: "#94a3b8", fontSize: 11, margin: 12 },
     },
     yAxis: {
       type: "value",
-      splitLine: { lineStyle: { color: "#f1f5f9" } },
-      axisLabel: { color: "#94a3b8" },
+      splitNumber: 3,
+      splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } },
+      axisLabel: {
+        color: "#94a3b8",
+        fontSize: 11,
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+      },
     },
     series: [
       {
         type: "line",
-        smooth: true,
+        smooth: 0.32,
         symbol: "circle",
-        symbolSize: 4,
+        symbolSize: 5,
+        showSymbol: false,
+        emphasis: { focus: "series", scale: 1.4 },
         data: props.data.map((p) => p.count),
-        lineStyle: { width: 2, color: "#3b82f6" },
-        itemStyle: { color: "#3b82f6" },
+        lineStyle: { width: 1.5, color: STROKE },
+        itemStyle: { color: STROKE, borderColor: "#fff", borderWidth: 1.5 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgb(59 130 246 / 30%)" },
-            { offset: 1, color: "rgb(59 130 246 / 0%)" },
+            { offset: 0, color: FILL_TOP },
+            { offset: 1, color: FILL_BOTTOM },
           ]),
         },
       },
@@ -98,26 +120,33 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
-.trend-chart {
-  padding: 20px 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+.trend {
+  padding: 18px 24px 22px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
 
   &__title {
-    margin-bottom: 16px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f172a;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    letter-spacing: 0.02em;
   }
 
   &__canvas {
     width: 100%;
-    height: 320px;
+    height: 220px;
   }
 
   &__placeholder {
-    height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 220px;
   }
 }
 </style>

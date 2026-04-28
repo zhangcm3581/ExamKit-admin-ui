@@ -1,151 +1,83 @@
 <template>
-  <div class="kpi-card" :class="`accent-${accent}`">
-    <div class="kpi-card__bar"></div>
-    <div class="kpi-card__body">
-      <div class="kpi-card__title">{{ title }}</div>
-      <div class="kpi-card__value">{{ formattedValue }}</div>
-    </div>
-    <div v-if="trend && trend.length > 0" ref="sparkRef" class="kpi-card__spark"></div>
+  <div class="kpi-stat" :class="{ 'kpi-stat--last': last }">
+    <div class="kpi-stat__label">{{ title }}</div>
+    <div class="kpi-stat__value">{{ display }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
-import * as echarts from "echarts/core";
-import { LineChart } from "echarts/charts";
-import { GridComponent } from "echarts/components";
-import { CanvasRenderer } from "echarts/renderers";
-
-echarts.use([LineChart, GridComponent, CanvasRenderer]);
+import { ref, computed, watch, onMounted } from "vue";
+import { useTransition, TransitionPresets } from "@vueuse/core";
 
 interface Props {
   title: string;
   value: number;
-  trend?: number[];
-  accent?: "blue" | "green" | "gray";
+  // 布局开关：true 表示该列右边不再渲染竖向 hairline 分隔
+  last?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  trend: () => [],
-  accent: "blue",
+const props = withDefaults(defineProps<Props>(), { last: false });
+
+// count-up：源值从 0 起步，挂载后或 value 变化时过渡到目标，约 900ms easeOutCubic
+const source = ref<number>(0);
+
+onMounted(() => {
+  source.value = props.value ?? 0;
 });
 
-const sparkRef = ref<HTMLDivElement>();
-let chart: echarts.ECharts | null = null;
-
-const accentColor = computed(() => {
-  switch (props.accent) {
-    case "green":
-      return "#22c55e";
-    case "gray":
-      return "#94a3b8";
-    case "blue":
-    default:
-      return "#3b82f6";
+watch(
+  () => props.value,
+  (v) => {
+    source.value = v ?? 0;
   }
+);
+
+const animated = useTransition(source, {
+  duration: 900,
+  transition: TransitionPresets.easeOutCubic,
 });
 
-const formattedValue = computed(() => props.value.toLocaleString("en-US"));
-
-function renderChart() {
-  if (!sparkRef.value || !props.trend || props.trend.length === 0) return;
-  // 错误恢复后 v-if 会重建 DOM，旧 chart 实例绑死被销毁的元素，需重置
-  if (chart && chart.getDom() !== sparkRef.value) {
-    chart.dispose();
-    chart = null;
-  }
-  if (!chart) {
-    chart = echarts.init(sparkRef.value);
-  }
-  const color = accentColor.value;
-  chart.setOption({
-    grid: { left: 0, right: 0, top: 4, bottom: 4 },
-    xAxis: { type: "category", show: false, data: props.trend.map((_, i) => i) },
-    yAxis: { type: "value", show: false },
-    series: [
-      {
-        type: "line",
-        data: props.trend,
-        smooth: true,
-        symbol: "none",
-        lineStyle: { width: 2, color },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: color + "4D" },
-            { offset: 1, color: color + "00" },
-          ]),
-        },
-      },
-    ],
-  });
-}
-
-onMounted(renderChart);
-watch(() => props.trend, renderChart, { deep: true });
-
-const onResize = () => chart?.resize();
-onMounted(() => window.addEventListener("resize", onResize));
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", onResize);
-  chart?.dispose();
-  chart = null;
-});
+const display = computed(() => Math.round(animated.value).toLocaleString("en-US"));
 </script>
 
 <style lang="scss" scoped>
-.kpi-card {
+.kpi-stat {
   position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  padding: 20px 20px 12px 24px;
-  overflow: hidden;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+  gap: 10px;
+  padding: 22px 28px;
 
-  &__bar {
+  &::after {
     position: absolute;
-    top: 16px;
-    bottom: 16px;
-    left: 0;
-    width: 4px;
-    border-radius: 0 4px 4px 0;
+    top: 22px;
+    right: 0;
+    bottom: 22px;
+    width: 1px;
+    content: "";
+    background: #eef0f3;
   }
 
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  &--last::after {
+    display: none;
   }
 
-  &__title {
-    font-size: 14px;
-    color: #64748b;
+  &__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   &__value {
-    font-size: 32px;
-    font-weight: 600;
+    font-size: 34px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     line-height: 1.1;
-    color: #0f172a;
-  }
-
-  &__spark {
-    width: 100%;
-    height: 36px;
-    margin-top: 12px;
-  }
-
-  &.accent-blue .kpi-card__bar {
-    background: #3b82f6;
-  }
-
-  &.accent-green .kpi-card__bar {
-    background: #22c55e;
-  }
-
-  &.accent-gray .kpi-card__bar {
-    background: #94a3b8;
+    color: #0b1220;
+    letter-spacing: -0.015em;
   }
 }
 </style>

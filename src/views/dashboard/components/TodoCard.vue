@@ -1,20 +1,18 @@
 <template>
-  <div class="todo-card" :class="`accent-${accent}`">
-    <div class="todo-card__icon">
-      <el-icon :size="32"><component :is="icon" /></el-icon>
-    </div>
-    <div class="todo-card__main">
-      <div class="todo-card__title">{{ title }}</div>
-      <div class="todo-card__count">
-        {{ count }}
-        <span class="todo-card__unit">{{ $t("dashboard.todo.unit") }}</span>
-      </div>
-    </div>
-    <el-button class="todo-card__action" plain @click="onClick">
+  <button class="todo-row" :class="`tone-${accent}`" type="button" @click="onClick">
+    <span class="todo-row__icon">
+      <el-icon :size="16"><component :is="icon" /></el-icon>
+    </span>
+    <span class="todo-row__label">{{ title }}</span>
+    <span class="todo-row__count">
+      <span class="todo-row__num">{{ count }}</span>
+      <span class="todo-row__unit">{{ $t("dashboard.todo.unit") }}</span>
+    </span>
+    <span class="todo-row__cta">
       {{ $t("dashboard.todo.goHandle") }}
-      <el-icon class="ml-1"><ArrowRight /></el-icon>
-    </el-button>
-  </div>
+      <el-icon class="todo-row__arrow" :size="12"><ArrowRight /></el-icon>
+    </span>
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -34,66 +32,105 @@ const onClick = () => router.push(props.actionTo);
 </script>
 
 <style lang="scss" scoped>
-.todo-card {
+.todo-row {
   display: flex;
   flex: 1;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+  width: 100%;
+  padding: 18px 24px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: #f8fafc;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #eef0f3;
+  }
 
   &__icon {
-    display: flex;
+    display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
   }
 
-  &__main {
-    flex: 1;
-  }
-
-  &__title {
+  &__label {
+    flex-shrink: 0;
+    min-width: 120px;
     font-size: 14px;
-    color: #64748b;
+    color: #334155;
   }
 
   &__count {
-    margin-top: 4px;
-    font-size: 36px;
-    font-weight: 600;
+    display: inline-flex;
+    flex: 1;
+    gap: 4px;
+    align-items: baseline;
+  }
+
+  &__num {
+    font-size: 22px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
-    color: #0f172a;
+    letter-spacing: -0.01em;
   }
 
   &__unit {
-    margin-left: 4px;
-    font-size: 14px;
-    font-weight: 400;
-    color: #64748b;
+    font-size: 12px;
+    color: #94a3b8;
   }
 
-  &.accent-red {
-    .todo-card__icon {
-      color: #dc2626;
+  &__cta {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 4px;
+    align-items: center;
+    font-size: 12px;
+    color: #64748b;
+    transition: color 0.15s ease;
+  }
+
+  &:hover &__cta {
+    color: #0b1220;
+  }
+
+  &__arrow {
+    transition: transform 0.2s ease;
+  }
+
+  &:hover &__arrow {
+    transform: translateX(2px);
+  }
+
+  // tone presets
+  &.tone-red {
+    .todo-row__icon {
+      color: #b91c1c;
       background: #fee2e2;
     }
-    .todo-card__count {
-      color: #dc2626;
+    .todo-row__num {
+      color: #b91c1c;
     }
   }
 
-  &.accent-amber {
-    .todo-card__icon {
-      color: #d97706;
+  &.tone-amber {
+    .todo-row__icon {
+      color: #b45309;
       background: #fef3c7;
     }
-    .todo-card__count {
-      color: #d97706;
+    .todo-row__num {
+      color: #b45309;
     }
   }
 }
