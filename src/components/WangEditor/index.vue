@@ -52,7 +52,15 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  placeholder: {
+    type: String,
+    default: "请输入内容...",
+  },
 });
+
+const emit = defineEmits<{
+  ready: [editor: any];
+}>();
 
 // 高度策略：autoHeight=true 时让内容自然撑高，仅设最小高度避免空内容塌缩
 const editorStyle = computed(() =>
@@ -74,9 +82,9 @@ const toolbarConfig = computed<Partial<IToolbarConfig>>(() =>
   props.toolbarKeys ? { toolbarKeys: props.toolbarKeys } : {}
 );
 
-// 编辑器配置
-const editorConfig = ref<Partial<IEditorConfig>>({
-  placeholder: "请输入内容...",
+// 编辑器配置：placeholder 跟随 prop
+const editorConfig = computed<Partial<IEditorConfig>>(() => ({
+  placeholder: props.placeholder,
   MENU_CONF: {
     uploadImage: {
       customUpload(file: File, insertFn: InsertFnType) {
@@ -97,11 +105,12 @@ const editorConfig = ref<Partial<IEditorConfig>>({
       },
     } as any,
   },
-});
+}));
 
 // 记录 editor 实例，重要！
 const handleCreated = (editor: any) => {
   editorRef.value = editor;
+  emit("ready", editor);
 };
 
 // 组件销毁时，也及时销毁编辑器，重要！
