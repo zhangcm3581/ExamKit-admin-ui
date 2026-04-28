@@ -299,6 +299,7 @@ async function onSave() {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  width: 100%;
   margin-bottom: 8px;
 }
 
