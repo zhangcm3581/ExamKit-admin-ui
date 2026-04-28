@@ -65,7 +65,6 @@
             {{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="科目" prop="subjectName" min-width="410" show-overflow-tooltip />
         <el-table-column label="激活码" prop="code" width="170">
           <template #default="scope">
             <span class="code-text">{{ scope.row.code }}</span>
@@ -74,6 +73,7 @@
             </el-icon>
           </template>
         </el-table-column>
+        <el-table-column label="科目" prop="subjectName" min-width="360" show-overflow-tooltip />
         <el-table-column label="天数" prop="validDays" width="80" align="center">
           <template #default="scope">
             <span v-if="scope.row.validDays">{{ scope.row.validDays }}</span>
