@@ -119,7 +119,13 @@
     </el-card>
 
     <!-- 处理对话框 -->
-    <el-dialog v-model="processDialogVisible" title="纠错处理" width="700px" destroy-on-close>
+    <el-dialog
+      v-model="processDialogVisible"
+      title="纠错处理"
+      width="700px"
+      destroy-on-close
+      :before-close="handleDialogBeforeClose"
+    >
       <div v-if="currentReport" v-loading="questionLoading">
         <!-- 题目区域工具栏 -->
         <div v-if="questionDetail" class="question-toolbar">
@@ -249,7 +255,7 @@
         </el-form>
       </div>
       <template #footer>
-        <el-button @click="processDialogVisible = false"><b>取消</b></el-button>
+        <el-button @click="handleDialogCancel"><b>取消</b></el-button>
         <el-button type="primary" :loading="processLoading" @click="submitProcess">
           <b>提交</b>
         </el-button>
@@ -472,6 +478,27 @@ async function onCancelEdit() {
     }
   }
   editing.value = false;
+}
+
+async function handleDialogBeforeClose(done: () => void) {
+  if (editing.value && editPanelRef.value?.isDirty()) {
+    try {
+      await ElMessageBox.confirm("题目有未保存的修改，确定关闭？", "提示", {
+        confirmButtonText: "确定关闭",
+        cancelButtonText: "继续编辑",
+        type: "warning",
+      });
+    } catch {
+      return;
+    }
+  }
+  done();
+}
+
+function handleDialogCancel() {
+  handleDialogBeforeClose(() => {
+    processDialogVisible.value = false;
+  });
 }
 
 async function submitProcess() {
