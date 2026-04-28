@@ -76,6 +76,35 @@
       </el-form-item>
     </el-form>
 
+    <!-- 答案（不区分语言） -->
+    <el-form label-position="top" class="qep-answer">
+      <el-form-item label="答案">
+        <template v-if="form.type === 'SHORT_ANSWER'">
+          <WangEditor v-model="form.answer" height="180px" />
+        </template>
+        <template v-else-if="form.type === 'SINGLE'">
+          <el-radio-group v-model="form.answer">
+            <el-radio v-for="opt in answerOptions" :key="opt.label" :label="opt.label">
+              {{ opt.label }}
+            </el-radio>
+          </el-radio-group>
+        </template>
+        <template v-else-if="form.type === 'MULTIPLE'">
+          <el-checkbox-group v-model="multipleAnswers">
+            <el-checkbox v-for="opt in answerOptions" :key="opt.label" :label="opt.label">
+              {{ opt.label }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </template>
+        <template v-else>
+          <el-radio-group v-model="form.answer">
+            <el-radio label="A">正确</el-radio>
+            <el-radio label="B">错误</el-radio>
+          </el-radio-group>
+        </template>
+      </el-form-item>
+    </el-form>
+
     <div class="qep-actions">
       <el-button @click="onCancel"><b>取消</b></el-button>
       <el-button type="primary" :loading="saving" @click="onSave">
@@ -86,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
 import type { QuestionVO, QuestionForm } from "@/api/exam/question-api";
 
@@ -158,6 +187,21 @@ const optionsEn = ref(
     : optionsZh.value.map((o) => ({ label: o.label, value: "" }))
 );
 
+// 答案选项源：优先用中文选项，若中文为空（仅英文科目）则退回英文选项
+const answerOptions = computed(() =>
+  optionsZh.value.length > 0 ? optionsZh.value : optionsEn.value
+);
+
+const multipleAnswers = ref<string[]>(
+  props.question.type === "MULTIPLE" && props.question.answer ? props.question.answer.split("") : []
+);
+
+watch(multipleAnswers, (newVal) => {
+  if (form.type === "MULTIPLE") {
+    form.answer = [...newVal].sort().join("");
+  }
+});
+
 function onCancel() {
   emit("cancel");
 }
@@ -204,6 +248,11 @@ function onSave() {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #ebeef5;
+}
+
+.qep-answer {
   padding-top: 8px;
   border-top: 1px solid #ebeef5;
 }
