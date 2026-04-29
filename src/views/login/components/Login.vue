@@ -1,15 +1,25 @@
 <template>
-  <div>
-    <h3 text-center m-0 mb-20px>{{ t("login.login") }}</h3>
+  <div class="login-form">
+    <header class="form-header">
+      <div class="form-eyebrow">User Login</div>
+      <div class="form-title-row">
+        <h2 class="form-title">欢迎登录</h2>
+        <span class="form-title-tag">掌学兔 后台管理系统</span>
+      </div>
+      <p class="form-sub">默认账号 · admin / 123456</p>
+    </header>
+
     <el-form
       ref="loginFormRef"
       :model="loginFormData"
       :rules="loginRules"
       size="large"
       :validate-on-rule-change="false"
+      class="ek-form"
     >
-      <!-- 用户名 -->
+      <!-- Username -->
       <el-form-item prop="username">
+        <label class="ek-label">用户名</label>
         <el-input v-model.trim="loginFormData.username" :placeholder="t('login.username')">
           <template #prefix>
             <el-icon><User /></el-icon>
@@ -17,9 +27,10 @@
         </el-input>
       </el-form-item>
 
-      <!-- 密码 -->
+      <!-- Password -->
       <el-tooltip :visible="isCapsLock" :content="t('login.capsLock')" placement="right">
         <el-form-item prop="password">
+          <label class="ek-label">密码</label>
           <el-input
             v-model.trim="loginFormData.password"
             :placeholder="t('login.password')"
@@ -35,59 +46,51 @@
         </el-form-item>
       </el-tooltip>
 
-      <!-- 验证码 -->
+      <!-- Captcha -->
       <el-form-item prop="captchaCode">
-        <div class="flex items-center gap-10px w-full">
+        <label class="ek-label">验证码</label>
+        <div class="captcha-row">
           <el-input
             v-model.trim="loginFormData.captchaCode"
             :placeholder="t('login.captchaCode')"
             clearable
-            style="flex: 1"
+            class="captcha-input"
             @keyup.enter="handleLoginSubmit"
           >
             <template #prefix>
               <div class="i-svg:captcha" />
             </template>
           </el-input>
-          <div
-            class="cursor-pointer flex items-center justify-center"
-            style="flex-shrink: 0; width: 120px; height: 40px"
-            @click="getCaptcha"
-          >
-            <el-icon v-if="codeLoading" class="is-loading" size="20"><Loading /></el-icon>
-            <img
-              v-else-if="captchaBase64"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                border-radius: 4px;
-                box-shadow: 0 0 0 1px var(--el-border-color) inset;
-              "
-              :src="captchaBase64"
-              alt="captchaCode"
-            />
-            <el-text v-else type="info" size="small">点击获取验证码</el-text>
-          </div>
+          <button type="button" class="captcha-img" @click="getCaptcha">
+            <el-icon v-if="codeLoading" class="is-loading" :size="18">
+              <Loading />
+            </el-icon>
+            <img v-else-if="captchaBase64" :src="captchaBase64" alt="captcha" />
+            <span v-else class="captcha-empty">点击获取</span>
+          </button>
         </div>
       </el-form-item>
 
-      <div class="flex-x-between w-full">
+      <div class="form-row">
         <el-checkbox v-model="loginFormData.rememberMe">{{ t("login.rememberMe") }}</el-checkbox>
-        <el-link type="primary" underline="never" @click="toOtherForm('resetPwd')">
+        <a class="form-link" @click="toOtherForm('resetPwd')">
           {{ t("login.forgetPassword") }}
-        </el-link>
+        </a>
       </div>
 
-      <!-- 登录按钮 -->
-      <el-form-item>
-        <el-button :loading="loading" type="primary" class="w-full" @click="handleLoginSubmit">
-          {{ t("login.login") }}
-        </el-button>
+      <el-form-item class="submit-item">
+        <button type="button" class="ek-btn primary" :disabled="loading" @click="handleLoginSubmit">
+          <span v-if="!loading" class="btn-label">登 录</span>
+          <span v-else class="btn-loading">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>登录中</span>
+          </span>
+        </button>
       </el-form-item>
     </el-form>
   </div>
 </template>
+
 <script setup lang="ts">
 import type { FormInstance } from "element-plus";
 import AuthAPI, { type LoginFormData } from "@/api/auth-api";
@@ -103,11 +106,8 @@ onMounted(() => getCaptcha());
 
 const loginFormRef = ref<FormInstance>();
 const loading = ref(false);
-// 是否大写锁定
 const isCapsLock = ref(false);
-// 验证码图片Base64字符串
 const captchaBase64 = ref();
-// 记住我
 const rememberMe = AuthStorage.getRememberMe();
 
 const loginFormData = ref<LoginFormData>({
@@ -149,7 +149,6 @@ const loginRules = computed(() => {
   };
 });
 
-// 获取验证码
 const codeLoading = ref(false);
 function getCaptcha() {
   codeLoading.value = true;
@@ -161,33 +160,24 @@ function getCaptcha() {
     .finally(() => (codeLoading.value = false));
 }
 
-/**
- * 登录提交
- */
 async function handleLoginSubmit() {
   try {
-    // 1. 表单验证
     const valid = await loginFormRef.value?.validate();
     if (!valid) return;
 
     loading.value = true;
 
-    // 2. 执行登录
     await userStore.login(loginFormData.value);
 
-    // 3. 登录成功后显示成功消息
     ElMessage.success("登录成功");
 
-    // 4. 等待一下确保token已保存，然后跳转
     await nextTick();
 
     const redirectPath = (route.query.redirect as string) || "/";
     await router.push(decodeURIComponent(redirectPath));
   } catch (error: any) {
-    // 5. 统一错误处理
-    getCaptcha(); // 刷新验证码
+    getCaptcha();
 
-    // 显示错误消息
     const errorMessage = error?.message || error || "登录失败，请重试";
     ElMessage.error(errorMessage);
 
@@ -197,9 +187,7 @@ async function handleLoginSubmit() {
   }
 }
 
-// 检查输入大小写
 function checkCapsLock(event: KeyboardEvent) {
-  // 防止浏览器密码自动填充时报错
   if (event instanceof KeyboardEvent) {
     isCapsLock.value = event.getModifierState("CapsLock");
   }
@@ -211,4 +199,6 @@ function toOtherForm(type: "register" | "resetPwd") {
 }
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+@use "./form-shared";
+</style>

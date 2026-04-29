@@ -43,7 +43,10 @@ export function setupPermission() {
           router.addRoute(route);
         });
 
-        next({ ...to, replace: true });
+        // 关键：传 path 字符串（不是 spread `to`），强制 Vue Router 用新注册的动态路由
+        // 重新解析 matched。spread 会保留 to 上的过期 matched: []，导致 URL 变了但
+        // router-view 仍渲染原 /login 视图，必须刷新页面才能进入系统。
+        next({ path: to.fullPath, replace: true });
         return;
       }
 

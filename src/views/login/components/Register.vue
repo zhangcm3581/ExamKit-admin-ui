@@ -1,9 +1,16 @@
 <template>
-  <div>
-    <h3 text-center m-0 mb-20px>{{ t("login.reg") }}</h3>
-    <el-form ref="formRef" :model="model" :rules="rules" size="large">
-      <!-- 用户名 -->
+  <div class="login-form">
+    <header class="form-header">
+      <div class="form-eyebrow">Sign Up</div>
+      <div class="form-title-row">
+        <h2 class="form-title">创建账号</h2>
+        <span class="form-title-tag">加入掌学兔 · 开启认证练习</span>
+      </div>
+    </header>
+
+    <el-form ref="formRef" :model="model" :rules="rules" size="large" class="ek-form">
       <el-form-item prop="username">
+        <label class="ek-label">用户名</label>
         <el-input v-model.trim="model.username" :placeholder="t('login.username')">
           <template #prefix>
             <el-icon><User /></el-icon>
@@ -11,9 +18,9 @@
         </el-input>
       </el-form-item>
 
-      <!-- 密码 -->
       <el-tooltip :visible="isCapsLock" :content="t('login.capsLock')" placement="right">
         <el-form-item prop="password">
+          <label class="ek-label">密码</label>
           <el-input
             v-model.trim="model.password"
             :placeholder="t('login.password')"
@@ -31,6 +38,7 @@
 
       <el-tooltip :visible="isCapsLock" :content="t('login.capsLock')" placement="right">
         <el-form-item prop="confirmPassword">
+          <label class="ek-label">确认密码</label>
           <el-input
             v-model.trim="model.confirmPassword"
             :placeholder="t('login.message.password.confirm')"
@@ -46,54 +54,52 @@
         </el-form-item>
       </el-tooltip>
 
-      <!-- 验证码 -->
       <el-form-item prop="captchaCode">
-        <div flex>
+        <label class="ek-label">验证码</label>
+        <div class="captcha-row">
           <el-input
             v-model.trim="model.captchaCode"
             :placeholder="t('login.captchaCode')"
+            class="captcha-input"
             @keyup.enter="submit"
           >
             <template #prefix>
               <div class="i-svg:captcha" />
             </template>
           </el-input>
-          <div cursor-pointer h="[40px]" w="[120px]" flex-center ml-10px @click="getCaptcha">
-            <el-icon v-if="codeLoading" class="is-loading"><Loading /></el-icon>
-
-            <img
-              v-else
-              object-cover
-              border-rd-4px
-              p-1px
-              shadow="[0_0_0_1px_var(--el-border-color)_inset]"
-              :src="captchaBase64"
-              alt="code"
-            />
-          </div>
+          <button type="button" class="captcha-img" @click="getCaptcha">
+            <el-icon v-if="codeLoading" class="is-loading" :size="18">
+              <Loading />
+            </el-icon>
+            <img v-else-if="captchaBase64" :src="captchaBase64" alt="captcha" />
+            <span v-else class="captcha-empty">点击获取</span>
+          </button>
         </div>
       </el-form-item>
 
-      <el-form-item>
-        <div class="flex-y-center w-full gap-10px">
-          <el-checkbox v-model="isRead">{{ t("login.agree") }}</el-checkbox>
-          <el-link type="primary" underline="never">{{ t("login.userAgreement") }}</el-link>
-        </div>
-      </el-form-item>
+      <div class="form-row agreement">
+        <el-checkbox v-model="isRead">
+          <span class="agreement-text">
+            {{ t("login.agree") }}
+            <a class="form-link strong">{{ t("login.userAgreement") }}</a>
+          </span>
+        </el-checkbox>
+      </div>
 
-      <!-- 注册按钮 -->
-      <el-form-item>
-        <el-button :loading="loading" type="success" class="w-full" @click="submit">
-          {{ t("login.register") }}
-        </el-button>
+      <el-form-item class="submit-item">
+        <button type="button" class="ek-btn primary" :disabled="loading" @click="submit">
+          <span class="btn-label">注 册</span>
+        </button>
       </el-form-item>
     </el-form>
-    <div flex-center gap-10px>
-      <el-text size="default">{{ t("login.haveAccount") }}</el-text>
-      <el-link type="primary" underline="never" @click="toLogin">{{ t("login.login") }}</el-link>
+
+    <div class="form-aside">
+      <span>{{ t("login.haveAccount") }}</span>
+      <a class="form-link strong" @click="toLogin">{{ t("login.login") }}</a>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 import type { FormInstance } from "element-plus";
 import { Lock } from "@element-plus/icons-vue";
@@ -108,9 +114,9 @@ const toLogin = () => emit("update:modelValue", "login");
 onMounted(() => getCaptcha());
 
 const formRef = ref<FormInstance>();
-const loading = ref(false); // 按钮 loading 状态
-const isCapsLock = ref(false); // 是否大写锁定
-const captchaBase64 = ref(); // 验证码图片Base64字符串
+const loading = ref(false);
+const isCapsLock = ref(false);
+const captchaBase64 = ref();
 const isRead = ref(false);
 
 interface Model extends LoginFormData {
@@ -176,7 +182,6 @@ const rules = computed(() => {
   };
 });
 
-// 获取验证码
 const codeLoading = ref(false);
 function getCaptcha() {
   codeLoading.value = true;
@@ -188,9 +193,7 @@ function getCaptcha() {
     .finally(() => (codeLoading.value = false));
 }
 
-// 检查输入大小写
 function checkCapsLock(event: KeyboardEvent) {
-  // 防止浏览器密码自动填充时报错
   if (event instanceof KeyboardEvent) {
     isCapsLock.value = event.getModifierState("CapsLock");
   }
@@ -201,3 +204,34 @@ const submit = async () => {
   ElMessage.warning("开发中 ...");
 };
 </script>
+
+<style lang="scss" scoped>
+@use "./form-shared";
+
+.agreement {
+  margin: -4px 2px 24px;
+}
+
+.agreement-text {
+  font-size: 13px;
+  color: rgb(15 23 41 / 65%);
+}
+
+:global(html.dark) .agreement-text {
+  color: rgb(244 239 231 / 65%);
+}
+
+.form-aside {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: rgb(15 23 41 / 60%);
+}
+
+:global(html.dark) .form-aside {
+  color: rgb(244 239 231 / 60%);
+}
+</style>
