@@ -30,7 +30,7 @@
 
       <!-- 题目列表 -->
       <div class="question-list">
-        <el-table :data="questions" border stripe>
+        <el-table :data="paginatedQuestions" border stripe>
           <el-table-column prop="questionNumber" label="题号" width="80" align="center" />
           <el-table-column label="题型" width="100" align="center">
             <template #default="{ row }">
@@ -257,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import QuestionBankAPI, {
@@ -288,7 +288,13 @@ const metadata = reactive({
   totalCount: 0,
 });
 
-const questions = ref<QuestionDraftItemVO[]>([]);
+const allQuestions = ref<QuestionDraftItemVO[]>([]);
+const currentPage = ref(1);
+const pageSize = ref(50);
+const paginatedQuestions = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return allQuestions.value.slice(start, start + pageSize.value);
+});
 const subjects = ref<SubjectVO[]>([]);
 const filteredSubjects = ref<SubjectVO[]>([]);
 const filterKeyword = ref("");
@@ -330,7 +336,7 @@ const fetchPreview = async () => {
   try {
     const data: QuestionDraftPreviewVO = await QuestionBankAPI.getPreview(batchId);
     Object.assign(metadata, data.metadata);
-    questions.value = data.questions;
+    allQuestions.value = data.questions;
 
     // 如果路由参数中有subjectId，自动选中
     if (route.query.subjectId) {
