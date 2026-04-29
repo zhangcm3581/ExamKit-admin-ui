@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-card v-loading="loading">
+    <el-card>
       <!-- 头部信息 -->
       <div class="preview-header">
         <div class="header-info">
@@ -29,7 +29,7 @@
       </div>
 
       <!-- 题目列表 -->
-      <div class="question-list">
+      <div v-loading="loading" class="question-list">
         <el-table :data="paginatedQuestions" border stripe>
           <el-table-column prop="questionNumber" label="题号" width="80" align="center" />
           <el-table-column label="题型" width="100" align="center">
@@ -92,6 +92,16 @@
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-wrapper">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="allQuestions.length"
+            :page-sizes="[20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+          />
+        </div>
       </div>
     </el-card>
 
@@ -777,6 +787,12 @@ onMounted(async () => {
     line-height: 1.6;
     color: #606266;
     overflow-wrap: break-word;
+  }
+
+  .pagination-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
   }
 }
 </style>
