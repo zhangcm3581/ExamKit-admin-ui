@@ -746,6 +746,7 @@ onMounted(async () => {
 }
 
 .question-list {
+  position: relative;
   margin-top: 20px;
 
   .case-content {
