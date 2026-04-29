@@ -192,7 +192,7 @@ const handleFileUpload = async (file: File) => {
       if (route.query.activeMenu) {
         query.activeMenu = route.query.activeMenu;
       }
-      router.push({
+      await router.push({
         name: "QuestionBankPreview",
         query,
       });
