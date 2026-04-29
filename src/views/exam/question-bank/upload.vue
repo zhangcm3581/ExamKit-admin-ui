@@ -85,7 +85,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElLoading } from "element-plus";
 import { UploadFilled } from "@element-plus/icons-vue";
 import QuestionBankAPI from "@/api/exam/question-bank-api";
 
@@ -172,38 +172,38 @@ const handleFileUpload = async (file: File) => {
     return;
   }
 
-  // 使用API上传
+  const loadingInstance = ElLoading.service({
+    fullscreen: true,
+    lock: true,
+    text: "文件上传中，正在解析...",
+    background: "rgba(0, 0, 0, 0.5)",
+  });
+
   try {
     console.log("Starting upload API call...");
     const response: any = await QuestionBankAPI.upload(file, selectedLanguage.value, isCase.value);
     console.log("Upload API response:", response);
 
-    // 响应拦截器已经返回了data对象: {batchId: "..."}
     if (response && response.batchId) {
-      ElMessage.success("文件上传成功，正在解析...");
-      const batchId = response.batchId;
-
-      // 跳转到预览页面，带上subjectId参数
-      setTimeout(() => {
-        const query: any = { batchId };
-        if (subjectId.value) {
-          query.subjectId = subjectId.value;
-        }
-        // 传递activeMenu参数，保持菜单选中状态
-        if (route.query.activeMenu) {
-          query.activeMenu = route.query.activeMenu;
-        }
-        router.push({
-          name: "QuestionBankPreview",
-          query,
-        });
-      }, 500);
+      const query: any = { batchId: response.batchId };
+      if (subjectId.value) {
+        query.subjectId = subjectId.value;
+      }
+      if (route.query.activeMenu) {
+        query.activeMenu = route.query.activeMenu;
+      }
+      router.push({
+        name: "QuestionBankPreview",
+        query,
+      });
     } else {
       ElMessage.error("上传失败：响应数据格式错误");
     }
   } catch (error: any) {
     console.error("上传失败", error);
     ElMessage.error(error.message || "上传失败，请稍后重试");
+  } finally {
+    loadingInstance.close();
   }
 };
 
