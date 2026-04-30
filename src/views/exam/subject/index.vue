@@ -117,11 +117,6 @@
             {{ formatDateTime(scope.row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="分享好友" align="center" width="80">
-          <template #default="{ row }">
-            <el-button type="primary" link :icon="Share" @click="openMiniappQr(row)" />
-          </template>
-        </el-table-column>
         <el-table-column fixed="right" label="操作" align="center" width="150">
           <template #default="scope">
             <el-button
@@ -154,8 +149,6 @@
         @pagination="fetchData"
       />
     </el-card>
-
-    <MiniappQrDialog v-model="qrDialogVisible" :subject-id="qrSubjectId" />
 
     <!--科目弹窗-->
     <el-dialog
@@ -309,8 +302,6 @@ import SubjectAPI, {
 } from "@/api/exam/subject-api";
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import WangEditor from "@/components/WangEditor/index.vue";
-import MiniappQrDialog from "./components/MiniappQrDialog.vue";
-import { Share } from "@element-plus/icons-vue";
 import { formatDateTime } from "@/utils/datetime";
 
 const queryFormRef = ref();
@@ -338,14 +329,6 @@ const dialog = reactive({
   title: "",
   visible: false,
 });
-
-const qrDialogVisible = ref(false);
-const qrSubjectId = ref("");
-
-function openMiniappQr(row: SubjectVO) {
-  qrSubjectId.value = row.id;
-  qrDialogVisible.value = true;
-}
 
 const formData = reactive<SubjectForm>({
   sortOrder: 0,

@@ -113,6 +113,17 @@
             </template>
           </template>
         </el-table-column>
+        <el-table-column label="分享好友" align="center" width="80">
+          <template #default="scope">
+            <el-button
+              v-if="!scope.row.isFolder"
+              type="primary"
+              link
+              :icon="Share"
+              @click="openMiniappQr(scope.row)"
+            />
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="220" align="left">
           <template #default="scope">
             <div class="action-buttons">
@@ -200,6 +211,8 @@
         <span class="goto-text">页</span>
       </div>
     </el-card>
+
+    <MiniappQrDialog v-model="qrDialogVisible" :subject-id="qrSubjectId" />
 
     <!-- 新建文件夹弹窗 -->
     <!-- 文件夹弹窗 -->
@@ -687,7 +700,9 @@ import {
   Document,
   UploadFilled,
   Loading,
+  Share,
 } from "@element-plus/icons-vue";
+import MiniappQrDialog from "@/views/exam/subject/components/MiniappQrDialog.vue";
 import { AuthStorage } from "@/utils/auth";
 import ProviderAPI, {
   type ProviderPageQuery,
@@ -738,6 +753,14 @@ const loading = ref(false);
 const total = ref(0);
 const gotoPage = ref("");
 const tableRef = ref(); // 表格引用
+
+const qrDialogVisible = ref(false);
+const qrSubjectId = ref("");
+
+function openMiniappQr(row: { id: string }) {
+  qrSubjectId.value = row.id;
+  qrDialogVisible.value = true;
+}
 
 const queryParams = reactive<ProviderPageQuery>({
   pageNum: 1,
