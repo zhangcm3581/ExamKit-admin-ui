@@ -20,6 +20,14 @@ const SubjectAPI = {
     });
   },
 
+  /** 获取科目小程序码 */
+  getMiniappQr(id: string) {
+    return request<any, MiniappQrVO>({
+      url: `${SUBJECT_BASE_URL}/${id}/miniapp-qr`,
+      method: "get",
+    });
+  },
+
   /** 新增科目 */
   create(data: SubjectForm) {
     return request({
@@ -106,6 +114,8 @@ export interface SubjectVO {
   examInfoEn?: string;
   /** PDF资料URL */
   pdfUrl?: string;
+  /** 小程序码 URL（懒加载缓存） */
+  miniappQrUrl?: string;
   /** 视频资料URLs */
   videoUrls?: string;
   /** 科目标签/分类 */
@@ -154,4 +164,14 @@ export interface SubjectForm {
   status?: number;
   /** 价格（分），如 9800 表示 98.00 元 */
   price?: number;
+}
+
+/** 科目小程序码 VO */
+export interface MiniappQrVO {
+  /** 小程序码图片 URL */
+  url: string;
+  /** 题库中文名 */
+  nameZh: string;
+  /** 题库英文名 */
+  nameEn?: string;
 }
