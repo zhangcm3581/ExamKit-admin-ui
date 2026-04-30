@@ -113,7 +113,7 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="分享好友" align="center" width="80">
+        <el-table-column label="分享好友" align="center" width="110">
           <template #default="scope">
             <el-button
               v-if="!scope.row.isFolder"
