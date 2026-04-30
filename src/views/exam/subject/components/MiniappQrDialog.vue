@@ -27,7 +27,7 @@
         </div>
       </template>
 
-      <el-result v-else icon="error" title="生成失败" sub-title="请稍后重试">
+      <el-result v-else icon="error" title="生成失败" :sub-title="errorMsg">
         <template #extra>
           <el-button type="primary" @click="fetchQr">重试</el-button>
         </template>
@@ -55,6 +55,7 @@ const visible = computed({
 
 const loading = ref(false);
 const error = ref(false);
+const errorMsg = ref("");
 const url = ref("");
 const nameZh = ref("");
 const nameEn = ref<string | undefined>(undefined);
@@ -67,13 +68,15 @@ async function fetchQr() {
   if (!props.subjectId) return;
   loading.value = true;
   error.value = false;
+  errorMsg.value = "";
   try {
     const data = await SubjectAPI.getMiniappQr(props.subjectId);
     url.value = data.url;
     nameZh.value = data.nameZh;
     nameEn.value = data.nameEn;
-  } catch {
+  } catch (e: any) {
     error.value = true;
+    errorMsg.value = e?.message || "请稍后重试";
   } finally {
     loading.value = false;
   }
@@ -83,6 +86,7 @@ function handleOpen() {
   url.value = "";
   nameZh.value = "";
   nameEn.value = undefined;
+  errorMsg.value = "";
   fetchQr();
 }
 
