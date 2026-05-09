@@ -120,3 +120,19 @@ onBeforeUnmount(() => {
   editor.destroy();
 });
 </script>
+
+<style>
+/* 覆盖 wangEditor-next 内核默认 p {margin:15px 0}/h1-h5 {margin:20px 0}，
+   减小段落与标题的上下间距，让编辑视觉与前端 .rich-text-content 渲染更接近 */
+.w-e-text-container [data-slate-editor] p {
+  margin: 0 0 6px 0;
+}
+
+.w-e-text-container [data-slate-editor] h1,
+.w-e-text-container [data-slate-editor] h2,
+.w-e-text-container [data-slate-editor] h3,
+.w-e-text-container [data-slate-editor] h4,
+.w-e-text-container [data-slate-editor] h5 {
+  margin: 12px 0 6px 0;
+}
+</style>
