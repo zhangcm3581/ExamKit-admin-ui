@@ -457,21 +457,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <el-input
-            v-model="subjectEditForm.descriptionZh"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（中文）"
-          />
+          <WangEditor v-model:model-value="subjectEditForm.descriptionZh" height="200px" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <el-input
-            v-model="subjectEditForm.descriptionEn"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（英文）"
-          />
+          <WangEditor v-model:model-value="subjectEditForm.descriptionEn" height="200px" />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -602,21 +592,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <el-input
-            v-model="subjectCreateForm.descriptionZh"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（中文）"
-          />
+          <WangEditor v-model:model-value="subjectCreateForm.descriptionZh" height="200px" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <el-input
-            v-model="subjectCreateForm.descriptionEn"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（英文）"
-          />
+          <WangEditor v-model:model-value="subjectCreateForm.descriptionEn" height="200px" />
         </el-form-item>
 
         <el-row :gutter="20">
