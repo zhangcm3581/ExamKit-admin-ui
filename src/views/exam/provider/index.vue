@@ -457,11 +457,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <WangEditor v-model:model-value="subjectEditForm.descriptionZh" height="200px" />
+          <RichTextField v-model="subjectEditForm.descriptionZh" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <WangEditor v-model:model-value="subjectEditForm.descriptionEn" height="200px" />
+          <RichTextField v-model="subjectEditForm.descriptionEn" />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -507,11 +507,11 @@
         </el-row>
 
         <el-form-item label="中文考试信息">
-          <WangEditor v-model:model-value="subjectEditForm.examInfoZh" height="300px" />
+          <RichTextField v-model="subjectEditForm.examInfoZh" />
         </el-form-item>
 
         <el-form-item label="英文考试信息">
-          <WangEditor v-model:model-value="subjectEditForm.examInfoEn" height="300px" />
+          <RichTextField v-model="subjectEditForm.examInfoEn" />
         </el-form-item>
       </el-form>
 
@@ -592,11 +592,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <WangEditor v-model:model-value="subjectCreateForm.descriptionZh" height="200px" />
+          <RichTextField v-model="subjectCreateForm.descriptionZh" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <WangEditor v-model:model-value="subjectCreateForm.descriptionEn" height="200px" />
+          <RichTextField v-model="subjectCreateForm.descriptionEn" />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -637,11 +637,11 @@
         </el-row>
 
         <el-form-item label="中文考试信息">
-          <WangEditor v-model:model-value="subjectCreateForm.examInfoZh" height="300px" />
+          <RichTextField v-model="subjectCreateForm.examInfoZh" />
         </el-form-item>
 
         <el-form-item label="英文考试信息">
-          <WangEditor v-model:model-value="subjectCreateForm.examInfoEn" height="300px" />
+          <RichTextField v-model="subjectCreateForm.examInfoEn" />
         </el-form-item>
       </el-form>
 
@@ -692,7 +692,7 @@ import ProviderAPI, {
 } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
-import WangEditor from "@/components/WangEditor/index.vue";
+import RichTextField from "@/components/RichTextField/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
 import { formatDate, formatTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";

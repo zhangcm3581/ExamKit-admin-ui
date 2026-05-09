@@ -210,11 +210,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <WangEditor v-model:model-value="formData.descriptionZh" height="200px" />
+          <RichTextField v-model="formData.descriptionZh" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <WangEditor v-model:model-value="formData.descriptionEn" height="200px" />
+          <RichTextField v-model="formData.descriptionEn" />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -259,11 +259,11 @@
         </el-form-item>
 
         <el-form-item label="中文考试信息">
-          <WangEditor v-model:model-value="formData.examInfoZh" height="300px" />
+          <RichTextField v-model="formData.examInfoZh" />
         </el-form-item>
 
         <el-form-item label="英文考试信息">
-          <WangEditor v-model:model-value="formData.examInfoEn" height="300px" />
+          <RichTextField v-model="formData.examInfoEn" />
         </el-form-item>
       </el-form>
 
@@ -291,7 +291,7 @@ import SubjectAPI, {
   type SubjectForm,
 } from "@/api/exam/subject-api";
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
-import WangEditor from "@/components/WangEditor/index.vue";
+import RichTextField from "@/components/RichTextField/index.vue";
 import { formatDateTime } from "@/utils/datetime";
 
 const queryFormRef = ref();
