@@ -210,21 +210,11 @@
         </el-row>
 
         <el-form-item label="中文描述">
-          <el-input
-            v-model="formData.descriptionZh"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（中文）"
-          />
+          <WangEditor v-model:model-value="formData.descriptionZh" height="200px" />
         </el-form-item>
 
         <el-form-item label="英文描述">
-          <el-input
-            v-model="formData.descriptionEn"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入科目描述（英文）"
-          />
+          <WangEditor v-model:model-value="formData.descriptionEn" height="200px" />
         </el-form-item>
 
         <el-row :gutter="20">
