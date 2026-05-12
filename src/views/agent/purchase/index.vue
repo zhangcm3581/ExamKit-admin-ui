@@ -7,7 +7,7 @@
           <template #header>
             <div class="card-header">
               <span class="title">购买激活码</span>
-              <span class="subtitle">选择科目、设置数量与有效期，扫码支付后系统自动生成激活码</span>
+              <span class="subtitle">先选提供商再选具体科目，扫码支付后系统自动生成激活码</span>
             </div>
           </template>
           <el-form
@@ -17,27 +17,45 @@
             label-width="90px"
             @submit.prevent="submit"
           >
+            <el-form-item label="提供商" prop="providerId">
+              <el-select
+                v-model="form.providerId"
+                placeholder="请选择考试提供商"
+                filterable
+                style="width: 100%"
+                @change="onProviderChange"
+              >
+                <el-option
+                  v-for="p in providers"
+                  :key="p.providerId"
+                  :label="p.providerName"
+                  :value="p.providerId"
+                >
+                  <span>{{ p.providerName }}</span>
+                  <span class="provider-count">{{ p.count }} 个科目</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+
             <el-form-item label="科目" prop="subjectId">
               <el-select
                 v-model="form.subjectId"
-                placeholder="搜索/选择题库科目"
+                :placeholder="form.providerId ? '搜索/选择题库科目' : '请先选择提供商'"
+                :disabled="!form.providerId"
                 filterable
-                :filter-method="filterSubject"
                 style="width: 100%"
               >
                 <el-option
-                  v-for="s in subjects"
+                  v-for="s in filteredSubjects"
                   :key="s.subjectId"
                   :label="s.subjectName"
                   :value="s.subjectId"
                 >
-                  <div class="subject-option">
-                    <span class="subject-name">{{ s.subjectName }}</span>
-                    <span class="subject-price">
-                      <span class="original">¥{{ s.originalPriceYuan }}</span>
-                      <span class="agent">¥{{ s.agentUnitPriceYuan }}</span>
-                    </span>
-                  </div>
+                  <span class="opt-name">{{ s.subjectName }}</span>
+                  <span class="opt-price">
+                    <span class="opt-original">¥{{ s.originalPriceYuan }}</span>
+                    <span class="opt-agent">¥{{ s.agentUnitPriceYuan }}</span>
+                  </span>
                 </el-option>
               </el-select>
             </el-form-item>
@@ -91,13 +109,17 @@
 
           <div v-if="!selectedSubject" class="empty">
             <el-icon class="empty-icon"><ShoppingCart /></el-icon>
-            <p>请先选择科目</p>
+            <p>请先选择提供商和科目</p>
           </div>
 
           <template v-else>
-            <div class="summary-row">
+            <div class="summary-row block">
+              <span class="label">提供商</span>
+              <span class="value">{{ selectedSubject.providerName || "—" }}</span>
+            </div>
+            <div class="summary-row block">
               <span class="label">科目</span>
-              <span class="value">{{ selectedSubject.subjectName }}</span>
+              <span class="value subject-name">{{ selectedSubject.subjectName }}</span>
             </div>
             <div class="summary-row">
               <span class="label">单价</span>
@@ -173,12 +195,48 @@ import AgentAPI, { type AgentSubjectOption, type AgentOrderCreateResponse } from
 const router = useRouter();
 const subjects = ref<AgentSubjectOption[]>([]);
 const formRef = ref();
-const form = reactive({ subjectId: "", quantity: 10, validDays: 365, remark: "" });
+const form = reactive({
+  providerId: undefined as number | undefined,
+  subjectId: "",
+  quantity: 10,
+  validDays: 365,
+  remark: "",
+});
 const rules: FormRules = {
+  providerId: [{ required: true, message: "请选择提供商", trigger: "change" }],
   subjectId: [{ required: true, message: "请选择科目", trigger: "change" }],
   quantity: [{ required: true, type: "number", message: "请填写数量", trigger: "blur" }],
   validDays: [{ required: true, type: "number", message: "请填写有效天数", trigger: "blur" }],
 };
+
+// 从 subjects 推导提供商列表（含每个提供商的科目数）
+interface ProviderOption {
+  providerId: number;
+  providerName: string;
+  count: number;
+}
+const providers = computed<ProviderOption[]>(() => {
+  const acc = new Map<number, ProviderOption>();
+  for (const s of subjects.value) {
+    if (s.providerId == null) continue;
+    const cur = acc.get(s.providerId);
+    if (cur) {
+      cur.count += 1;
+    } else {
+      acc.set(s.providerId, {
+        providerId: s.providerId,
+        providerName: s.providerName || `#${s.providerId}`,
+        count: 1,
+      });
+    }
+  }
+  return Array.from(acc.values()).sort((a, b) => a.providerName.localeCompare(b.providerName));
+});
+
+const filteredSubjects = computed(() =>
+  form.providerId == null ? [] : subjects.value.filter((s) => s.providerId === form.providerId)
+);
+
 const selectedSubject = computed(() => subjects.value.find((s) => s.subjectId === form.subjectId));
 const totalYuan = computed(() =>
   selectedSubject.value ? selectedSubject.value.agentUnitPriceYuan * form.quantity : 0
@@ -196,11 +254,9 @@ const discountRate = computed(() => {
   return Math.round(rate * 100) / 100;
 });
 
-// el-select filterable 用 filter-method 控制搜索字段，避免被 label 限制
-function filterSubject(query: string) {
-  // el-select 默认按 label 过滤；这里手动做的话需要管控显示集
-  // 为简化保持默认 label 过滤即可；占位以保留 hook
-  return query;
+function onProviderChange() {
+  // 切换提供商时清空已选科目
+  form.subjectId = "";
 }
 
 const submitting = ref(false);
@@ -232,7 +288,12 @@ async function submit() {
   await formRef.value.validate();
   submitting.value = true;
   try {
-    const resp = await AgentAPI.createOrder({ ...form });
+    const resp = await AgentAPI.createOrder({
+      subjectId: form.subjectId,
+      quantity: form.quantity,
+      validDays: form.validDays,
+      remark: form.remark,
+    });
     try {
       qrcodeDataUrl.value = await QRCode.toDataURL(resp.codeUrl, { width: 240 });
     } catch (qrErr) {
@@ -332,42 +393,6 @@ async function closeDialog() {
     color: var(--el-text-color-placeholder);
   }
 
-  /* 科目下拉两行布局 */
-  .subject-option {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 0;
-
-    .subject-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 13px;
-      line-height: 1.3;
-      color: var(--el-text-color-primary);
-      white-space: nowrap;
-    }
-
-    .subject-price {
-      display: inline-flex;
-      gap: 8px;
-      align-items: baseline;
-      font-size: 12px;
-
-      .original {
-        color: var(--el-text-color-placeholder);
-        text-decoration: line-through;
-      }
-
-      .agent {
-        font-weight: 600;
-        color: var(--el-color-danger);
-      }
-    }
-  }
-
   /* 摘要卡 */
   .summary-card {
     position: sticky;
@@ -396,21 +421,33 @@ async function closeDialog() {
 
     .summary-row {
       display: flex;
+      gap: 12px;
       align-items: baseline;
       justify-content: space-between;
       padding: 6px 0;
       font-size: 13px;
 
       .label {
+        flex-shrink: 0;
         color: var(--el-text-color-secondary);
       }
 
       .value {
-        max-width: 65%;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: 70%;
         color: var(--el-text-color-primary);
-        white-space: nowrap;
+        text-align: right;
+        overflow-wrap: anywhere;
+      }
+
+      &.block {
+        /* 提供商/科目 行允许换行，避免长名被截断 */
+        .value {
+          line-height: 1.4;
+        }
+
+        .subject-name {
+          font-weight: 500;
+        }
       }
 
       .strike {
@@ -493,6 +530,56 @@ async function closeDialog() {
       font-size: 12px;
       color: var(--el-text-color-placeholder);
     }
+  }
+}
+</style>
+
+<!--
+  全局样式：下拉选项内部布局。
+  el-select 的 popper 会被 Teleport 到 body，无法用 <style scoped> 命中，
+  所以这部分必须放在非 scoped 的 style 块里。
+-->
+<style lang="scss">
+.el-select-dropdown__item {
+  .opt-name {
+    flex: 1 1 auto;
+    padding-right: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--el-text-color-primary);
+    white-space: nowrap;
+  }
+
+  .opt-price {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 12px;
+    line-height: 1;
+
+    .opt-original {
+      color: var(--el-text-color-placeholder);
+      text-decoration: line-through;
+    }
+
+    .opt-agent {
+      font-weight: 600;
+      color: var(--el-color-danger);
+    }
+  }
+
+  /* 选项整体一行：名字左，价格右 */
+  &:has(.opt-price) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .provider-count {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
   }
 }
 </style>
