@@ -48,12 +48,14 @@
                 <el-option
                   v-for="s in filteredSubjects"
                   :key="s.subjectId"
-                  :label="s.subjectName"
+                  :label="s.subjectName || s.subjectNameEn"
                   :value="s.subjectId"
                 >
                   <div class="opt-info">
-                    <div class="opt-name">{{ s.subjectName }}</div>
-                    <div v-if="s.subjectNameEn" class="opt-name-en">{{ s.subjectNameEn }}</div>
+                    <div class="opt-name">{{ s.subjectName || s.subjectNameEn }}</div>
+                    <div v-if="s.subjectName && s.subjectNameEn" class="opt-name-en">
+                      {{ s.subjectNameEn }}
+                    </div>
                   </div>
                   <span class="opt-price">
                     <span class="opt-original">¥{{ s.originalPriceYuan }}</span>
@@ -123,8 +125,13 @@
             <div class="summary-row block">
               <span class="label">科目</span>
               <span class="value">
-                <span class="subject-name">{{ selectedSubject.subjectName }}</span>
-                <span v-if="selectedSubject.subjectNameEn" class="subject-name-en">
+                <span class="subject-name">
+                  {{ selectedSubject.subjectName || selectedSubject.subjectNameEn }}
+                </span>
+                <span
+                  v-if="selectedSubject.subjectName && selectedSubject.subjectNameEn"
+                  class="subject-name-en"
+                >
                   {{ selectedSubject.subjectNameEn }}
                 </span>
               </span>
