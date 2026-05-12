@@ -230,7 +230,8 @@ const providers = computed<ProviderOption[]>(() => {
       });
     }
   }
-  return Array.from(acc.values()).sort((a, b) => a.providerName.localeCompare(b.providerName));
+  // 保留后端返回顺序（已按 provider.sort_order 排好）
+  return Array.from(acc.values());
 });
 
 const filteredSubjects = computed(() =>
