@@ -111,42 +111,59 @@ const AgentAPI = {
 export default AgentAPI;
 
 // ===== 管理员端 =====
-export interface AgentPriceConfigVO {
-  id: number;
+export interface AgentPriceSummaryVO {
   agentId: number;
   agentName?: string;
-  subjectId: string;
-  subjectName?: string;
-  pricingType: "PERCENT" | "FIXED";
+  /** null 表示该代理未配置过比例（前端按系统默认 33.33% 展示） */
   discountBasisPoints?: number;
-  fixedPriceCents?: number;
-  agentUnitPriceYuan?: number;
-  originalPriceYuan?: number;
-  createTime: string;
-  updateTime: string;
+  overrideCount: number;
+  updateTime?: string;
 }
 
-export interface AgentPriceConfigSaveRequest {
-  agentId: number;
+export interface AgentPriceFixedOverrideVO {
   subjectId: string;
-  pricingType: "PERCENT" | "FIXED";
+  subjectName?: string;
+  fixedPriceCents: number;
+  originalPriceYuan?: number;
+}
+
+export interface AgentPriceDetailVO {
+  agentId: number;
+  agentName?: string;
   discountBasisPoints?: number;
-  fixedPriceYuan?: number;
+  overrides: AgentPriceFixedOverrideVO[];
+}
+
+export interface AgentPriceSummaryPageQuery extends PageQuery {
+  keyword?: string;
+  agentId?: number;
+}
+
+export interface AgentPriceSaveRequest {
+  discountBasisPoints: number;
+  overrides: Array<{ subjectId: string; fixedPriceYuan: number }>;
 }
 
 export const AgentAdminAPI = {
-  pagePriceConfigs(query: PageQuery & { agentId?: number; subjectId?: string }) {
-    return request<any, PageResult<AgentPriceConfigVO[]>>({
-      url: `${AGENT_PRICE_BASE}/page`,
+  pageAgentPriceSummaries(query: AgentPriceSummaryPageQuery) {
+    return request<any, PageResult<AgentPriceSummaryVO[]>>({
+      url: `${AGENT_PRICE_BASE}/agents/page`,
       method: "post",
       data: query,
     });
   },
-  savePriceConfig(data: AgentPriceConfigSaveRequest) {
-    return request({ url: AGENT_PRICE_BASE, method: "post", data });
+  getAgentPriceConfig(agentId: number) {
+    return request<any, AgentPriceDetailVO>({
+      url: `${AGENT_PRICE_BASE}/agents/${agentId}`,
+      method: "get",
+    });
   },
-  deletePriceConfig(id: number) {
-    return request({ url: `${AGENT_PRICE_BASE}/${id}`, method: "delete" });
+  saveAgentPriceConfig(agentId: number, data: AgentPriceSaveRequest) {
+    return request({
+      url: `${AGENT_PRICE_BASE}/agents/${agentId}`,
+      method: "put",
+      data,
+    });
   },
   pageAgentOrders(query: AgentOrderPageQuery & { agentId?: number }) {
     return request<any, PageResult<AgentOrderVO[]>>({
