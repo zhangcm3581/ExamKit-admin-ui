@@ -31,7 +31,16 @@
     <el-table :data="rows" border>
       <el-table-column prop="orderNo" label="订单号" width="220" />
       <el-table-column prop="agentName" label="代理" />
-      <el-table-column prop="subjectName" label="科目" />
+      <el-table-column label="科目" min-width="240">
+        <template #default="{ row }">
+          <div class="subject-cell">
+            <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
+            <div v-if="row.subjectName && row.subjectNameEn" class="en">
+              {{ row.subjectNameEn }}
+            </div>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="quantity" label="数量" width="80" />
       <el-table-column prop="unitPriceYuan" label="单价(¥)" width="100" />
       <el-table-column prop="totalYuan" label="总额(¥)" width="100" />
@@ -79,3 +88,19 @@ onMounted(() => {
   loadAgents();
 });
 </script>
+
+<style scoped lang="scss">
+.subject-cell {
+  line-height: 1.4;
+
+  .zh {
+    color: var(--el-text-color-primary);
+  }
+
+  .en {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+}
+</style>

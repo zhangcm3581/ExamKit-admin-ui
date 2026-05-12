@@ -100,7 +100,16 @@
             </el-icon>
           </template>
         </el-table-column>
-        <el-table-column label="科目" prop="subjectName" min-width="360" show-overflow-tooltip />
+        <el-table-column label="科目" min-width="360">
+          <template #default="{ row }">
+            <div class="subject-cell">
+              <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
+              <div v-if="row.subjectName && row.subjectNameEn" class="en">
+                {{ row.subjectNameEn }}
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
             <el-tag v-if="!row.agentId" type="info">管理员</el-tag>
@@ -576,7 +585,8 @@ function handleConfirmExport() {
     const worksheet = XLSX.utils.json_to_sheet(
       data.map((item) => ({
         激活码: item.code,
-        科目: item.subjectName,
+        科目: item.subjectName || item.subjectNameEn || "",
+        "科目(英文)": item.subjectName && item.subjectNameEn ? item.subjectNameEn : "",
         创建时间: formatDateTime(item.createTime),
       }))
     );
@@ -642,6 +652,20 @@ onMounted(() => {
 <style lang="scss" scoped>
 .app-container {
   padding: 20px;
+}
+
+.subject-cell {
+  line-height: 1.4;
+
+  .zh {
+    color: var(--el-text-color-primary);
+  }
+
+  .en {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .toolbar {

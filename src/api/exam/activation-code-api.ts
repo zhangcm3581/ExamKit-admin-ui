@@ -72,8 +72,10 @@ export interface ActivationCodeVO {
   code: string;
   /** 科目ID */
   subjectId: string;
-  /** 科目名称 */
+  /** 科目名称（中文） */
   subjectName?: string;
+  /** 科目名称（英文） */
+  subjectNameEn?: string;
   /** 类型 */
   type?: string;
   /** 有效天数 */
