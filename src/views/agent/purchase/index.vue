@@ -49,7 +49,12 @@
       :close-on-press-escape="false"
     >
       <div style="text-align: center">
-        <canvas ref="qrcodeCanvas" />
+        <img
+          v-if="qrcodeDataUrl"
+          :src="qrcodeDataUrl"
+          alt="支付二维码"
+          style="width: 240px; height: 240px"
+        />
         <p>订单号：{{ payInfo?.orderNo }}</p>
         <p>
           金额：
@@ -59,7 +64,7 @@
           剩余时间：
           <strong style="color: #f56c6c">{{ countdownText }}</strong>
         </p>
-        <p style=" font-size: 12px;color: #909399">{{ statusHint }}</p>
+        <p style="font-size: 12px; color: #909399">{{ statusHint }}</p>
       </div>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
@@ -69,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox, type FormRules } from "element-plus";
 import QRCode from "qrcode";
@@ -92,7 +97,7 @@ const totalYuan = computed(() =>
 const submitting = ref(false);
 const payDialogVisible = ref(false);
 const payInfo = ref<AgentOrderCreateResponse | null>(null);
-const qrcodeCanvas = ref<HTMLCanvasElement>();
+const qrcodeDataUrl = ref<string>("");
 const countdownSec = ref(0);
 const statusHint = ref("等待扫码支付...");
 let pollTimer: number | null = null;
@@ -121,10 +126,16 @@ async function submit() {
   submitting.value = true;
   try {
     const resp = await AgentAPI.createOrder({ ...form });
+    // 先渲染二维码，失败则不开弹窗、不计入超时
+    try {
+      qrcodeDataUrl.value = await QRCode.toDataURL(resp.codeUrl, { width: 240 });
+    } catch (qrErr) {
+      console.error("QR render failed", qrErr);
+      ElMessage.error("二维码生成失败，请重试");
+      return;
+    }
     payInfo.value = resp;
     payDialogVisible.value = true;
-    await nextTick();
-    await QRCode.toCanvas(qrcodeCanvas.value!, resp.codeUrl, { width: 240 });
     startCountdown(new Date(resp.expiresAt).getTime());
     startPolling(resp.orderNo);
   } catch (e: any) {
@@ -146,9 +157,11 @@ function startCountdown(expiresAtMs: number) {
 }
 
 function startPolling(orderNo: string) {
+  let consecutiveErrors = 0;
   pollTimer = window.setInterval(async () => {
     try {
       const status = await AgentAPI.getOrderStatus(orderNo);
+      consecutiveErrors = 0;
       if (status.status === "PAID") {
         stopTimers();
         payDialogVisible.value = false;
@@ -158,8 +171,13 @@ function startPolling(orderNo: string) {
         stopTimers();
         statusHint.value = "订单已关闭";
       }
-    } catch {
-      // ignore polling errors; keep retrying until status resolves or dialog closes
+    } catch (e) {
+      consecutiveErrors += 1;
+      console.warn("订单状态查询失败", consecutiveErrors, e);
+      if (consecutiveErrors >= 5) {
+        stopTimers();
+        statusHint.value = "状态查询失败，请刷新页面或稍后到「我的订单」页查看";
+      }
     }
   }, 2000);
 }
@@ -178,6 +196,7 @@ function stopTimers() {
 async function closeDialog() {
   await ElMessageBox.confirm("确定取消支付？订单将在超时后自动关闭。", "提示", { type: "warning" });
   stopTimers();
+  qrcodeDataUrl.value = "";
   payDialogVisible.value = false;
 }
 </script>
