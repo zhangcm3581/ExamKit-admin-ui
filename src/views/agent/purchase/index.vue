@@ -51,7 +51,10 @@
                   :label="s.subjectName"
                   :value="s.subjectId"
                 >
-                  <span class="opt-name">{{ s.subjectName }}</span>
+                  <div class="opt-info">
+                    <div class="opt-name">{{ s.subjectName }}</div>
+                    <div v-if="s.subjectNameEn" class="opt-name-en">{{ s.subjectNameEn }}</div>
+                  </div>
                   <span class="opt-price">
                     <span class="opt-original">¥{{ s.originalPriceYuan }}</span>
                     <span class="opt-agent">¥{{ s.agentUnitPriceYuan }}</span>
@@ -542,12 +545,37 @@ async function closeDialog() {
 -->
 <style lang="scss">
 .el-select-dropdown__item {
-  .opt-name {
+  /* 含 .opt-price 的选项：左侧科目信息（可两行），右侧价格 */
+  &:has(.opt-price) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: auto;
+    min-height: 34px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .opt-info {
     flex: 1 1 auto;
+    min-width: 0;
     padding-right: 12px;
+  }
+
+  .opt-name {
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--el-text-color-primary);
+    white-space: nowrap;
+  }
+
+  .opt-name-en {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
     white-space: nowrap;
   }
 
@@ -568,13 +596,6 @@ async function closeDialog() {
       font-weight: 600;
       color: var(--el-color-danger);
     }
-  }
-
-  /* 选项整体一行：名字左，价格右 */
-  &:has(.opt-price) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
   }
 
   .provider-count {

@@ -8,6 +8,7 @@ const AGENT_PRICE_BASE = "/v1/agent-price-configs";
 export interface AgentSubjectOption {
   subjectId: string;
   subjectName: string;
+  subjectNameEn?: string;
   providerId?: number;
   providerName?: string;
   originalPriceYuan: number;
