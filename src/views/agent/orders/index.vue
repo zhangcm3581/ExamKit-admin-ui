@@ -47,12 +47,16 @@
                 <span class="mono">{{ row.orderNo }}</span>
               </template>
             </el-table-column>
-            <el-table-column
-              prop="subjectName"
-              label="科目"
-              min-width="180"
-              show-overflow-tooltip
-            />
+            <el-table-column label="科目" min-width="240">
+              <template #default="{ row }">
+                <div class="subject-cell">
+                  <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
+                  <div v-if="row.subjectName && row.subjectNameEn" class="en">
+                    {{ row.subjectNameEn }}
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="quantity" label="数量" width="80" align="center" />
             <el-table-column prop="unitPriceYuan" label="单价" width="90" align="right">
               <template #default="{ row }">¥{{ row.unitPriceYuan }}</template>
@@ -150,12 +154,16 @@
                 <span class="mono code-cell">{{ row.code }}</span>
               </template>
             </el-table-column>
-            <el-table-column
-              prop="subjectName"
-              label="科目"
-              min-width="180"
-              show-overflow-tooltip
-            />
+            <el-table-column label="科目" min-width="240">
+              <template #default="{ row }">
+                <div class="subject-cell">
+                  <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
+                  <div v-if="row.subjectName && row.subjectNameEn" class="en">
+                    {{ row.subjectNameEn }}
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="状态" width="100" align="center">
               <template #default="{ row }">
                 <el-tag :type="codeStatusTag(row.status)" effect="light">
@@ -259,7 +267,8 @@ async function exportCodes() {
   const ws = XLSX.utils.json_to_sheet(
     all.map((c) => ({
       激活码: c.code,
-      科目: c.subjectName,
+      科目: c.subjectName || c.subjectNameEn || "",
+      "科目(英文)": c.subjectName && c.subjectNameEn ? c.subjectNameEn : "",
       状态: codeStatusLabel(c.status),
       有效天数: c.validDays,
       使用人: c.usedByName ?? "",
@@ -297,6 +306,20 @@ onMounted(loadOrders);
   .mono {
     font-family: "SFMono-Regular", Menlo, Consolas, monospace;
     font-size: 12.5px;
+  }
+
+  .subject-cell {
+    line-height: 1.4;
+
+    .zh {
+      color: var(--el-text-color-primary);
+    }
+
+    .en {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
   }
 
   .code-cell {

@@ -42,6 +42,7 @@ export interface AgentOrderVO {
   agentName?: string;
   subjectId: string;
   subjectName?: string;
+  subjectNameEn?: string;
   quantity: number;
   unitPriceYuan: number;
   totalYuan: number;
