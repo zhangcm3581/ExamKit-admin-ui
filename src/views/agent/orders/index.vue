@@ -42,9 +42,14 @@
             :header-cell-style="{ background: 'var(--el-fill-color-light)' }"
             empty-text="还没有订单，去「购买激活码」生成第一笔吧"
           >
-            <el-table-column prop="orderNo" label="订单号" min-width="200">
+            <el-table-column prop="orderNo" label="订单号" min-width="220">
               <template #default="{ row }">
-                <span class="mono">{{ row.orderNo }}</span>
+                <div class="order-no-cell">
+                  <div class="mono">{{ row.orderNo }}</div>
+                  <div v-if="row.remark" class="remark" :title="row.remark">
+                    备注：{{ row.remark }}
+                  </div>
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="科目" min-width="240">
@@ -338,6 +343,19 @@ onMounted(loadOrders);
   .nowrap {
     display: inline-block;
     white-space: nowrap;
+  }
+
+  .order-no-cell {
+    line-height: 1.4;
+
+    .remark {
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      white-space: nowrap;
+    }
   }
 
   .code-cell {

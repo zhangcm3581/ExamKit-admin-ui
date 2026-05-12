@@ -29,7 +29,14 @@
       </el-form-item>
     </el-form>
     <el-table :data="rows" border>
-      <el-table-column prop="orderNo" label="订单号" width="220" />
+      <el-table-column prop="orderNo" label="订单号" min-width="220">
+        <template #default="{ row }">
+          <div class="order-no-cell">
+            <div class="mono">{{ row.orderNo }}</div>
+            <div v-if="row.remark" class="remark" :title="row.remark">备注：{{ row.remark }}</div>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="agentName" label="代理" />
       <el-table-column label="科目" min-width="240">
         <template #default="{ row }">
@@ -116,5 +123,23 @@ onMounted(() => {
 .nowrap {
   display: inline-block;
   white-space: nowrap;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.order-no-cell {
+  line-height: 1.4;
+
+  .remark {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    white-space: nowrap;
+  }
 }
 </style>
