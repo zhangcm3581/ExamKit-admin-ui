@@ -122,7 +122,12 @@
             </div>
             <div class="summary-row block">
               <span class="label">科目</span>
-              <span class="value subject-name">{{ selectedSubject.subjectName }}</span>
+              <span class="value">
+                <span class="subject-name">{{ selectedSubject.subjectName }}</span>
+                <span v-if="selectedSubject.subjectNameEn" class="subject-name-en">
+                  {{ selectedSubject.subjectNameEn }}
+                </span>
+              </span>
             </div>
             <div class="summary-row">
               <span class="label">单价</span>
@@ -446,11 +451,20 @@ async function closeDialog() {
       &.block {
         /* 提供商/科目 行允许换行，避免长名被截断 */
         .value {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          align-items: flex-end;
           line-height: 1.4;
         }
 
         .subject-name {
           font-weight: 500;
+        }
+
+        .subject-name-en {
+          font-size: 12px;
+          color: var(--el-text-color-secondary);
         }
       }
 
