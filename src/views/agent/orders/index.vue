@@ -73,9 +73,15 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间" width="170" />
-            <el-table-column prop="paidAt" label="支付时间" width="170">
-              <template #default="{ row }">{{ row.paidAt || "—" }}</template>
+            <el-table-column prop="createTime" label="创建时间" width="170" align="center">
+              <template #default="{ row }">
+                <span class="nowrap">{{ formatDateTime(row.createTime) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="paidAt" label="支付时间" width="170" align="center">
+              <template #default="{ row }">
+                <span class="nowrap">{{ row.paidAt ? formatDateTime(row.paidAt) : "—" }}</span>
+              </template>
             </el-table-column>
             <el-table-column label="操作" width="120" fixed="right">
               <template #default="{ row }">
@@ -175,10 +181,16 @@
             <el-table-column prop="usedByName" label="使用人" min-width="140">
               <template #default="{ row }">{{ row.usedByName || "—" }}</template>
             </el-table-column>
-            <el-table-column prop="usedAt" label="使用时间" width="170">
-              <template #default="{ row }">{{ row.usedAt || "—" }}</template>
+            <el-table-column prop="usedAt" label="使用时间" width="170" align="center">
+              <template #default="{ row }">
+                <span class="nowrap">{{ row.usedAt ? formatDateTime(row.usedAt) : "—" }}</span>
+              </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="生成时间" width="170" />
+            <el-table-column prop="createTime" label="生成时间" width="170" align="center">
+              <template #default="{ row }">
+                <span class="nowrap">{{ formatDateTime(row.createTime) }}</span>
+              </template>
+            </el-table-column>
           </el-table>
 
           <pagination
@@ -200,6 +212,7 @@ import { ElMessage } from "element-plus";
 import { CopyDocument, Download } from "@element-plus/icons-vue";
 import * as XLSX from "xlsx";
 import AgentAPI, { type AgentOrderVO, type AgentCodePageQuery } from "@/api/agent-api";
+import { formatDateTime } from "@/utils/datetime";
 
 const tab = ref<"orders" | "codes">("orders");
 
@@ -272,8 +285,8 @@ async function exportCodes() {
       状态: codeStatusLabel(c.status),
       有效天数: c.validDays,
       使用人: c.usedByName ?? "",
-      使用时间: c.usedAt ?? "",
-      创建时间: c.createTime,
+      使用时间: c.usedAt ? formatDateTime(c.usedAt) : "",
+      创建时间: formatDateTime(c.createTime),
     }))
   );
   const wb = XLSX.utils.book_new();
@@ -320,6 +333,11 @@ onMounted(loadOrders);
       font-size: 12px;
       color: var(--el-text-color-secondary);
     }
+  }
+
+  .nowrap {
+    display: inline-block;
+    white-space: nowrap;
   }
 
   .code-cell {

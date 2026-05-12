@@ -45,8 +45,16 @@
       <el-table-column prop="unitPriceYuan" label="单价(¥)" width="100" />
       <el-table-column prop="totalYuan" label="总额(¥)" width="100" />
       <el-table-column prop="status" label="状态" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="180" />
-      <el-table-column prop="paidAt" label="支付时间" width="180" />
+      <el-table-column prop="createTime" label="创建时间" width="170" align="center">
+        <template #default="{ row }">
+          <span class="nowrap">{{ formatDateTime(row.createTime) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="paidAt" label="支付时间" width="170" align="center">
+        <template #default="{ row }">
+          <span class="nowrap">{{ row.paidAt ? formatDateTime(row.paidAt) : "—" }}</span>
+        </template>
+      </el-table-column>
     </el-table>
     <pagination
       v-if="total > 0"
@@ -62,6 +70,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { AgentAdminAPI, type AgentOrderVO } from "@/api/agent-api";
 import UserAPI from "@/api/system/user-api";
+import { formatDateTime } from "@/utils/datetime";
 
 const query = reactive({
   pageNum: 1,
@@ -102,5 +111,10 @@ onMounted(() => {
     font-size: 12px;
     color: var(--el-text-color-secondary);
   }
+}
+
+.nowrap {
+  display: inline-block;
+  white-space: nowrap;
 }
 </style>
