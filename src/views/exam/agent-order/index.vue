@@ -7,12 +7,19 @@
           <span v-if="total > 0" class="total-tip">共 {{ total }} 条订单</span>
         </div>
         <div class="toolbar-right">
+          <el-input
+            v-model="query.orderNo"
+            placeholder="订单号"
+            clearable
+            style="width: 220px; margin-right: 8px"
+            @keyup.enter="handleSearch"
+          />
           <el-select
             v-model="query.agentId"
             placeholder="代理"
             clearable
             filterable
-            style="width: 200px; margin-right: 8px"
+            style="width: 180px; margin-right: 8px"
             @change="handleSearch"
           >
             <el-option
@@ -51,10 +58,15 @@
             {{ (query.pageNum - 1) * query.pageSize + $index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="订单号" min-width="220">
+        <el-table-column label="订单号" width="200">
           <template #default="{ row }">
             <div class="order-no-cell">
-              <div class="mono">{{ row.orderNo }}</div>
+              <div class="order-no-line">
+                <span class="mono" :title="row.orderNo">{{ row.orderNo }}</span>
+                <el-icon class="copy-icon" title="复制订单号" @click="copy(row.orderNo)">
+                  <DocumentCopy />
+                </el-icon>
+              </div>
               <div v-if="row.remark" class="remark" :title="row.remark">备注：{{ row.remark }}</div>
             </div>
           </template>
@@ -103,6 +115,21 @@
             <span v-else class="text-secondary">—</span>
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="110" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'PAID'"
+              type="primary"
+              size="small"
+              text
+              bg
+              @click="openCodesDialog(row)"
+            >
+              查看激活码
+            </el-button>
+            <span v-else class="text-secondary">—</span>
+          </template>
+        </el-table-column>
       </el-table>
 
       <pagination
@@ -113,12 +140,57 @@
         @pagination="load"
       />
     </el-card>
+
+    <!-- 激活码弹窗 -->
+    <el-dialog
+      v-model="codesDialogVisible"
+      :title="codesDialogTitle"
+      width="780px"
+      destroy-on-close
+    >
+      <div class="codes-summary">
+        <el-tag size="small" type="info" effect="plain">共 {{ dialogCodes.length }} 条</el-tag>
+        <el-button size="small" :icon="CopyDocument" @click="copyAllCodes">复制全部</el-button>
+      </div>
+      <el-table v-loading="dialogLoading" :data="dialogCodes" max-height="500" stripe size="small">
+        <el-table-column label="序号" type="index" width="60" align="center" />
+        <el-table-column label="激活码" width="180">
+          <template #default="{ row }">
+            <span class="mono">{{ row.code }}</span>
+            <el-icon class="copy-icon" @click="copy(row.code)">
+              <DocumentCopy />
+            </el-icon>
+          </template>
+        </el-table-column>
+        <el-table-column label="天数" prop="validDays" width="70" align="center" />
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="codeStatusTag(row.status)" size="small" effect="plain">
+              {{ codeStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="使用人" prop="usedByName" min-width="130">
+          <template #default="{ row }">
+            <span v-if="row.usedByName">{{ row.usedByName }}</span>
+            <span v-else class="text-secondary">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="使用时间" width="170" align="center">
+          <template #default="{ row }">
+            <span v-if="row.usedAt" class="nowrap">{{ formatDateTime(row.usedAt) }}</span>
+            <span v-else class="text-secondary">—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
-import { Search, Refresh } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { Search, Refresh, DocumentCopy, CopyDocument } from "@element-plus/icons-vue";
 import { AgentAdminAPI, type AgentOrderVO } from "@/api/agent-api";
 import UserAPI from "@/api/system/user-api";
 import { formatDateTime } from "@/utils/datetime";
@@ -126,6 +198,7 @@ import { formatDateTime } from "@/utils/datetime";
 const query = reactive({
   pageNum: 1,
   pageSize: 10,
+  orderNo: "",
   agentId: undefined as number | undefined,
   status: "",
 });
@@ -140,6 +213,11 @@ const statusTag = (s: string): TagType =>
   "info";
 const statusLabel = (s: string) =>
   (({ PENDING: "待支付", PAID: "已支付", CLOSED: "已关闭" }) as Record<string, string>)[s] ?? s;
+const codeStatusTag = (s: number): TagType =>
+  (({ 0: "warning", 1: "success", 2: "info", 3: "danger" }) as Record<number, TagType>)[s] ??
+  "info";
+const codeStatusLabel = (s: number) =>
+  (({ 0: "未使用", 1: "已使用", 2: "已过期", 3: "已回收" }) as Record<number, string>)[s] ?? "未知";
 
 async function load() {
   loading.value = true;
@@ -159,6 +237,7 @@ function handleSearch() {
 
 function handleReset() {
   query.pageNum = 1;
+  query.orderNo = "";
   query.agentId = undefined;
   query.status = "";
   load();
@@ -166,6 +245,43 @@ function handleReset() {
 
 async function loadAgents() {
   agents.value = await UserAPI.listByRoleCode("AGENT");
+}
+
+async function copy(text: string) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success("已复制");
+  } catch {
+    ElMessage.error("复制失败，请手动选择");
+  }
+}
+
+// ===== 激活码弹窗 =====
+const codesDialogVisible = ref(false);
+const codesDialogTitle = ref("");
+const dialogCodes = ref<any[]>([]);
+const dialogLoading = ref(false);
+
+async function openCodesDialog(row: AgentOrderVO) {
+  codesDialogTitle.value = `订单 ${row.orderNo} 的激活码`;
+  codesDialogVisible.value = true;
+  dialogCodes.value = [];
+  dialogLoading.value = true;
+  try {
+    dialogCodes.value = await AgentAdminAPI.listCodesForOrder(row.id);
+  } catch {
+    ElMessage.error("加载激活码失败");
+  } finally {
+    dialogLoading.value = false;
+  }
+}
+
+async function copyAllCodes() {
+  if (!dialogCodes.value.length) return;
+  const text = dialogCodes.value.map((c) => c.code).join("\n");
+  await navigator.clipboard.writeText(text);
+  ElMessage.success(`已复制 ${dialogCodes.value.length} 条激活码`);
 }
 
 onMounted(() => {
@@ -229,11 +345,20 @@ onMounted(() => {
 .order-no-cell {
   line-height: 1.4;
 
+  .order-no-line {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
   .mono {
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--el-color-primary);
+    white-space: nowrap;
   }
 
   .remark {
@@ -243,6 +368,17 @@ onMounted(() => {
     font-size: 12px;
     color: var(--el-text-color-secondary);
     white-space: nowrap;
+  }
+}
+
+.copy-icon {
+  flex-shrink: 0;
+  color: #909399;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--el-color-primary);
   }
 }
 
@@ -267,6 +403,13 @@ onMounted(() => {
 
 .text-secondary {
   color: var(--el-text-color-placeholder);
+}
+
+.codes-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 :deep(.table-header) {

@@ -55,6 +55,7 @@ export interface AgentOrderVO {
 }
 
 export interface AgentOrderPageQuery extends PageQuery {
+  orderNo?: string;
   status?: string;
   subjectId?: string;
   startTime?: string;
@@ -152,6 +153,13 @@ export const AgentAdminAPI = {
       url: `${AGENT_ORDER_ADMIN_BASE}/page`,
       method: "post",
       data: query,
+    });
+  },
+  /** 列出某个代理订单的全部激活码（不分页） */
+  listCodesForOrder(orderId: number) {
+    return request<any, any[]>({
+      url: `${AGENT_ORDER_ADMIN_BASE}/${orderId}/codes`,
+      method: "get",
     });
   },
 };
