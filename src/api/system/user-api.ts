@@ -208,6 +208,16 @@ const UserAPI = {
       method: "get",
     });
   },
+
+  /**
+   * 按角色 code 拉取用户列表（仅前 500 条）。
+   * @param roleCode 角色编码，如 "AGENT"
+   */
+  listByRoleCode(roleCode: string) {
+    return UserAPI.getPage({ pageNum: 1, pageSize: 500, roleCode } as UserPageQuery).then(
+      (res) => res.data
+    );
+  },
 };
 
 export default UserAPI;
@@ -248,6 +258,9 @@ export interface UserPageQuery extends PageQuery {
 
   /** 开始时间 */
   createTime?: [string, string];
+
+  /** 按角色 code 过滤（如 'AGENT'） */
+  roleCode?: string;
 }
 
 /** 用户分页对象 */
