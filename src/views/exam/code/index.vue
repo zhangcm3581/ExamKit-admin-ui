@@ -48,6 +48,32 @@
             <el-option label="已过期" :value="2" />
             <el-option label="已回收" :value="3" />
           </el-select>
+          <el-select
+            v-model="queryParams.source"
+            placeholder="来源"
+            clearable
+            style="width: 140px; margin-right: 8px"
+            @change="onSourceChange"
+          >
+            <el-option label="管理员生成" value="ADMIN" />
+            <el-option label="代理生成" value="AGENT" />
+          </el-select>
+          <el-select
+            v-if="queryParams.source === 'AGENT'"
+            v-model="queryParams.agentId"
+            placeholder="全部代理"
+            clearable
+            filterable
+            style="width: 200px; margin-right: 8px"
+            @change="handleQuery"
+          >
+            <el-option
+              v-for="a in agents"
+              :key="a.id"
+              :label="a.nickname || a.username"
+              :value="a.id"
+            />
+          </el-select>
           <el-button type="primary" icon="Search" @click="handleSearch" />
           <el-button icon="Refresh" @click="handleReset" />
         </div>
@@ -75,6 +101,12 @@
           </template>
         </el-table-column>
         <el-table-column label="科目" prop="subjectName" min-width="360" show-overflow-tooltip />
+        <el-table-column label="来源" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="!row.agentId" type="info">管理员</el-tag>
+            <el-tag v-else type="success">{{ row.agentName || `代理#${row.agentId}` }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="天数" prop="validDays" width="80" align="center">
           <template #default="scope">
             <span v-if="scope.row.validDays">{{ scope.row.validDays }}</span>
@@ -313,6 +345,7 @@ import ActivationCodeAPI, {
 } from "@/api/exam/activation-code-api";
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import UserAPI from "@/api/system/user-api";
 import { formatDateTime } from "@/utils/datetime";
 
 const formRef = ref();
@@ -328,6 +361,16 @@ const queryParams = reactive<ActivationCodePageQuery>({
 const tableData = ref<ActivationCodeVO[]>();
 const subjectOptions = ref<SubjectVO[]>([]);
 const providerOptions = ref<ProviderOptionVO[]>([]);
+const agents = ref<any[]>([]);
+
+async function loadAgents() {
+  agents.value = await UserAPI.listByRoleCode("AGENT");
+}
+
+function onSourceChange(v: string) {
+  if (v !== "AGENT") queryParams.agentId = undefined;
+  handleQuery();
+}
 
 const groupedSubjects = computed(() => {
   const map = new Map<string, SubjectVO[]>();
@@ -591,6 +634,7 @@ async function onRecycle(row: ActivationCodeVO) {
 onMounted(() => {
   loadSubjectOptions();
   loadProviderOptions();
+  loadAgents();
   handleQuery();
 });
 </script>
