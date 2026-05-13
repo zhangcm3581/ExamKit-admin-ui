@@ -17,6 +17,16 @@
 
           <div class="toolbar">
             <el-form inline :model="orderQuery">
+              <el-form-item label="订单号">
+                <el-input
+                  v-model="orderQuery.orderNo"
+                  clearable
+                  placeholder="支持模糊匹配"
+                  style="width: 240px"
+                  @keyup.enter="loadOrders"
+                  @clear="loadOrders"
+                />
+              </el-form-item>
               <el-form-item label="状态">
                 <el-select
                   v-model="orderQuery.status"
@@ -222,7 +232,7 @@ import { formatDateTime } from "@/utils/datetime";
 const tab = ref<"orders" | "codes">("orders");
 
 // ===== 订单 =====
-const orderQuery = reactive({ pageNum: 1, pageSize: 10, status: "" as string });
+const orderQuery = reactive({ pageNum: 1, pageSize: 10, status: "" as string, orderNo: "" });
 const orders = ref<AgentOrderVO[]>([]);
 const orderTotal = ref(0);
 async function loadOrders() {
