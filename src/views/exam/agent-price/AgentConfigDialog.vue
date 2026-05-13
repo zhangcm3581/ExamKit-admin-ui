@@ -34,21 +34,10 @@
             <div class="col-price">价格(元)</div>
             <div class="col-action">操作</div>
           </div>
-          <div v-for="(row, idx) in overrides" :key="idx" class="overrides-row">
+          <div v-for="(row, idx) in overrides" :key="row.subjectId" class="overrides-row">
             <div class="col-subject">
-              <el-select
-                v-model="row.subjectId"
-                filterable
-                placeholder="选择科目"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="s in subjectOptions(idx)"
-                  :key="s.id"
-                  :label="s.label"
-                  :value="s.id"
-                />
-              </el-select>
+              <span class="subject-zh">{{ row.subjectName }}</span>
+              <span v-if="row.subjectNameEn" class="subject-en">{{ row.subjectNameEn }}</span>
             </div>
             <div class="col-price">
               <el-input-number
@@ -68,14 +57,7 @@
           </div>
         </div>
 
-        <el-button
-          type="primary"
-          plain
-          :icon="Plus"
-          :disabled="!canAddOverride"
-          class="add-btn"
-          @click="addOverride"
-        >
+        <el-button type="primary" plain :icon="Plus" class="add-btn" @click="pickerVisible = true">
           添加固定价覆盖
         </el-button>
       </div>
@@ -85,6 +67,13 @@
       <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
     </template>
+
+    <SubjectPickerDialog
+      v-model="pickerVisible"
+      :subjects="subjects"
+      :already-picked-ids="pickedIds"
+      @confirm="onPickerConfirm"
+    />
   </el-dialog>
 </template>
 
@@ -94,6 +83,7 @@ import { ElMessage } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
 import { AgentAdminAPI, type AgentPriceSaveRequest } from "@/api/agent-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import SubjectPickerDialog from "./SubjectPickerDialog.vue";
 
 interface Props {
   modelValue: boolean;
@@ -114,10 +104,20 @@ const title = computed(() => (props.agentName ? `配置定价 - ${props.agentNam
 
 const loading = ref(false);
 const saving = ref(false);
+const pickerVisible = ref(false);
 
 const ratioPercent = ref(33.33);
-const overrides = reactive<Array<{ subjectId: string; fixedPriceYuan: number | undefined }>>([]);
+
+interface OverrideRow {
+  subjectId: string;
+  subjectName: string;
+  subjectNameEn?: string;
+  fixedPriceYuan: number | undefined;
+}
+const overrides = reactive<OverrideRow[]>([]);
 const subjects = ref<SubjectVO[]>([]);
+
+const pickedIds = computed(() => overrides.map((o) => o.subjectId));
 
 watch(
   () => props.modelValue,
@@ -128,6 +128,10 @@ watch(
   }
 );
 
+function subjectLabel(s: SubjectVO): string {
+  return s.nameZh && s.nameZh.length ? s.nameZh : (s.nameEn ?? s.id);
+}
+
 async function loadData(agentId: number) {
   loading.value = true;
   try {
@@ -135,16 +139,20 @@ async function loadData(agentId: number) {
       const res = await SubjectAPI.getPage({ pageNum: 1, pageSize: 1000 });
       subjects.value = res.data;
     }
+    const subjectById = new Map(subjects.value.map((s) => [s.id, s]));
     const detail = await AgentAdminAPI.getAgentPriceConfig(agentId);
     ratioPercent.value =
       detail.discountBasisPoints != null ? detail.discountBasisPoints / 100 : 33.33;
     overrides.splice(0, overrides.length);
-    detail.overrides.forEach((o) =>
+    detail.overrides.forEach((o) => {
+      const s = subjectById.get(o.subjectId);
       overrides.push({
         subjectId: o.subjectId,
+        subjectName: o.subjectName ?? (s ? subjectLabel(s) : o.subjectId),
+        subjectNameEn: s?.nameZh && s?.nameEn ? s.nameEn : undefined,
         fixedPriceYuan: Math.round(o.fixedPriceCents / 100),
-      })
-    );
+      });
+    });
   } finally {
     loading.value = false;
   }
@@ -155,23 +163,17 @@ function handleClosed() {
   ratioPercent.value = 33.33;
 }
 
-function subjectLabel(s: SubjectVO): string {
-  return s.nameZh && s.nameZh.length ? s.nameZh : (s.nameEn ?? s.id);
-}
-
-function subjectOptions(rowIdx: number) {
-  const takenIds = new Set(
-    overrides.map((o, i) => (i === rowIdx ? null : o.subjectId)).filter((id): id is string => !!id)
-  );
-  return subjects.value
-    .filter((s) => !takenIds.has(s.id))
-    .map((s) => ({ id: s.id, label: subjectLabel(s) }));
-}
-
-const canAddOverride = computed(() => overrides.length < subjects.value.length);
-
-function addOverride() {
-  overrides.push({ subjectId: "", fixedPriceYuan: undefined });
+function onPickerConfirm(ids: string[]) {
+  const subjectById = new Map(subjects.value.map((s) => [s.id, s]));
+  for (const id of ids) {
+    const s = subjectById.get(id);
+    overrides.push({
+      subjectId: id,
+      subjectName: s ? subjectLabel(s) : id,
+      subjectNameEn: s?.nameZh && s?.nameEn ? s.nameEn : undefined,
+      fixedPriceYuan: undefined,
+    });
+  }
 }
 
 function removeOverride(idx: number) {
@@ -184,21 +186,11 @@ async function submit() {
     ElMessage.warning("请输入默认比例");
     return;
   }
-  const seen = new Set<string>();
   for (const [i, row] of overrides.entries()) {
-    if (!row.subjectId) {
-      ElMessage.warning(`第 ${i + 1} 行请选择科目`);
-      return;
-    }
     if (row.fixedPriceYuan == null || row.fixedPriceYuan < 1) {
-      ElMessage.warning(`第 ${i + 1} 行价格必须 ≥ 1`);
+      ElMessage.warning(`第 ${i + 1} 行（${row.subjectName}）价格必须 ≥ 1`);
       return;
     }
-    if (seen.has(row.subjectId)) {
-      ElMessage.warning(`科目「${row.subjectId}」重复`);
-      return;
-    }
-    seen.add(row.subjectId);
   }
 
   const payload: AgentPriceSaveRequest = {
@@ -280,6 +272,28 @@ async function submit() {
 
   .overrides-row {
     border-top: 1px solid var(--el-border-color-lighter);
+  }
+
+  .col-subject {
+    overflow: hidden;
+    line-height: 1.35;
+
+    .subject-zh {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--el-text-color-primary);
+      white-space: nowrap;
+    }
+
+    .subject-en {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      white-space: nowrap;
+    }
   }
 
   .col-action {
