@@ -1,11 +1,13 @@
 <template>
-  <el-dialog
+  <el-drawer
     v-model="visible"
     title="选择要覆盖的科目"
-    width="640px"
+    size="560px"
+    direction="rtl"
     destroy-on-close
     append-to-body
-    class="subject-picker-dialog"
+    :with-header="true"
+    class="subject-picker-drawer"
   >
     <div class="picker-toolbar">
       <el-input
@@ -68,15 +70,17 @@
     </div>
 
     <template #footer>
-      <span v-if="alreadyPickedIds.length > 0" class="footer-hint">
-        已加入 {{ alreadyPickedIds.length }} 个，不再展示
-      </span>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :disabled="selectedIds.size === 0" @click="confirm">
-        加入 {{ selectedIds.size }} 个科目
-      </el-button>
+      <div class="drawer-footer">
+        <span v-if="alreadyPickedIds.length > 0" class="footer-hint">
+          已加入 {{ alreadyPickedIds.length }} 个，不再展示
+        </span>
+        <el-button @click="visible = false">取消</el-button>
+        <el-button type="primary" :disabled="selectedIds.size === 0" @click="confirm">
+          加入 {{ selectedIds.size }} 个科目
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>
 
 <script setup lang="ts">
@@ -196,15 +200,37 @@ function confirm() {
 </script>
 
 <style scoped lang="scss">
-:deep(.el-dialog__body) {
-  padding-top: 8px;
-  padding-bottom: 12px;
+/* 让 drawer body 内部成为可滚动区域，footer 始终贴底 */
+:deep(.el-drawer__body) {
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 12px;
+  overflow: hidden;
+}
+
+:deep(.el-drawer__header) {
+  padding: 18px 20px 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
+  .el-drawer__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+}
+
+:deep(.el-drawer__footer) {
+  padding: 12px 20px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .picker-toolbar {
   display: flex;
+  flex-shrink: 0;
   gap: 12px;
   align-items: center;
+  padding-top: 4px;
   margin-bottom: 12px;
 
   :deep(.el-input) {
@@ -224,10 +250,17 @@ function confirm() {
 }
 
 .picker-body {
-  max-height: 480px;
+  flex: 1;
   overflow-y: auto;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
+}
+
+.drawer-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .provider-group + .provider-group {
