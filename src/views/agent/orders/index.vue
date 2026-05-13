@@ -73,12 +73,20 @@
               </template>
             </el-table-column>
             <el-table-column prop="quantity" label="数量" width="80" align="center" />
-            <el-table-column prop="unitPriceYuan" label="单价" width="90" align="right">
-              <template #default="{ row }">¥{{ row.unitPriceYuan }}</template>
-            </el-table-column>
-            <el-table-column prop="totalYuan" label="总额" width="100" align="right">
+            <el-table-column prop="unitPriceYuan" label="单价" width="100" align="right">
               <template #default="{ row }">
-                <strong>¥{{ row.totalYuan }}</strong>
+                <span class="price-cell">
+                  <span class="currency">¥</span>
+                  {{ row.unitPriceYuan }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="totalYuan" label="总额" width="120" align="right">
+              <template #default="{ row }">
+                <span class="total-cell">
+                  <span class="currency">¥</span>
+                  {{ row.totalYuan }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="100" align="center">
@@ -377,6 +385,41 @@ onActivated(() => {
     font-weight: 600;
     color: var(--el-color-primary);
     letter-spacing: 0.5px;
+  }
+
+  .price-cell,
+  .total-cell {
+    font-family:
+      "SF Pro Display",
+      "PingFang SC",
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+
+    .currency {
+      margin-right: 2px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--el-text-color-secondary);
+    }
+  }
+
+  .price-cell {
+    font-size: 14px;
+    color: var(--el-text-color-regular);
+  }
+
+  .total-cell {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fa541c; // 主色调（暖橙），强调"应付/已付金额"
+
+    .currency {
+      color: #fa541c;
+      opacity: 0.7;
+    }
   }
 }
 </style>
