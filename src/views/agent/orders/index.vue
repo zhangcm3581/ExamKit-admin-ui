@@ -222,7 +222,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from "vue";
+import { ref, reactive, onMounted, onActivated, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { CopyDocument, Download } from "@element-plus/icons-vue";
 import * as XLSX from "xlsx";
@@ -314,6 +314,11 @@ watch(tab, (v) => {
   if (v === "codes" && codes.value.length === 0) loadCodes();
 });
 onMounted(loadOrders);
+// 路由被 keep-alive 缓存：从「购买激活码」付款成功跳回时刷新，避免显示旧列表
+onActivated(() => {
+  loadOrders();
+  if (tab.value === "codes") loadCodes();
+});
 </script>
 
 <style scoped lang="scss">
