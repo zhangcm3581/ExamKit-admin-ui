@@ -58,7 +58,7 @@
             {{ (query.pageNum - 1) * query.pageSize + $index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="订单号" width="200">
+        <el-table-column label="订单号" min-width="260">
           <template #default="{ row }">
             <div class="order-no-cell">
               <div class="order-no-line">
@@ -115,17 +115,16 @@
             <span v-else class="text-secondary">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right" align="center">
+        <el-table-column label="操作" width="130" fixed="right" align="center">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'PAID'"
-              type="primary"
               size="small"
-              text
-              bg
+              class="codes-btn"
               @click="openCodesDialog(row)"
             >
-              查看激活码
+              <el-icon class="codes-btn-icon"><Key /></el-icon>
+              <span>查看激活码</span>
             </el-button>
             <span v-else class="text-secondary">—</span>
           </template>
@@ -144,53 +143,119 @@
     <!-- 激活码弹窗 -->
     <el-dialog
       v-model="codesDialogVisible"
-      :title="codesDialogTitle"
-      width="780px"
+      width="820px"
       destroy-on-close
+      align-center
+      class="codes-dialog"
+      :show-close="false"
     >
-      <div class="codes-summary">
-        <el-tag size="small" type="info" effect="plain">共 {{ dialogCodes.length }} 条</el-tag>
-        <el-button size="small" :icon="CopyDocument" @click="copyAllCodes">复制全部</el-button>
+      <template #header="{ close }">
+        <div class="codes-dialog-header">
+          <div class="header-main">
+            <div class="header-icon">
+              <el-icon><Key /></el-icon>
+            </div>
+            <div class="header-text">
+              <div class="header-title">订单激活码</div>
+              <div v-if="currentOrder" class="header-subtitle">
+                <span class="mono order-no">{{ currentOrder.orderNo }}</span>
+                <el-icon
+                  class="header-copy-icon"
+                  title="复制订单号"
+                  @click="copy(currentOrder.orderNo)"
+                >
+                  <DocumentCopy />
+                </el-icon>
+              </div>
+            </div>
+          </div>
+          <el-icon class="header-close" @click="close">
+            <Close />
+          </el-icon>
+        </div>
+      </template>
+
+      <div class="codes-dialog-body">
+        <div class="codes-stats">
+          <div class="stat-item stat-total">
+            <div class="stat-label">总数</div>
+            <div class="stat-value">{{ dialogCodes.length }}</div>
+          </div>
+          <div class="stat-item stat-unused">
+            <div class="stat-label">未使用</div>
+            <div class="stat-value">{{ codeStats.unused }}</div>
+          </div>
+          <div class="stat-item stat-used">
+            <div class="stat-label">已使用</div>
+            <div class="stat-value">{{ codeStats.used }}</div>
+          </div>
+          <div class="stat-item stat-expired">
+            <div class="stat-label">已过期</div>
+            <div class="stat-value">{{ codeStats.expired }}</div>
+          </div>
+          <div class="stats-spacer" />
+          <el-button
+            type="primary"
+            :icon="CopyDocument"
+            :disabled="!dialogCodes.length"
+            @click="copyAllCodes"
+          >
+            复制全部
+          </el-button>
+        </div>
+
+        <el-table
+          v-loading="dialogLoading"
+          :data="dialogCodes"
+          max-height="460"
+          class="codes-table"
+          size="default"
+        >
+          <el-table-column label="#" type="index" width="50" align="center" />
+          <el-table-column label="激活码" min-width="220">
+            <template #default="{ row }">
+              <div class="code-chip" @click="copy(row.code)">
+                <span class="code-text">{{ row.code }}</span>
+                <el-icon class="code-chip-icon">
+                  <DocumentCopy />
+                </el-icon>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="有效天数" prop="validDays" width="90" align="center">
+            <template #default="{ row }">
+              <span class="days-pill">{{ row.validDays }}天</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="codeStatusTag(row.status)" size="small" effect="light" round>
+                {{ codeStatusLabel(row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="使用人" prop="usedByName" min-width="120">
+            <template #default="{ row }">
+              <span v-if="row.usedByName">{{ row.usedByName }}</span>
+              <span v-else class="text-secondary">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="使用时间" width="160" align="center">
+            <template #default="{ row }">
+              <span v-if="row.usedAt" class="nowrap">{{ formatDateTime(row.usedAt) }}</span>
+              <span v-else class="text-secondary">—</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
-      <el-table v-loading="dialogLoading" :data="dialogCodes" max-height="500" stripe size="small">
-        <el-table-column label="序号" type="index" width="60" align="center" />
-        <el-table-column label="激活码" width="180">
-          <template #default="{ row }">
-            <span class="mono">{{ row.code }}</span>
-            <el-icon class="copy-icon" @click="copy(row.code)">
-              <DocumentCopy />
-            </el-icon>
-          </template>
-        </el-table-column>
-        <el-table-column label="天数" prop="validDays" width="70" align="center" />
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="codeStatusTag(row.status)" size="small" effect="plain">
-              {{ codeStatusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="使用人" prop="usedByName" min-width="130">
-          <template #default="{ row }">
-            <span v-if="row.usedByName">{{ row.usedByName }}</span>
-            <span v-else class="text-secondary">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="使用时间" width="170" align="center">
-          <template #default="{ row }">
-            <span v-if="row.usedAt" class="nowrap">{{ formatDateTime(row.usedAt) }}</span>
-            <span v-else class="text-secondary">—</span>
-          </template>
-        </el-table-column>
-      </el-table>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { Search, Refresh, DocumentCopy, CopyDocument } from "@element-plus/icons-vue";
+import { Search, Refresh, DocumentCopy, CopyDocument, Key, Close } from "@element-plus/icons-vue";
 import { AgentAdminAPI, type AgentOrderVO } from "@/api/agent-api";
 import UserAPI from "@/api/system/user-api";
 import { formatDateTime } from "@/utils/datetime";
@@ -259,12 +324,23 @@ async function copy(text: string) {
 
 // ===== 激活码弹窗 =====
 const codesDialogVisible = ref(false);
-const codesDialogTitle = ref("");
+const currentOrder = ref<AgentOrderVO | null>(null);
 const dialogCodes = ref<any[]>([]);
 const dialogLoading = ref(false);
 
+const codeStats = computed(() => {
+  const acc = { unused: 0, used: 0, expired: 0, recycled: 0 };
+  for (const c of dialogCodes.value) {
+    if (c.status === 0) acc.unused++;
+    else if (c.status === 1) acc.used++;
+    else if (c.status === 2) acc.expired++;
+    else if (c.status === 3) acc.recycled++;
+  }
+  return acc;
+});
+
 async function openCodesDialog(row: AgentOrderVO) {
-  codesDialogTitle.value = `订单 ${row.orderNo} 的激活码`;
+  currentOrder.value = row;
   codesDialogVisible.value = true;
   dialogCodes.value = [];
   dialogLoading.value = true;
@@ -405,16 +481,282 @@ onMounted(() => {
   color: var(--el-text-color-placeholder);
 }
 
-.codes-summary {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
 :deep(.table-header) {
   font-weight: 600;
   color: #606266;
   background-color: #f5f7fa !important;
+}
+
+/* ===== 查看激活码按钮 ===== */
+.codes-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  letter-spacing: 0.2px;
+  background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, #fff 100%);
+  border: 1px solid var(--el-color-primary-light-5);
+  border-radius: 999px;
+  transition: all 0.18s ease;
+
+  &:hover,
+  &:focus {
+    color: #fff;
+    background: var(--el-color-primary);
+    border-color: var(--el-color-primary);
+    box-shadow: 0 4px 12px -2px rgba(64, 158, 255, 0.45);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    box-shadow: 0 2px 6px -2px rgba(64, 158, 255, 0.45);
+    transform: translateY(0);
+  }
+
+  .codes-btn-icon {
+    font-size: 13px;
+  }
+}
+
+/* ===== 激活码弹窗 ===== */
+:deep(.codes-dialog) {
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow:
+    0 20px 60px -20px rgba(0, 21, 41, 0.25),
+    0 8px 24px -8px rgba(0, 21, 41, 0.12);
+
+  .el-dialog__header {
+    padding: 0;
+    margin: 0;
+  }
+
+  .el-dialog__body {
+    padding: 0;
+  }
+}
+
+.codes-dialog-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #4f7df3 0%, #6b8df4 45%, #8aa3f7 100%);
+
+  &::before {
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 220px;
+    height: 220px;
+    pointer-events: none;
+    content: "";
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+  }
+
+  .header-main {
+    z-index: 1;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(4px);
+  }
+
+  .header-text {
+    line-height: 1.35;
+  }
+
+  .header-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+
+  .header-subtitle {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.88);
+
+    .order-no {
+      font-size: 12.5px;
+      letter-spacing: 0.3px;
+    }
+  }
+
+  .header-copy-icon {
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .header-close {
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.18);
+    }
+  }
+}
+
+.codes-dialog-body {
+  padding: 20px 24px 24px;
+  background: #fff;
+}
+
+.codes-stats {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 18px;
+
+  .stat-item {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 84px;
+    padding: 10px 16px;
+    line-height: 1.2;
+    background: #fafbfd;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 10px;
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
+
+    .stat-value {
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--el-text-color-primary);
+    }
+
+    &.stat-unused {
+      background: linear-gradient(180deg, #fff8ec 0%, #fffdf7 100%);
+      border-color: #fde8c5;
+
+      .stat-value {
+        color: #e6a23c;
+      }
+    }
+
+    &.stat-used {
+      background: linear-gradient(180deg, #effaf0 0%, #f8fdf9 100%);
+      border-color: #c8eccc;
+
+      .stat-value {
+        color: #67c23a;
+      }
+    }
+
+    &.stat-expired {
+      background: linear-gradient(180deg, #f6f7fa 0%, #fcfcfd 100%);
+      border-color: #e4e7ed;
+
+      .stat-value {
+        color: #909399;
+      }
+    }
+  }
+
+  .stats-spacer {
+    flex: 1;
+  }
+}
+
+.codes-table {
+  overflow: hidden;
+  border-radius: 10px;
+
+  :deep(.el-table__header) th {
+    font-weight: 600;
+    color: var(--el-text-color-regular);
+    background-color: #f5f7fa;
+  }
+
+  :deep(.el-table__row) td {
+    padding: 10px 0;
+  }
+}
+
+.code-chip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 12px;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, #fff 100%);
+  border: 1px dashed var(--el-color-primary-light-5);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--el-color-primary-light-8);
+    border-style: solid;
+
+    .code-chip-icon {
+      opacity: 1;
+    }
+  }
+
+  .code-chip-icon {
+    font-size: 13px;
+    color: var(--el-color-primary);
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+}
+
+.days-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--el-text-color-regular);
+  background: var(--el-fill-color-light);
+  border-radius: 999px;
 }
 </style>

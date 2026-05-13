@@ -58,10 +58,6 @@ export interface ActivationCodePageQuery extends PageQuery {
   subjectId?: string;
   /** 状态 0-未使用 1-已使用 2-已过期 */
   status?: number;
-  /** 来源 ADMIN/AGENT/不传=全部 */
-  source?: string;
-  /** source=AGENT 时可指定具体代理 */
-  agentId?: number;
 }
 
 /** 激活码VO */
