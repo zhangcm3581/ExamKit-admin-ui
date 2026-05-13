@@ -135,7 +135,6 @@ export interface AgentPriceDetailVO {
 }
 
 export interface AgentPriceSummaryPageQuery extends PageQuery {
-  keyword?: string;
   agentId?: number;
 }
 

@@ -105,7 +105,6 @@ const query = reactive<AgentPriceSummaryPageQuery>({
   pageNum: 1,
   pageSize: 10,
   agentId: undefined,
-  keyword: "",
 });
 const rows = ref<AgentPriceSummaryVO[]>([]);
 const total = ref(0);
@@ -135,7 +134,6 @@ function handleSearch() {
 function handleReset() {
   query.pageNum = 1;
   query.agentId = undefined;
-  query.keyword = "";
   load();
 }
 
