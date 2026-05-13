@@ -89,12 +89,20 @@
           </template>
         </el-table-column>
         <el-table-column label="数量" prop="quantity" width="80" align="center" />
-        <el-table-column label="单价" prop="unitPriceYuan" width="90" align="right">
-          <template #default="{ row }">¥{{ row.unitPriceYuan }}</template>
-        </el-table-column>
-        <el-table-column label="总额" prop="totalYuan" width="100" align="right">
+        <el-table-column label="单价" prop="unitPriceYuan" width="100" align="right">
           <template #default="{ row }">
-            <strong>¥{{ row.totalYuan }}</strong>
+            <span class="price-cell">
+              <span class="currency">¥</span>
+              {{ row.unitPriceYuan }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="总额" prop="totalYuan" width="120" align="right">
+          <template #default="{ row }">
+            <span class="total-cell">
+              <span class="currency">¥</span>
+              {{ row.totalYuan }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
@@ -367,6 +375,41 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.price-cell,
+.total-cell {
+  font-family:
+    "SF Pro Display",
+    "PingFang SC",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+
+  .currency {
+    margin-right: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.price-cell {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+}
+
+.total-cell {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fa541c;
+
+  .currency {
+    color: #fa541c;
+    opacity: 0.7;
+  }
+}
+
 .toolbar {
   display: flex;
   align-items: center;
