@@ -252,34 +252,34 @@
     <el-dialog
       v-model="pdfDialog.visible"
       :title="'资料管理 - ' + pdfDialog.subjectName"
-      width="520px"
+      width="560px"
     >
-      <!-- 已上传文件 -->
-      <div
-        v-if="pdfDialog.currentUrl"
-        class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4"
-      >
-        <div class="flex items-center gap-2 min-w-0">
-          <el-icon class="text-red-500" :size="20"><Document /></el-icon>
-          <span class="text-sm text-gray-700 truncate">{{ pdfDialog.fileName }}</span>
+      <!-- 当前资料 -->
+      <div v-if="pdfDialog.currentUrl" class="p-3 bg-gray-50 rounded-lg mb-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 min-w-0">
+            <el-icon class="text-red-500" :size="20"><Document /></el-icon>
+            <span class="text-sm text-gray-700 truncate">{{ pdfDialog.fileName }}</span>
+          </div>
+          <div class="flex-shrink-0">
+            <el-button size="small" type="danger" link @click="handleDeletePdf">删除</el-button>
+          </div>
         </div>
-        <div class="flex-shrink-0">
-          <el-button size="small" type="danger" link @click="handleDeletePdf">删除</el-button>
-        </div>
+        <div class="text-xs text-gray-400 mt-1 break-all">{{ pdfDialog.currentUrl }}</div>
       </div>
-      <!-- 上传区 -->
-      <!-- 上传中状态 -->
+
+      <!-- 方式一：上传文件 -->
+      <div class="text-sm text-gray-500 mb-2">方式一 · 上传文件</div>
       <div
         v-if="pdfDialog.uploading"
-        class="flex flex-col items-center justify-center py-8 border border-dashed border-gray-300 rounded-lg bg-gray-50"
+        class="flex flex-col items-center justify-center py-8 border border-dashed border-gray-300 rounded-lg bg-gray-50 mb-4"
       >
         <el-icon class="is-loading text-blue-500 mb-2" :size="32"><Loading /></el-icon>
         <span class="text-sm text-gray-500">文件上传中，请稍候...</span>
       </div>
-      <!-- 上传区 -->
       <el-upload
         v-else
-        class="pdf-uploader"
+        class="pdf-uploader mb-4"
         drag
         :action="pdfUploadUrl"
         :headers="uploadHeaders"
@@ -299,6 +299,43 @@
           <div class="el-upload__tip">支持 .pdf .zip .rar .7z 格式，文件大小不超过 100MB</div>
         </template>
       </el-upload>
+
+      <!-- 方式二：填写外链 -->
+      <div class="text-sm text-gray-500 mb-2">方式二 · 填写外链（网盘等）</div>
+      <el-form
+        ref="pdfLinkFormRef"
+        :model="pdfDialog.linkForm"
+        :rules="pdfLinkRules"
+        label-width="80px"
+        size="default"
+      >
+        <el-form-item label="文件名称" prop="name">
+          <el-input
+            v-model="pdfDialog.linkForm.name"
+            placeholder="如：SAA-C03 题库.pdf"
+            maxlength="255"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="文件链接" prop="url">
+          <el-input
+            v-model="pdfDialog.linkForm.url"
+            placeholder="https:// 开头的网盘链接"
+            maxlength="500"
+          />
+        </el-form-item>
+        <div class="flex justify-end">
+          <el-button
+            type="primary"
+            :loading="pdfDialog.savingLink"
+            :disabled="pdfDialog.uploading"
+            @click="handleSavePdfLink"
+          >
+            保存外链
+          </el-button>
+        </div>
+      </el-form>
+
       <template #footer>
         <el-button @click="pdfDialog.visible = false">关闭</el-button>
       </template>
@@ -726,6 +763,7 @@ interface TableRow {
   providerId?: number;
   isTop?: boolean;
   pdfUrl?: string;
+  pdfName?: string;
   videoUrls?: string;
 }
 
@@ -785,7 +823,22 @@ const pdfDialog = reactive({
   fileName: "" as string,
   uploading: false,
   progress: 0,
+  linkForm: { name: "" as string, url: "" as string },
+  savingLink: false,
 });
+
+const pdfLinkFormRef = ref();
+const pdfLinkRules = {
+  name: [{ required: true, message: "请输入文件名称", trigger: "blur" }],
+  url: [
+    { required: true, message: "请输入文件链接", trigger: "blur" },
+    {
+      pattern: /^https?:\/\/\S+/,
+      message: "链接必须以 http:// 或 https:// 开头",
+      trigger: "blur",
+    },
+  ],
+};
 
 // 视频资料弹窗
 interface VideoItem {
@@ -1014,6 +1067,7 @@ async function fetchData() {
         status: s.status,
         providerId: s.providerId,
         pdfUrl: s.pdfUrl,
+        pdfName: s.pdfName,
         videoUrls: s.videoUrls,
       }));
       total.value = subjectRes.total || 0;
@@ -1043,6 +1097,7 @@ async function fetchData() {
         status: item.status,
         providerId: item.providerId,
         pdfUrl: (item as any).pdfUrl,
+        pdfName: (item as any).pdfName,
         videoUrls: (item as any).videoUrls,
       }));
 
@@ -1154,11 +1209,16 @@ function handleOpenPdfDialog(row: TableRow) {
   pdfDialog.subjectId = row.id as string;
   pdfDialog.subjectName = row.nameZh || row.nameEn || "";
   pdfDialog.currentUrl = row.pdfUrl || "";
-  pdfDialog.fileName = pdfDialog.currentUrl
-    ? decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件")
-    : "";
+  pdfDialog.fileName =
+    row.pdfName ||
+    (pdfDialog.currentUrl
+      ? decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件")
+      : "");
   pdfDialog.uploading = false;
   pdfDialog.progress = 0;
+  pdfDialog.linkForm = { name: "", url: "" };
+  pdfDialog.savingLink = false;
+  nextTick(() => pdfLinkFormRef.value?.clearValidate?.());
   pdfDialog.visible = true;
 }
 
@@ -1187,7 +1247,8 @@ function handlePdfSuccess(response: any) {
   pdfDialog.progress = 100;
   if (response.success) {
     pdfDialog.currentUrl = response.data.url;
-    pdfDialog.fileName = decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件");
+    pdfDialog.fileName =
+      response.data.name || decodeURIComponent(pdfDialog.currentUrl.split("/").pop() || "文件");
     ElMessage.success("上传成功");
     fetchData();
   } else {
@@ -1209,10 +1270,38 @@ async function handleDeletePdf() {
     await SubjectAPI.deletePdf(pdfDialog.subjectId);
     pdfDialog.currentUrl = "";
     pdfDialog.fileName = "";
+    pdfDialog.linkForm = { name: "", url: "" };
+    pdfLinkFormRef.value?.clearValidate?.();
     ElMessage.success("删除成功");
     fetchData();
   } catch {
     // cancelled
+  }
+}
+
+async function handleSavePdfLink() {
+  if (!pdfLinkFormRef.value) return;
+  try {
+    await pdfLinkFormRef.value.validate();
+  } catch {
+    return;
+  }
+  pdfDialog.savingLink = true;
+  try {
+    const res = await SubjectAPI.setPdfLink(pdfDialog.subjectId, {
+      name: pdfDialog.linkForm.name.trim(),
+      url: pdfDialog.linkForm.url.trim(),
+    });
+    pdfDialog.currentUrl = res.url;
+    pdfDialog.fileName = res.name;
+    pdfDialog.linkForm = { name: "", url: "" };
+    pdfLinkFormRef.value?.clearValidate?.();
+    ElMessage.success("外链保存成功");
+    fetchData();
+  } catch (e: any) {
+    ElMessage.error(e?.message || "保存失败");
+  } finally {
+    pdfDialog.savingLink = false;
   }
 }
 
