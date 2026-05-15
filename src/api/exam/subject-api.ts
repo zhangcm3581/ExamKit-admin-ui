@@ -163,11 +163,7 @@ export interface SubjectForm {
   examInfoZh?: string;
   /** 考试信息-英文 */
   examInfoEn?: string;
-  /** PDF资料URL */
-  pdfUrl?: string;
-  /** PDF文件名 */
-  pdfName?: string;
-  /** 视频资料URLs */
+  /** 视频资料URLs（视频弹窗通过通用更新接口写入） */
   videoUrls?: string;
   /** 科目标签/分类 */
   tag?: string;
