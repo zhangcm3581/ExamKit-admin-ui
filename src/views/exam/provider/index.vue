@@ -281,6 +281,7 @@
         v-else
         class="pdf-uploader mb-4"
         drag
+        :disabled="pdfDialog.savingLink"
         :action="pdfUploadUrl"
         :headers="uploadHeaders"
         :before-upload="beforePdfUpload"
@@ -1298,8 +1299,8 @@ async function handleSavePdfLink() {
     pdfLinkFormRef.value?.clearValidate?.();
     ElMessage.success("外链保存成功");
     fetchData();
-  } catch (e: any) {
-    ElMessage.error(e?.message || "保存失败");
+  } catch {
+    // 全局拦截器已显示错误消息
   } finally {
     pdfDialog.savingLink = false;
   }
