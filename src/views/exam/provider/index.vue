@@ -262,7 +262,15 @@
             <span class="text-sm text-gray-700 truncate">{{ pdfDialog.fileName }}</span>
           </div>
           <div class="flex-shrink-0">
-            <el-button size="small" type="danger" link @click="handleDeletePdf">删除</el-button>
+            <el-button
+              size="small"
+              type="danger"
+              link
+              :disabled="pdfDialog.uploading || pdfDialog.savingLink"
+              @click="handleDeletePdf"
+            >
+              删除
+            </el-button>
           </div>
         </div>
         <div class="text-xs text-gray-400 mt-1 break-all">{{ pdfDialog.currentUrl }}</div>
