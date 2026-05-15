@@ -70,6 +70,15 @@ const SubjectAPI = {
       method: "delete",
     });
   },
+
+  /** 设置科目PDF外链 */
+  setPdfLink(id: string, data: { name: string; url: string }) {
+    return request<any, { url: string; name: string }>({
+      url: `${SUBJECT_BASE_URL}/${id}/pdf-link`,
+      method: "put",
+      data,
+    });
+  },
 };
 
 export default SubjectAPI;
@@ -114,6 +123,8 @@ export interface SubjectVO {
   examInfoEn?: string;
   /** PDF资料URL */
   pdfUrl?: string;
+  /** PDF文件名（上传时取原始文件名，外链时由管理员填写） */
+  pdfName?: string;
   /** 小程序码 URL（懒加载缓存） */
   miniappQrUrl?: string;
   /** 视频资料URLs */
@@ -154,6 +165,8 @@ export interface SubjectForm {
   examInfoEn?: string;
   /** PDF资料URL */
   pdfUrl?: string;
+  /** PDF文件名 */
+  pdfName?: string;
   /** 视频资料URLs */
   videoUrls?: string;
   /** 科目标签/分类 */
