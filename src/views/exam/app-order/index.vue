@@ -288,10 +288,13 @@ const codesTitle = ref("");
 
 async function openCodes(row: AppOrderAdminVO) {
   codesTitle.value = `订单 ${row.orderNo} 的激活码`;
+  codes.value = [];
   codesVisible.value = true;
   codesLoading.value = true;
   try {
     codes.value = await AppOrderAdminAPI.listCodes(row.id);
+  } catch {
+    ElMessage.error("加载激活码失败");
   } finally {
     codesLoading.value = false;
   }
@@ -300,8 +303,12 @@ async function openCodes(row: AppOrderAdminVO) {
 async function copyAll() {
   if (!codes.value.length) return;
   const text = codes.value.map((c) => c.code).join("\n");
-  await navigator.clipboard.writeText(text);
-  ElMessage.success(`已复制 ${codes.value.length} 个激活码`);
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success(`已复制 ${codes.value.length} 个激活码`);
+  } catch {
+    ElMessage.error("复制失败，请手动选择");
+  }
 }
 
 onMounted(loadOrders);
