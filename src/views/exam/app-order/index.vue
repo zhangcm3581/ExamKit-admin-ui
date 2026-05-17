@@ -173,42 +173,90 @@
     </el-card>
 
     <!-- 激活码弹窗 -->
-    <el-dialog v-model="codesVisible" :title="codesTitle" width="640px" destroy-on-close>
-      <div v-loading="codesLoading">
-        <div class="codes-actions">
-          <el-button :icon="CopyDocument" size="small" :disabled="!codes.length" @click="copyAll">
-            复制全部（{{ codes.length }}）
+    <el-dialog
+      v-model="codesVisible"
+      width="560px"
+      destroy-on-close
+      append-to-body
+      :show-close="true"
+      class="codes-dialog"
+    >
+      <template #header>
+        <div class="codes-header">
+          <div class="codes-header-main">
+            <div class="codes-title">激活码明细</div>
+            <div class="codes-order-no mono" :title="currentOrderNo">{{ currentOrderNo }}</div>
+          </div>
+          <div class="codes-stats">
+            <span class="stat-total">共 {{ codes.length }} 个</span>
+            <span v-if="codeSummary.used > 0" class="stat-item stat-used">
+              已用 {{ codeSummary.used }}
+            </span>
+            <span v-if="codeSummary.unused > 0" class="stat-item stat-unused">
+              未用 {{ codeSummary.unused }}
+            </span>
+            <span v-if="codeSummary.expired > 0" class="stat-item stat-expired">
+              已过期 {{ codeSummary.expired }}
+            </span>
+            <span v-if="codeSummary.recycled > 0" class="stat-item stat-recycled">
+              已回收 {{ codeSummary.recycled }}
+            </span>
+          </div>
+        </div>
+      </template>
+
+      <div v-loading="codesLoading" class="codes-body">
+        <div v-if="!codesLoading && !codes.length" class="codes-empty">
+          <el-icon :size="32"><DocumentRemove /></el-icon>
+          <span>该订单暂无激活码</span>
+        </div>
+
+        <ul v-else class="code-list">
+          <li v-for="(c, i) in codes" :key="c.code" class="code-card" :class="`status-${c.status}`">
+            <div class="code-index">{{ i + 1 }}</div>
+            <div class="code-main">
+              <div class="code-row-1">
+                <span class="code-value mono">{{ c.code }}</span>
+                <el-button
+                  link
+                  type="primary"
+                  size="small"
+                  class="code-copy"
+                  @click="copyOne(c.code)"
+                >
+                  <el-icon><CopyDocument /></el-icon>
+                </el-button>
+              </div>
+              <div class="code-row-2">
+                <el-tag :type="codeStatusTag(c.status)" size="small" effect="light" round>
+                  {{ codeStatusLabel(c.status) }}
+                </el-tag>
+                <span class="code-meta">有效 {{ c.validDays }} 天</span>
+                <span v-if="c.usedAt" class="code-meta">
+                  · 使用于 {{ formatDateTime(c.usedAt) }}
+                </span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <template #footer>
+        <div class="codes-footer">
+          <span class="footer-hint">点击激活码右侧图标可单独复制</span>
+          <el-button type="primary" :icon="CopyDocument" :disabled="!codes.length" @click="copyAll">
+            复制全部
           </el-button>
         </div>
-        <el-table :data="codes" stripe size="small" empty-text="该订单暂无激活码">
-          <el-table-column label="激活码" min-width="180">
-            <template #default="{ row }">
-              <span class="mono code-cell">{{ row.code }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="codeStatusTag(row.status)" effect="light">
-                {{ codeStatusLabel(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="有效天数" prop="validDays" width="90" align="center" />
-          <el-table-column label="使用时间" width="170" align="center">
-            <template #default="{ row }">
-              <span class="nowrap">{{ row.usedAt ? formatDateTime(row.usedAt) : "—" }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { Search, Refresh, CopyDocument } from "@element-plus/icons-vue";
+import { Search, Refresh, CopyDocument, DocumentRemove } from "@element-plus/icons-vue";
 import AppOrderAdminAPI, {
   type AppOrderAdminPageQuery,
   type AppOrderAdminVO,
@@ -288,10 +336,21 @@ const codeStatusLabel = (s: number) =>
 const codesVisible = ref(false);
 const codesLoading = ref(false);
 const codes = ref<AppOrderCodeVO[]>([]);
-const codesTitle = ref("");
+const currentOrderNo = ref("");
+
+const codeSummary = computed(() => {
+  const acc = { unused: 0, used: 0, expired: 0, recycled: 0 };
+  for (const c of codes.value) {
+    if (c.status === 0) acc.unused++;
+    else if (c.status === 1) acc.used++;
+    else if (c.status === 2) acc.expired++;
+    else if (c.status === 3) acc.recycled++;
+  }
+  return acc;
+});
 
 async function openCodes(row: AppOrderAdminVO) {
-  codesTitle.value = `订单 ${row.orderNo} 的激活码`;
+  currentOrderNo.value = row.orderNo;
   codes.value = [];
   codesVisible.value = true;
   codesLoading.value = true;
@@ -310,6 +369,15 @@ async function copyAll() {
   try {
     await navigator.clipboard.writeText(text);
     ElMessage.success(`已复制 ${codes.value.length} 个激活码`);
+  } catch {
+    ElMessage.error("复制失败，请手动选择");
+  }
+}
+
+async function copyOne(code: string) {
+  try {
+    await navigator.clipboard.writeText(code);
+    ElMessage.success("已复制");
   } catch {
     ElMessage.error("复制失败，请手动选择");
   }
@@ -401,11 +469,241 @@ onMounted(loadOrders);
       opacity: 0.7;
     }
   }
+}
 
-  .codes-actions {
+// ============ 激活码弹窗（append-to-body，作用域穿透） ============
+:deep(.codes-dialog) {
+  overflow: hidden;
+  border-radius: 12px;
+
+  .el-dialog__header {
+    padding: 18px 20px 14px;
+    margin-right: 0;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .el-dialog__body {
+    padding: 0;
+  }
+
+  .el-dialog__footer {
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--el-border-color-lighter);
+  }
+
+  .codes-header {
     display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .codes-header-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .codes-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--el-text-color-primary);
+  }
+
+  .codes-order-no {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    white-space: nowrap;
+  }
+
+  .codes-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     justify-content: flex-end;
-    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .stat-total {
+    padding: 2px 8px;
+    color: var(--el-text-color-regular);
+    background: var(--el-fill-color);
+    border-radius: 4px;
+  }
+
+  .stat-item {
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .stat-used {
+    color: #5daf34;
+    background: rgba(103, 194, 58, 0.12);
+  }
+
+  .stat-unused {
+    color: #b88230;
+    background: rgba(230, 162, 60, 0.14);
+  }
+
+  .stat-expired {
+    color: var(--el-text-color-secondary);
+    background: var(--el-fill-color);
+  }
+
+  .stat-recycled {
+    color: #c45656;
+    background: rgba(245, 108, 108, 0.12);
+  }
+
+  .codes-body {
+    max-height: 60vh;
+    padding: 14px 20px 6px;
+    overflow-y: auto;
+  }
+
+  .codes-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+    color: var(--el-text-color-placeholder);
+
+    .el-icon {
+      color: var(--el-text-color-disabled);
+    }
+
+    span {
+      font-size: 13px;
+    }
+  }
+
+  .code-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .code-card {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px 12px 18px;
+    background: var(--el-fill-color-blank);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
+    transition: border-color 0.15s;
+
+    &::before {
+      position: absolute;
+      top: 12px;
+      bottom: 12px;
+      left: 8px;
+      width: 3px;
+      content: "";
+      background: var(--el-color-info-light-5);
+      border-radius: 2px;
+    }
+
+    &.status-0::before {
+      background: var(--el-color-warning);
+    }
+
+    &.status-1::before {
+      background: var(--el-color-success);
+    }
+
+    &.status-2::before {
+      background: var(--el-color-info);
+    }
+
+    &.status-3::before {
+      background: var(--el-color-danger);
+    }
+
+    &:hover {
+      border-color: var(--el-color-primary-light-5);
+    }
+  }
+
+  .code-index {
+    flex-shrink: 0;
+    width: 22px;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
+    text-align: center;
+  }
+
+  .code-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .code-row-1 {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .code-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-color-primary);
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+    user-select: all;
+  }
+
+  .code-copy {
+    padding: 0 4px;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .code-row-2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .code-meta {
+    color: var(--el-text-color-secondary);
+  }
+
+  .codes-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-hint {
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
   }
 }
 </style>
