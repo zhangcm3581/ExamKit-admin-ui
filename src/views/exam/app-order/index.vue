@@ -246,6 +246,10 @@ async function loadOrders() {
     const res = await AppOrderAdminAPI.page(query);
     rows.value = res.data;
     total.value = res.total;
+  } catch {
+    rows.value = [];
+    total.value = 0;
+    ElMessage.error("加载订单失败");
   } finally {
     loading.value = false;
   }
