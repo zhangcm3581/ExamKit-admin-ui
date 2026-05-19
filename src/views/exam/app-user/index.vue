@@ -53,7 +53,6 @@
           </template>
         </el-table-column>
         <el-table-column label="昵称" prop="nickname" min-width="140" show-overflow-tooltip />
-        <el-table-column label="邮箱" prop="email" min-width="200" show-overflow-tooltip />
         <el-table-column label="注册时间" min-width="180" align="center">
           <template #default="scope">
             {{ formatDateTime(scope.row.createTime) }}
