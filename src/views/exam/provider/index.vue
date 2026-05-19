@@ -159,6 +159,7 @@
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
+                      <el-dropdown-item command="editPrice">修改价格</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
                       <el-dropdown-item command="editVideo">编辑视频</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
@@ -567,6 +568,47 @@
             取 消
           </el-button>
           <el-button type="primary" style="font-weight: bold" @click="handleSubmitSubjectEdit">
+            确 定
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 修改价格弹窗 -->
+    <el-dialog
+      v-model="priceDialog.visible"
+      title="修改价格"
+      width="420px"
+      :close-on-click-modal="false"
+    >
+      <div class="price-dialog-subject">{{ priceDialog.subjectName }}</div>
+      <div class="price-dialog-current">
+        当前价格：
+        <span>
+          {{
+            priceDialog.currentPriceFen != null
+              ? (priceDialog.currentPriceFen / 100).toFixed(2) + " 元"
+              : "未设置"
+          }}
+        </span>
+      </div>
+      <el-form ref="priceFormRef" :model="priceDialog" :rules="priceRules" label-width="100px">
+        <el-form-item label="新价格（元）" prop="newPriceYuan">
+          <el-input-number
+            v-model="priceDialog.newPriceYuan"
+            :min="1"
+            :max="999"
+            :precision="2"
+            :step="1"
+            controls-position="right"
+            style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="priceDialog.visible = false">取 消</el-button>
+          <el-button type="primary" :loading="priceDialog.saving" @click="handleSubmitPrice">
             确 定
           </el-button>
         </div>
@@ -1044,6 +1086,44 @@ const subjectCreateRules = computed(() => {
   return rules;
 });
 
+// 修改价格弹窗
+const priceFormRef = ref();
+const priceDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  subjectName: "" as string,
+  currentPriceFen: null as number | null,
+  newPriceYuan: 98 as number | null,
+  saving: false,
+});
+
+const priceRules = {
+  newPriceYuan: [
+    { required: true, message: "请输入价格", trigger: "change" },
+    { min: 1, max: 999, message: "价格范围 1–999 元", trigger: "change" },
+  ],
+};
+
+async function handleEditPrice(row: TableRow) {
+  priceDialog.subjectId = row.id as string;
+  priceDialog.subjectName = getSubjectPrimaryName(row);
+  priceDialog.currentPriceFen = null;
+  priceDialog.newPriceYuan = 98;
+  priceDialog.saving = false;
+
+  const data = await SubjectAPI.getFormData(row.id as string);
+  priceDialog.currentPriceFen = data.price ?? null;
+  priceDialog.newPriceYuan = data.price != null ? data.price / 100 : 98;
+
+  priceDialog.visible = true;
+  nextTick(() => priceFormRef.value?.clearValidate?.());
+}
+
+// 提交逻辑在 Task 2 实现
+function handleSubmitPrice() {
+  // placeholder, Task 2 fills this in
+}
+
 // 加载供应商选项
 function loadProviderOptions() {
   ProviderAPI.getOptions().then((data) => {
@@ -1180,6 +1260,9 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "editSubject":
       // 统一编辑题库信息
       handleEditSubject(row);
+      break;
+    case "editPrice":
+      handleEditPrice(row);
       break;
     case "move":
       moveDialog.visible = true;
@@ -2068,5 +2151,18 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+.price-dialog-subject {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.price-dialog-current {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #606266;
 }
 </style>
