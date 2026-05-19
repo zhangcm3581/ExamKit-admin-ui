@@ -785,6 +785,7 @@ import Dialog from "@/components/Dialog/index.vue";
 import { formatDate, formatTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
+import { type FormRules } from "element-plus";
 
 const examIcon = "/exam.png";
 const folderIcon = "/folder.png";
@@ -1097,10 +1098,10 @@ const priceDialog = reactive({
   saving: false,
 });
 
-const priceRules = {
+const priceRules: FormRules = {
   newPriceYuan: [
     { required: true, message: "请输入价格", trigger: "change" },
-    { min: 1, max: 999, message: "价格范围 1–999 元", trigger: "change" },
+    { type: "number", min: 1, max: 999, message: "价格范围 1–999 元", trigger: "change" },
   ],
 };
 
