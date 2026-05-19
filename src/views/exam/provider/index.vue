@@ -70,9 +70,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="170" align="center">
+        <el-table-column label="添加时间" width="120" align="center">
           <template #default="scope">
-            <span class="datetime-cell">{{ formatDateTime(scope.row.createTime) }}</span>
+            <span class="datetime-cell">{{ formatDate(scope.row.createTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="数量" width="70" align="center">
@@ -790,7 +790,7 @@ import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import RichTextField from "@/components/RichTextField/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
-import { formatDateTime } from "@/utils/datetime";
+import { formatDate } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
 import { type FormRules } from "element-plus";
