@@ -594,7 +594,7 @@
           }}
         </span>
       </div>
-      <el-form ref="priceFormRef" :model="priceDialog" :rules="priceRules" label-width="100px">
+      <el-form ref="priceFormRef" :model="priceDialog" :rules="priceRules" label-width="120px">
         <el-form-item label="新价格（元）" prop="newPriceYuan">
           <el-input-number
             v-model="priceDialog.newPriceYuan"
@@ -610,9 +610,12 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="priceDialog.visible = false">取 消</el-button>
+          <el-button style="font-weight: bold" @click="priceDialog.visible = false">
+            取 消
+          </el-button>
           <el-button
             type="primary"
+            style="font-weight: bold"
             :loading="priceDialog.saving"
             :disabled="!priceDialog.dataLoaded"
             @click="handleSubmitPrice"
