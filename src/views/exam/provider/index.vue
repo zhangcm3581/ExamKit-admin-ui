@@ -584,7 +584,9 @@
       <div class="price-dialog-subject">{{ priceDialog.subjectName }}</div>
       <div class="price-dialog-current">
         当前价格：
-        <span>
+        <span v-if="priceDialog.loading">加载中…</span>
+        <span v-else-if="!priceDialog.dataLoaded">加载失败，请关闭重试</span>
+        <span v-else>
           {{
             priceDialog.currentPriceFen != null
               ? (priceDialog.currentPriceFen / 100).toFixed(2) + " 元"
@@ -600,6 +602,7 @@
             :max="999"
             :precision="2"
             :step="1"
+            :disabled="!priceDialog.dataLoaded"
             controls-position="right"
             style="width: 100%"
           />
@@ -608,7 +611,12 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="priceDialog.visible = false">取 消</el-button>
-          <el-button type="primary" :loading="priceDialog.saving" @click="handleSubmitPrice">
+          <el-button
+            type="primary"
+            :loading="priceDialog.saving"
+            :disabled="!priceDialog.dataLoaded"
+            @click="handleSubmitPrice"
+          >
             确 定
           </el-button>
         </div>
@@ -1091,6 +1099,8 @@ const subjectCreateRules = computed(() => {
 const priceFormRef = ref();
 const priceDialog = reactive({
   visible: false,
+  loading: false,
+  dataLoaded: false,
   subjectId: "" as string,
   subjectName: "" as string,
   currentPriceFen: null as number | null,
@@ -1111,13 +1121,19 @@ async function handleEditPrice(row: TableRow) {
   priceDialog.currentPriceFen = null;
   priceDialog.newPriceYuan = 98;
   priceDialog.saving = false;
-
-  const data = await SubjectAPI.getFormData(row.id as string);
-  priceDialog.currentPriceFen = data.price ?? null;
-  priceDialog.newPriceYuan = data.price != null ? data.price / 100 : 98;
-
+  priceDialog.dataLoaded = false;
+  priceDialog.loading = true;
   priceDialog.visible = true;
   nextTick(() => priceFormRef.value?.clearValidate?.());
+
+  try {
+    const data = await SubjectAPI.getFormData(row.id as string);
+    priceDialog.currentPriceFen = data.price ?? null;
+    priceDialog.newPriceYuan = data.price != null ? data.price / 100 : 98;
+    priceDialog.dataLoaded = true;
+  } finally {
+    priceDialog.loading = false;
+  }
 }
 
 async function handleSubmitPrice() {
