@@ -1120,9 +1120,29 @@ async function handleEditPrice(row: TableRow) {
   nextTick(() => priceFormRef.value?.clearValidate?.());
 }
 
-// 提交逻辑在 Task 2 实现
-function handleSubmitPrice() {
-  // placeholder, Task 2 fills this in
+async function handleSubmitPrice() {
+  try {
+    await priceFormRef.value.validate();
+  } catch {
+    return;
+  }
+  if (priceDialog.newPriceYuan == null) return;
+
+  const priceFen = Math.round(priceDialog.newPriceYuan * 100);
+  if (priceFen === priceDialog.currentPriceFen) {
+    priceDialog.visible = false;
+    return;
+  }
+
+  priceDialog.saving = true;
+  try {
+    await SubjectAPI.update(priceDialog.subjectId, { price: priceFen });
+    ElMessage.success("价格修改成功");
+    priceDialog.visible = false;
+    fetchData();
+  } finally {
+    priceDialog.saving = false;
+  }
 }
 
 // 加载供应商选项
