@@ -70,12 +70,9 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="添加时间" width="125" align="center">
+        <el-table-column label="添加时间" width="170" align="center">
           <template #default="scope">
-            <div class="datetime-cell">
-              <div>{{ formatDate(scope.row.createTime) }}</div>
-              <div class="datetime-cell-time">{{ formatTime(scope.row.createTime) }}</div>
-            </div>
+            <span class="datetime-cell">{{ formatDateTime(scope.row.createTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="数量" width="70" align="center">
@@ -793,7 +790,7 @@ import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import RichTextField from "@/components/RichTextField/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
-import { formatDate, formatTime } from "@/utils/datetime";
+import { formatDateTime } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
 import { type FormRules } from "element-plus";
@@ -2110,17 +2107,9 @@ onMounted(() => {
   color: #909399;
 }
 
-/* 添加时间双行样式：日期主 + 时间副灰色，强制每行不换行 */
+/* 添加时间单行不换行 */
 .datetime-cell {
-  line-height: 1.4;
-
-  > div {
-    white-space: nowrap;
-  }
-}
-.datetime-cell-time {
-  font-size: 12px;
-  color: #909399;
+  white-space: nowrap;
 }
 
 /* 科目名称样式 */
