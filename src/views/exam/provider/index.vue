@@ -972,6 +972,8 @@ const coverDialog = reactive({
   logo: "",
   itemId: null as number | string | null,
   isFolder: false,
+  folderName: "",
+  displayName: "",
 });
 
 // 编辑题库信息弹窗
@@ -1440,12 +1442,18 @@ function handleSetCover(row: TableRow) {
   coverDialog.itemId = row.id;
   coverDialog.isFolder = row.isFolder;
   coverDialog.logo = row.logo || "";
+  coverDialog.folderName = row.folderName || "";
+  coverDialog.displayName = row.displayName || "";
 }
 
 // 确认设置封面
 function handleConfirmCover() {
   if (coverDialog.isFolder && coverDialog.itemId) {
-    ProviderAPI.update(coverDialog.itemId as number, { logo: coverDialog.logo }).then(() => {
+    ProviderAPI.update(coverDialog.itemId as number, {
+      logo: coverDialog.logo,
+      folderName: coverDialog.folderName,
+      displayName: coverDialog.displayName,
+    }).then(() => {
       ElMessage.success("封面设置成功");
       coverDialog.visible = false;
       fetchData();
