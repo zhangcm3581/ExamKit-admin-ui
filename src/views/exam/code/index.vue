@@ -358,7 +358,7 @@ const formProviderId = ref<number | undefined>(undefined);
 
 const formData = reactive<any>({
   subjectId: "",
-  count: 10,
+  count: 1,
   validDays: 365,
   remark: "",
 });
@@ -510,7 +510,7 @@ function handleSubmit() {
 function handleDialogClose() {
   formRef.value?.resetFields();
   formData.subjectId = "";
-  formData.count = 10;
+  formData.count = 1;
   formData.validDays = 365;
   formData.remark = "";
   codesText.value = "";
