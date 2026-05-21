@@ -16,25 +16,50 @@
             @keyup.enter="handleSearch"
           />
           <el-select
+            v-model="queryParams.providerId"
+            placeholder="供应商"
+            clearable
+            filterable
+            style="width: 160px; margin-right: 8px"
+            @change="onQueryProviderChange"
+          >
+            <el-option
+              v-for="p in providerOptions"
+              :key="p.value"
+              :label="p.label"
+              :value="p.value"
+            />
+          </el-select>
+          <el-select
             v-model="queryParams.subjectId"
             placeholder="科目"
             clearable
             filterable
-            style="width: 260px; margin-right: 8px"
+            style="width: 220px; margin-right: 8px"
             @change="handleQuery"
           >
-            <el-option-group
-              v-for="group in groupedSubjects"
-              :key="group.label"
-              :label="group.label"
-            >
+            <template v-if="queryParams.providerId">
               <el-option
-                v-for="subject in group.options"
+                v-for="subject in querySubjectsByProvider"
                 :key="subject.id"
                 :label="subject.nameZh || subject.nameEn"
                 :value="subject.id"
               />
-            </el-option-group>
+            </template>
+            <template v-else>
+              <el-option-group
+                v-for="group in groupedSubjects"
+                :key="group.label"
+                :label="group.label"
+              >
+                <el-option
+                  v-for="subject in group.options"
+                  :key="subject.id"
+                  :label="subject.nameZh || subject.nameEn"
+                  :value="subject.id"
+                />
+              </el-option-group>
+            </template>
           </el-select>
           <el-select
             v-model="queryParams.status"
@@ -74,7 +99,13 @@
             </el-icon>
           </template>
         </el-table-column>
-        <el-table-column label="科目" min-width="360">
+        <el-table-column label="供应商" prop="providerName" width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.providerName">{{ row.providerName }}</span>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="科目" min-width="320">
           <template #default="{ row }">
             <div class="subject-cell">
               <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
@@ -348,6 +379,16 @@ const groupedSubjects = computed(() => {
   return Array.from(map.entries()).map(([label, options]) => ({ label, options }));
 });
 
+const querySubjectsByProvider = computed<SubjectVO[]>(() => {
+  if (!queryParams.providerId) return subjectOptions.value;
+  return subjectOptions.value.filter((s) => s.providerId === queryParams.providerId);
+});
+
+function onQueryProviderChange() {
+  queryParams.subjectId = undefined;
+  handleQuery();
+}
+
 // 对话框相关
 const dialogVisible = ref(false);
 const dialogTitle = ref("生成激活码");
@@ -380,7 +421,7 @@ const formRules = {
 
 // 导出对话框
 const exportDialogVisible = ref(false);
-const exportSubjectId = ref("");
+const exportSubjectId = ref<string | undefined>(undefined);
 const exportProviderId = ref<number | undefined>(undefined);
 
 const exportSubjectsByProvider = computed<SubjectVO[]>(() => {
@@ -389,7 +430,7 @@ const exportSubjectsByProvider = computed<SubjectVO[]>(() => {
 });
 
 function onExportProviderChange() {
-  exportSubjectId.value = "";
+  exportSubjectId.value = undefined;
 }
 
 // 获取数据
@@ -435,6 +476,7 @@ function handleQuery() {
 function handleReset() {
   searchKeyword.value = "";
   queryParams.keywords = undefined;
+  queryParams.providerId = undefined;
   queryParams.subjectId = undefined;
   queryParams.status = undefined;
   queryParams.pageNum = 1;
@@ -521,29 +563,26 @@ function handleDialogClose() {
 // 导出
 function handleExport() {
   exportProviderId.value = undefined;
-  exportSubjectId.value = "";
+  exportSubjectId.value = undefined;
   exportDialogVisible.value = true;
 }
 
-// 确认导出
 function handleConfirmExport() {
-  if (!exportSubjectId.value) {
-    ElMessage.warning("请选择科目");
-    return;
-  }
-
-  ActivationCodeAPI.exportUnused(exportSubjectId.value).then((data) => {
+  ActivationCodeAPI.exportUnused({
+    providerId: exportProviderId.value,
+    subjectId: exportSubjectId.value,
+  }).then((data) => {
     if (data.length === 0) {
       ElMessage.warning("没有可导出的激活码");
       return;
     }
 
-    // 导出为Excel
     const worksheet = XLSX.utils.json_to_sheet(
       data.map((item) => ({
-        激活码: item.code,
+        供应商: item.providerName || "",
         科目: item.subjectName || item.subjectNameEn || "",
         "科目(英文)": item.subjectName && item.subjectNameEn ? item.subjectNameEn : "",
+        激活码: item.code,
         创建时间: formatDateTime(item.createTime),
       }))
     );

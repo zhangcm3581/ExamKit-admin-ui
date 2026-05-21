@@ -30,12 +30,12 @@ const ActivationCodeAPI = {
     });
   },
 
-  /** 导出未使用的激活码 */
-  exportUnused(subjectId: string) {
+  /** 导出未使用的激活码：providerId / subjectId 均可选，留空则导出全部 */
+  exportUnused(params: { providerId?: number; subjectId?: string }) {
     return request<any, ActivationCodeVO[]>({
       url: `${ACTIVATION_CODE_BASE_URL}/export-unused`,
       method: "get",
-      params: { subjectId },
+      params,
     });
   },
 
@@ -54,6 +54,8 @@ export default ActivationCodeAPI;
 export interface ActivationCodePageQuery extends PageQuery {
   /** 关键词(激活码) */
   keywords?: string;
+  /** 供应商ID（与 subjectId 同传时以 subjectId 为准） */
+  providerId?: number;
   /** 科目ID */
   subjectId?: string;
   /** 状态 0-未使用 1-已使用 2-已过期 */
@@ -72,6 +74,8 @@ export interface ActivationCodeVO {
   subjectName?: string;
   /** 科目名称（英文） */
   subjectNameEn?: string;
+  /** 供应商名称 */
+  providerName?: string;
   /** 类型 */
   type?: string;
   /** 有效天数 */
