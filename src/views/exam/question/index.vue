@@ -48,6 +48,12 @@
                 >
                   简答题
                 </el-dropdown-item>
+                <el-dropdown-item
+                  :class="{ 'is-active': queryParams.type === 'DRAG' }"
+                  @click="handleTypeFilter('DRAG')"
+                >
+                  拖拽题
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -124,7 +130,7 @@
                 </div>
                 <!-- 中文选项 -->
                 <div
-                  v-if="row.optionsZh && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  v-if="row.optionsZh && !isTextAnswerType(row.type) && row.type !== 'FILL_BLANK'"
                   class="detail-block"
                 >
                   <div class="options-list">
@@ -143,7 +149,7 @@
                   <div class="block-label">答案</div>
                   <!-- 简答题显示富文本答案 -->
                   <div
-                    v-if="row.type === 'SHORT_ANSWER'"
+                    v-if="isTextAnswerType(row.type)"
                     class="block-content"
                     v-html="row.answer"
                   ></div>
@@ -171,7 +177,7 @@
                 </div>
                 <!-- 英文选项 -->
                 <div
-                  v-if="row.optionsEn && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  v-if="row.optionsEn && !isTextAnswerType(row.type) && row.type !== 'FILL_BLANK'"
                   class="detail-block"
                 >
                   <div class="options-list">
@@ -190,7 +196,7 @@
                   <div class="block-label">Answer</div>
                   <!-- 简答题显示富文本答案 -->
                   <div
-                    v-if="row.type === 'SHORT_ANSWER'"
+                    v-if="isTextAnswerType(row.type)"
                     class="block-content"
                     v-html="row.answer"
                   ></div>
@@ -237,7 +243,7 @@
           <template #default="{ row }">
             <!-- 简答题显示富文本答案预览 -->
             <div
-              v-if="row.type === 'SHORT_ANSWER'"
+              v-if="isTextAnswerType(row.type)"
               class="answer-preview"
               v-html="getContentPreview(row.answer)"
             ></div>
@@ -288,6 +294,7 @@
             <el-radio label="JUDGE">判断题</el-radio>
             <el-radio label="FILL_BLANK">填空题</el-radio>
             <el-radio label="SHORT_ANSWER">简答题</el-radio>
+            <el-radio label="DRAG">拖拽题</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -312,7 +319,7 @@
             <el-form-item
               v-if="
                 formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
+                !isTextAnswerType(formData.type) &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -358,7 +365,7 @@
             <el-form-item
               v-if="
                 formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
+                !isTextAnswerType(formData.type) &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -403,7 +410,7 @@
             <el-form-item
               v-if="
                 formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
+                !isTextAnswerType(formData.type) &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -447,7 +454,7 @@
             <el-form-item
               v-if="
                 formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
+                !isTextAnswerType(formData.type) &&
                 formData.type !== 'FILL_BLANK'
               "
               label="Options"
@@ -484,7 +491,7 @@
         <!-- 答案（通用，不区分语言） -->
         <el-form-item label="答案" prop="answer">
           <!-- 简答题使用富文本编辑器 -->
-          <template v-if="formData.type === 'SHORT_ANSWER'">
+          <template v-if="isTextAnswerType(formData.type)">
             <RichTextField v-model="formData.answer" />
           </template>
           <!-- 单选题 -->
@@ -634,9 +641,15 @@ const currentTypeLabel = computed(() => {
     JUDGE: "判断题",
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
+    DRAG: "拖拽题",
   };
   return typeMap[queryParams.type || ""] || "全部题型";
 });
+
+// 无选项的文本答案题型（简答、拖拽）
+function isTextAnswerType(type?: string) {
+  return type === "SHORT_ANSWER" || type === "DRAG";
+}
 
 // 表单验证规则 - 根据科目支持的语言动态设置
 const rules = computed(() => {
@@ -686,6 +699,7 @@ function getQuestionTypeText(type: string): string {
     JUDGE: "判断题",
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
+    DRAG: "拖拽题",
   };
   return typeMap[type] || type;
 }
@@ -698,6 +712,7 @@ function getQuestionTypeColor(type: string): string {
     JUDGE: "warning",
     FILL_BLANK: "danger",
     SHORT_ANSWER: "info",
+    DRAG: "",
   };
   return colorMap[type] || "info";
 }
@@ -884,8 +899,8 @@ function handleTypeChange() {
   formData.answer = "";
   multipleAnswers.value = [];
 
-  // 如果是简答题，清空选项
-  if (formData.type === "SHORT_ANSWER") {
+  // 简答题/拖拽题不需要选项
+  if (isTextAnswerType(formData.type)) {
     optionsList.value = [];
     optionsListEn.value = [];
   }
@@ -1040,8 +1055,8 @@ async function handleEdit(row: QuestionVO) {
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
 
-  // 简答题不需要解析选项
-  if (data.type === "SHORT_ANSWER") {
+  // 简答题/拖拽题不需要解析选项
+  if (isTextAnswerType(data.type)) {
     optionsList.value = [];
     optionsListEn.value = [];
   } else {
@@ -1104,8 +1119,8 @@ function handleDelete(id?: number) {
 function handleSubmit() {
   dataFormRef.value.validate((valid: boolean) => {
     if (valid) {
-      // 简答题不需要选项
-      if (formData.type === "SHORT_ANSWER") {
+      // 简答题/拖拽题不需要选项
+      if (isTextAnswerType(formData.type)) {
         formData.optionsZh = "[]";
         formData.optionsEn = "[]";
       }

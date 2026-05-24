@@ -4,7 +4,7 @@
       <div class="form-eyebrow">Sign Up</div>
       <div class="form-title-row">
         <h2 class="form-title">创建账号</h2>
-        <span class="form-title-tag">加入掌学兔 · 开启认证练习</span>
+        <span class="form-title-tag">加入米舒刷题 · 开启认证练习</span>
       </div>
     </header>
 

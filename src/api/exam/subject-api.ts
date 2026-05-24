@@ -115,8 +115,6 @@ export interface SubjectVO {
   supportLanguages?: string;
   /** 题目总数 */
   totalQuestions: number;
-  /** 价格（分），如 9800 表示 98.00 元 */
-  price: number;
   /** 考试信息-中文 */
   examInfoZh?: string;
   /** 考试信息-英文 */
@@ -127,8 +125,6 @@ export interface SubjectVO {
   pdfName?: string;
   /** 小程序码 URL（懒加载缓存） */
   miniappQrUrl?: string;
-  /** 视频资料URLs */
-  videoUrls?: string;
   /** 科目标签/分类 */
   tag?: string;
   /** 排序值 */
@@ -163,16 +159,12 @@ export interface SubjectForm {
   examInfoZh?: string;
   /** 考试信息-英文 */
   examInfoEn?: string;
-  /** 视频资料URLs（视频弹窗通过通用更新接口写入） */
-  videoUrls?: string;
   /** 科目标签/分类 */
   tag?: string;
   /** 排序值 */
   sortOrder?: number;
   /** 状态 */
   status?: number;
-  /** 价格（分），如 9800 表示 98.00 元 */
-  price?: number;
 }
 
 /** 科目小程序码 VO */

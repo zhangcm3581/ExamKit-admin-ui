@@ -4,7 +4,7 @@
       <div class="form-eyebrow">User Login</div>
       <div class="form-title-row">
         <h2 class="form-title">欢迎登录</h2>
-        <span class="form-title-tag">掌学兔 后台管理系统</span>
+        <span class="form-title-tag">米舒刷题 后台管理系统</span>
       </div>
       <p class="form-sub">默认账号 · admin / 123456</p>
     </header>

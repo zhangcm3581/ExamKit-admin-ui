@@ -12,50 +12,11 @@
       <header class="card-header">
         <div class="brand">
           <span class="brand-mark">
-            <svg viewBox="0 0 40 40" width="36" height="36">
-              <defs>
-                <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#60a5fa" />
-                  <stop offset="0.55" stop-color="#3b82f6" />
-                  <stop offset="1" stop-color="#1d4ed8" />
-                </linearGradient>
-                <linearGradient id="brandTop" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="white" stop-opacity="0.35" />
-                  <stop offset="0.6" stop-color="white" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-              <rect width="40" height="40" rx="11" fill="url(#brandGrad)" />
-              <rect width="40" height="40" rx="11" fill="url(#brandTop)" />
-
-              <!-- Rabbit ears -->
-              <g fill="white">
-                <path
-                  d="M14.2 8 C 13 8.2, 12.2 9.6, 12.4 12.5 L 13 18 C 13.2 19.6, 14.2 20.4, 15.2 20.2 C 16.2 20, 16.8 19, 16.6 17.4 L 16 11.6 C 15.8 9, 15.4 7.8, 14.2 8 Z"
-                />
-                <path
-                  d="M25.8 8 C 27 8.2, 27.8 9.6, 27.6 12.5 L 27 18 C 26.8 19.6, 25.8 20.4, 24.8 20.2 C 23.8 20, 23.2 19, 23.4 17.4 L 24 11.6 C 24.2 9, 24.6 7.8, 25.8 8 Z"
-                />
-                <!-- Round face -->
-                <ellipse cx="20" cy="26.5" rx="8.2" ry="7.8" />
-              </g>
-
-              <!-- Inner ears (pink) -->
-              <ellipse cx="14.5" cy="14.8" rx="0.85" ry="3.2" fill="#fbcfe8" opacity="0.95" />
-              <ellipse cx="25.5" cy="14.8" rx="0.85" ry="3.2" fill="#fbcfe8" opacity="0.95" />
-
-              <!-- Eyes -->
-              <ellipse cx="17.2" cy="25.8" rx="1.2" ry="1.5" fill="#1e3a8a" />
-              <ellipse cx="22.8" cy="25.8" rx="1.2" ry="1.5" fill="#1e3a8a" />
-              <ellipse cx="17.5" cy="25.3" rx="0.4" ry="0.5" fill="white" />
-              <ellipse cx="23.1" cy="25.3" rx="0.4" ry="0.5" fill="white" />
-
-              <!-- Nose -->
-              <path d="M19.1 28.6 L20.9 28.6 L20 29.9 Z" fill="#ec4899" />
-            </svg>
+            <img :src="brandLogo" alt="米舒刷题" class="brand-logo-img" />
           </span>
           <div class="brand-text">
-            <span class="brand-name">掌学兔</span>
-            <span class="brand-sub">Zhang Xue Tu · 管理后台</span>
+            <span class="brand-name">米舒刷题</span>
+            <span class="brand-sub">米舒刷题 · 管理后台</span>
           </div>
         </div>
 
@@ -331,7 +292,7 @@
 
       <!-- Card foot -->
       <div class="card-foot">
-        <span>© {{ new Date().getFullYear() }} 掌学兔</span>
+        <span>© {{ new Date().getFullYear() }} 米舒刷题</span>
         <span class="dot">·</span>
         <span>v {{ defaultSettings.version }}</span>
         <span class="dot">·</span>
@@ -343,6 +304,7 @@
 
 <script setup lang="ts">
 import { defaultSettings } from "@/settings";
+import brandLogo from "@/assets/logo.png";
 import CommonWrapper from "@/components/CommonWrapper/index.vue";
 import DarkModeSwitch from "@/components/DarkModeSwitch/index.vue";
 
@@ -524,6 +486,13 @@ $body:
   align-items: center;
   justify-content: center;
   filter: drop-shadow(0 8px 16px rgb(29 78 216 / 32%));
+}
+
+.brand-logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .brand-text {

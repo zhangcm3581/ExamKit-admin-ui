@@ -156,9 +156,7 @@
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
-                      <el-dropdown-item command="editPrice">修改价格</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
-                      <el-dropdown-item command="editVideo">编辑视频</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
                       <el-dropdown-item command="delete" divided class="delete-item">
@@ -348,58 +346,6 @@
       </template>
     </el-dialog>
 
-    <!-- 视频资料弹窗 -->
-    <el-dialog
-      v-model="videoDialog.visible"
-      :title="'编辑视频 - ' + videoDialog.subjectName"
-      width="750px"
-    >
-      <el-table :data="videoDialog.items" border size="small" style="width: 100%">
-        <el-table-column label="序号" width="60" align="center">
-          <template #default="scope">{{ scope.$index + 1 }}</template>
-        </el-table-column>
-        <el-table-column label="名称" min-width="180">
-          <template #default="scope">
-            <el-input v-model="scope.row.name" size="small" placeholder="视频名称" />
-          </template>
-        </el-table-column>
-        <el-table-column label="链接" min-width="240">
-          <template #default="scope">
-            <el-input v-model="scope.row.url" size="small" placeholder="COS链接地址" />
-          </template>
-        </el-table-column>
-        <el-table-column label="大小" width="120">
-          <template #default="scope">
-            <el-input v-model="scope.row.size" size="small" placeholder="如 123.45MB" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="60" align="center">
-          <template #default="scope">
-            <el-button
-              type="danger"
-              link
-              size="small"
-              icon="Delete"
-              @click="videoDialog.items.splice(scope.$index, 1)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-button
-        class="mt-3"
-        style="width: 100%"
-        @click="videoDialog.items.push({ name: '', url: '', size: '' })"
-      >
-        + 添加视频
-      </el-button>
-      <template #footer>
-        <el-button @click="videoDialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="videoDialog.saving" @click="handleSaveVideos">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-
     <!-- 移动至弹窗 -->
     <Dialog
       v-model="moveDialog.visible"
@@ -528,19 +474,6 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="价格（元）" prop="price">
-              <el-input-number
-                v-model="priceYuanEdit"
-                :min="1"
-                :max="999"
-                :precision="2"
-                :step="1"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectEditForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -565,58 +498,6 @@
             取 消
           </el-button>
           <el-button type="primary" style="font-weight: bold" @click="handleSubmitSubjectEdit">
-            确 定
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 修改价格弹窗 -->
-    <el-dialog
-      v-model="priceDialog.visible"
-      title="修改价格"
-      width="420px"
-      :close-on-click-modal="false"
-    >
-      <div class="price-dialog-subject">{{ priceDialog.subjectName }}</div>
-      <div class="price-dialog-current">
-        当前价格：
-        <span v-if="priceDialog.loading">加载中…</span>
-        <span v-else-if="!priceDialog.dataLoaded">加载失败，请关闭重试</span>
-        <span v-else>
-          {{
-            priceDialog.currentPriceFen != null
-              ? (priceDialog.currentPriceFen / 100).toFixed(2) + " 元"
-              : "未设置"
-          }}
-        </span>
-      </div>
-      <el-form ref="priceFormRef" :model="priceDialog" :rules="priceRules" label-width="120px">
-        <el-form-item label="新价格（元）" prop="newPriceYuan">
-          <el-input-number
-            v-model="priceDialog.newPriceYuan"
-            :min="1"
-            :max="999"
-            :precision="2"
-            :step="1"
-            :disabled="!priceDialog.dataLoaded"
-            controls-position="right"
-            style="width: 100%"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button style="font-weight: bold" @click="priceDialog.visible = false">
-            取 消
-          </el-button>
-          <el-button
-            type="primary"
-            style="font-weight: bold"
-            :loading="priceDialog.saving"
-            :disabled="!priceDialog.dataLoaded"
-            @click="handleSubmitPrice"
-          >
             确 定
           </el-button>
         </div>
@@ -708,21 +589,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="价格（元）" prop="price">
-              <el-input-number
-                v-model="priceYuanCreate"
-                :min="1"
-                :max="999"
-                :precision="2"
-                :step="1"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectCreateForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -793,7 +659,6 @@ import Dialog from "@/components/Dialog/index.vue";
 import { formatDate } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
-import { type FormRules } from "element-plus";
 
 const examIcon = "/exam.png";
 const folderIcon = "/folder.png";
@@ -824,7 +689,6 @@ interface TableRow {
   isTop?: boolean;
   pdfUrl?: string;
   pdfName?: string;
-  videoUrls?: string;
 }
 
 const loading = ref(false);
@@ -900,57 +764,6 @@ const pdfLinkRules = {
   ],
 };
 
-// 视频资料弹窗
-interface VideoItem {
-  name: string;
-  url: string;
-  size: string;
-}
-
-const videoDialog = reactive({
-  visible: false,
-  subjectId: "" as string,
-  subjectName: "" as string,
-  items: [] as VideoItem[],
-  saving: false,
-});
-
-function handleOpenVideoDialog(row: TableRow) {
-  videoDialog.subjectId = row.id as string;
-  videoDialog.subjectName = row.nameEn || row.nameZh || "";
-  videoDialog.saving = false;
-  // 解析已有视频数据
-  const raw = (row as any).videoUrls;
-  if (raw) {
-    try {
-      videoDialog.items = JSON.parse(raw);
-    } catch {
-      videoDialog.items = [];
-    }
-  } else {
-    videoDialog.items = [];
-  }
-  videoDialog.visible = true;
-}
-
-async function handleSaveVideos() {
-  videoDialog.saving = true;
-  try {
-    // 过滤空行
-    const validItems = videoDialog.items.filter((v) => v.name.trim() || v.url.trim());
-    await SubjectAPI.update(videoDialog.subjectId, {
-      videoUrls: validItems.length > 0 ? JSON.stringify(validItems) : "",
-    });
-    ElMessage.success("保存成功");
-    videoDialog.visible = false;
-    fetchData();
-  } catch {
-    ElMessage.error("保存失败");
-  } finally {
-    videoDialog.saving = false;
-  }
-}
-
 const pdfUploadUrl = computed(() => {
   return `${import.meta.env.VITE_APP_BASE_API}/v1/subjects/${pdfDialog.subjectId}/pdf`;
 });
@@ -994,21 +807,8 @@ const subjectEditForm = reactive({
   tag: "",
   sortOrder: 0,
   status: 1,
-  price: 9800 as number | undefined,
   examInfoZh: "",
   examInfoEn: "",
-});
-
-// 编辑 form 的元↔分转换（与 views/exam/subject/index.vue 的 priceYuan 同样模式）
-const priceYuanEdit = computed({
-  get: () => (subjectEditForm.price != null ? subjectEditForm.price / 100 : 98),
-  set: (yuan: number | null | undefined) => {
-    if (yuan == null || Number.isNaN(yuan)) {
-      subjectEditForm.price = undefined;
-    } else {
-      subjectEditForm.price = Math.round(yuan * 100);
-    }
-  },
 });
 
 // 支持语言多选
@@ -1023,7 +823,6 @@ watch(selectedLanguagesForEdit, (val) => {
 const subjectEditRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
-    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
 
   // 根据支持语言动态设置必填规则
@@ -1053,24 +852,11 @@ const subjectCreateForm = reactive({
   descriptionEn: "",
   sortOrder: 0,
   status: 1,
-  price: 9800 as number | undefined,
   examInfoZh: "",
   examInfoEn: "",
 });
 
 // 新建 form 的元↔分转换
-const priceYuanCreate = computed({
-  get: () => (subjectCreateForm.price != null ? subjectCreateForm.price / 100 : 98),
-  set: (yuan: number | null | undefined) => {
-    if (yuan == null || Number.isNaN(yuan)) {
-      subjectCreateForm.price = undefined;
-    } else {
-      subjectCreateForm.price = Math.round(yuan * 100);
-    }
-  },
-});
-
-// 新建科目 - 支持语言多选
 const selectedLanguagesForCreate = ref<string[]>([]);
 
 // 监听选中语言变化，同步到formData
@@ -1082,7 +868,6 @@ watch(selectedLanguagesForCreate, (val) => {
 const subjectCreateRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
-    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
 
   // 根据支持语言动态设置必填规则
@@ -1096,72 +881,6 @@ const subjectCreateRules = computed(() => {
 
   return rules;
 });
-
-// 修改价格弹窗
-const priceFormRef = ref();
-const priceDialog = reactive({
-  visible: false,
-  loading: false,
-  dataLoaded: false,
-  subjectId: "" as string,
-  subjectName: "" as string,
-  currentPriceFen: null as number | null,
-  newPriceYuan: 98 as number | null,
-  saving: false,
-});
-
-const priceRules: FormRules = {
-  newPriceYuan: [
-    { required: true, message: "请输入价格", trigger: "change" },
-    { type: "number", min: 1, max: 999, message: "价格范围 1–999 元", trigger: "change" },
-  ],
-};
-
-async function handleEditPrice(row: TableRow) {
-  priceDialog.subjectId = row.id as string;
-  priceDialog.subjectName = getSubjectPrimaryName(row);
-  priceDialog.currentPriceFen = null;
-  priceDialog.newPriceYuan = 98;
-  priceDialog.saving = false;
-  priceDialog.dataLoaded = false;
-  priceDialog.loading = true;
-  priceDialog.visible = true;
-  nextTick(() => priceFormRef.value?.clearValidate?.());
-
-  try {
-    const data = await SubjectAPI.getFormData(row.id as string);
-    priceDialog.currentPriceFen = data.price ?? null;
-    priceDialog.newPriceYuan = data.price != null ? data.price / 100 : 98;
-    priceDialog.dataLoaded = true;
-  } finally {
-    priceDialog.loading = false;
-  }
-}
-
-async function handleSubmitPrice() {
-  try {
-    await priceFormRef.value.validate();
-  } catch {
-    return;
-  }
-  if (priceDialog.newPriceYuan == null) return;
-
-  const priceFen = Math.round(priceDialog.newPriceYuan * 100);
-  if (priceFen === priceDialog.currentPriceFen) {
-    priceDialog.visible = false;
-    return;
-  }
-
-  priceDialog.saving = true;
-  try {
-    await SubjectAPI.update(priceDialog.subjectId, { price: priceFen });
-    ElMessage.success("价格修改成功");
-    priceDialog.visible = false;
-    fetchData();
-  } finally {
-    priceDialog.saving = false;
-  }
-}
 
 // 加载供应商选项
 function loadProviderOptions() {
@@ -1196,7 +915,6 @@ async function fetchData() {
         providerId: s.providerId,
         pdfUrl: s.pdfUrl,
         pdfName: s.pdfName,
-        videoUrls: s.videoUrls,
       }));
       total.value = subjectRes.total || 0;
 
@@ -1226,7 +944,6 @@ async function fetchData() {
         providerId: item.providerId,
         pdfUrl: (item as any).pdfUrl,
         pdfName: (item as any).pdfName,
-        videoUrls: (item as any).videoUrls,
       }));
 
       total.value = bankItemRes.total || 0;
@@ -1300,9 +1017,6 @@ function handleRowMoreAction(command: string, row: TableRow) {
       // 统一编辑题库信息
       handleEditSubject(row);
       break;
-    case "editPrice":
-      handleEditPrice(row);
-      break;
     case "move":
       moveDialog.visible = true;
       moveDialog.subjectId = row.id as string;
@@ -1325,9 +1039,6 @@ function handleRowMoreAction(command: string, row: TableRow) {
       break;
     case "uploadPdf":
       handleOpenPdfDialog(row);
-      break;
-    case "editVideo":
-      handleOpenVideoDialog(row);
       break;
     case "delete":
       handleDeleteSubject(row);
@@ -1639,7 +1350,6 @@ function handleEditSubject(row: TableRow) {
     subjectEditForm.tag = data.tag || "";
     subjectEditForm.sortOrder = data.sortOrder || 0;
     subjectEditForm.status = data.status !== undefined ? data.status : 1;
-    subjectEditForm.price = data.price != null ? data.price : 9800;
     subjectEditForm.examInfoZh = data.examInfoZh || "";
     subjectEditForm.examInfoEn = data.examInfoEn || "";
 
@@ -1669,7 +1379,6 @@ function handleSubmitSubjectEdit() {
         tag: subjectEditForm.tag,
         sortOrder: subjectEditForm.sortOrder,
         status: subjectEditForm.status,
-        price: subjectEditForm.price,
         examInfoZh: subjectEditForm.examInfoZh,
         examInfoEn: subjectEditForm.examInfoEn,
       };
@@ -1706,7 +1415,6 @@ function handleSubjectEditDialogClosed() {
     subjectEditForm.descriptionEn = "";
     subjectEditForm.sortOrder = 0;
     subjectEditForm.status = 1;
-    subjectEditForm.price = 9800;
     subjectEditForm.examInfoZh = "";
     subjectEditForm.examInfoEn = "";
     selectedLanguagesForEdit.value = [];
@@ -1724,7 +1432,6 @@ function handleNewSubject() {
   subjectCreateForm.descriptionEn = "";
   subjectCreateForm.sortOrder = 0;
   subjectCreateForm.status = 1;
-  subjectCreateForm.price = 9800;
   subjectCreateForm.examInfoZh = "";
   subjectCreateForm.examInfoEn = "";
   selectedLanguagesForCreate.value = [];
@@ -1752,7 +1459,6 @@ function handleSubmitSubjectCreate() {
         descriptionEn: subjectCreateForm.descriptionEn,
         sortOrder: subjectCreateForm.sortOrder,
         status: subjectCreateForm.status,
-        price: subjectCreateForm.price,
         examInfoZh: subjectCreateForm.examInfoZh,
         examInfoEn: subjectCreateForm.examInfoEn,
       };
@@ -1788,7 +1494,6 @@ function handleSubjectCreateDialogClosed() {
     subjectCreateForm.descriptionEn = "";
     subjectCreateForm.sortOrder = 0;
     subjectCreateForm.status = 1;
-    subjectCreateForm.price = 9800;
     subjectCreateForm.examInfoZh = "";
     subjectCreateForm.examInfoEn = "";
     selectedLanguagesForCreate.value = [];
@@ -2188,18 +1893,5 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-}
-
-.price-dialog-subject {
-  margin-bottom: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.price-dialog-current {
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: #606266;
 }
 </style>

@@ -79,7 +79,7 @@
     <!-- 答案（不区分语言） -->
     <el-form label-position="top" class="qep-answer">
       <el-form-item label="答案">
-        <template v-if="form.type === 'SHORT_ANSWER'">
+        <template v-if="form.type === 'SHORT_ANSWER' || form.type === 'DRAG'">
           <RichTextField v-model="form.answer" />
         </template>
         <template v-else-if="form.type === 'SINGLE'">
@@ -152,6 +152,7 @@ const hasOptions = computed(
   () =>
     props.question.type !== "JUDGE" &&
     props.question.type !== "SHORT_ANSWER" &&
+    props.question.type !== "DRAG" &&
     props.question.type !== "FILL_BLANK"
 );
 
@@ -236,7 +237,7 @@ function onCancel() {
 function buildPayload(): QuestionForm {
   const payload: QuestionForm = { ...form };
 
-  if (form.type === "SHORT_ANSWER") {
+  if (form.type === "SHORT_ANSWER" || form.type === "DRAG") {
     payload.optionsZh = "[]";
     payload.optionsEn = "[]";
   } else if (form.type === "JUDGE") {
