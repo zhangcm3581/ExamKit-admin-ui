@@ -144,6 +144,12 @@ export interface BankItemVO {
   status: number;
   /** 供应商ID (仅Subject) */
   providerId?: number;
+  /** 标签 (仅Subject) */
+  tag?: string;
+  /** 分享码 (仅Subject) */
+  shareCode?: string;
+  /** Web 分享链接 (仅Subject) */
+  shareUrl?: string;
   /** 创建时间 */
   createTime: string;
   /** 更新时间 */

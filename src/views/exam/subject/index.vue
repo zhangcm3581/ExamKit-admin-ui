@@ -112,6 +112,20 @@
             {{ formatDateTime(scope.row.createTime) }}
           </template>
         </el-table-column>
+        <el-table-column label="Web分享链接" min-width="200" align="center">
+          <template #default="scope">
+            <el-button
+              v-if="scope.row.shareUrl"
+              type="primary"
+              link
+              size="small"
+              @click.stop="copyShareUrl(scope.row.shareUrl)"
+            >
+              复制链接
+            </el-button>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
         <el-table-column fixed="right" label="操作" align="center" width="150">
           <template #default="scope">
             <el-button
@@ -155,6 +169,13 @@
       @closed="handleDialogClosed"
     >
       <el-form ref="dataFormRef" :model="formData" :rules="computedRules" label-width="90px">
+        <el-form-item v-if="editShareUrl" label="分享链接">
+          <el-input v-model="editShareUrl" readonly>
+            <template #append>
+              <el-button @click="copyShareUrl(editShareUrl)">复制</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
         <el-form-item label="中文名称" prop="nameZh">
           <el-input v-model="formData.nameZh" placeholder="请输入科目名称（中文）" />
         </el-form-item>
@@ -306,6 +327,18 @@ const formData = reactive<SubjectForm>({
 
 // 支持语言多选
 const selectedLanguages = ref<string[]>([]);
+const editShareUrl = ref("");
+
+function copyShareUrl(url?: string) {
+  if (!url) {
+    ElMessage.warning("暂无分享链接");
+    return;
+  }
+  navigator.clipboard
+    .writeText(url)
+    .then(() => ElMessage.success("分享链接已复制"))
+    .catch(() => ElMessage.error("复制失败，请手动复制"));
+}
 
 // 监听选中语言变化，同步到formData
 watch(selectedLanguages, (val) => {
@@ -360,6 +393,7 @@ function handleSelectionChange(selection: any) {
 
 // 新增科目
 function handleAddClick() {
+  editShareUrl.value = "";
   dialog.visible = true;
   dialog.title = "新增科目";
 }
@@ -386,6 +420,7 @@ function handleEditClick(id: string) {
     formData.tag = data.tag || "";
     formData.sortOrder = data.sortOrder || 0;
     formData.status = data.status !== undefined ? data.status : 1;
+    editShareUrl.value = data.shareUrl || "";
 
     // 解析支持语言到多选数组
     if (data.supportLanguages) {
@@ -453,6 +488,7 @@ function handleDialogClosed() {
     formData.sortOrder = 0;
     formData.status = 1;
     selectedLanguages.value = [];
+    editShareUrl.value = "";
   });
 }
 

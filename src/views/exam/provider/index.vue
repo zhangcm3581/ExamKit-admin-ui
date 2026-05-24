@@ -110,15 +110,21 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column label="分享好友" align="center" width="110">
+        <el-table-column label="分享" align="center" width="130">
           <template #default="scope">
-            <el-button
-              v-if="!scope.row.isFolder"
-              type="primary"
-              link
-              :icon="Share"
-              @click="openMiniappQr(scope.row)"
-            />
+            <div v-if="!scope.row.isFolder" class="share-actions">
+              <el-tooltip content="小程序码" placement="top">
+                <el-button
+                  type="primary"
+                  link
+                  :icon="Share"
+                  @click.stop="openMiniappQr(scope.row)"
+                />
+              </el-tooltip>
+              <el-tooltip content="复制Web链接" placement="top">
+                <el-button type="primary" link :icon="Link" @click.stop="copyShareUrl(scope.row)" />
+              </el-tooltip>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" align="left">
@@ -156,6 +162,7 @@
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
+                      <el-dropdown-item command="copyShareUrl">复制Web分享链接</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
@@ -643,6 +650,7 @@ import {
   UploadFilled,
   Loading,
   Share,
+  Link,
 } from "@element-plus/icons-vue";
 import MiniappQrDialog from "@/views/exam/subject/components/MiniappQrDialog.vue";
 import { AuthStorage } from "@/utils/auth";
@@ -689,6 +697,9 @@ interface TableRow {
   isTop?: boolean;
   pdfUrl?: string;
   pdfName?: string;
+  tag?: string;
+  shareCode?: string;
+  shareUrl?: string;
 }
 
 const loading = ref(false);
@@ -702,6 +713,18 @@ const qrSubjectId = ref("");
 function openMiniappQr(row: { id: string }) {
   qrSubjectId.value = row.id;
   qrDialogVisible.value = true;
+}
+
+function copyShareUrl(row: TableRow) {
+  const url = row.shareUrl;
+  if (!url) {
+    ElMessage.warning("暂无分享链接，请确认已执行 share_code 迁移并重启服务");
+    return;
+  }
+  navigator.clipboard
+    .writeText(url)
+    .then(() => ElMessage.success("Web分享链接已复制"))
+    .catch(() => ElMessage.error("复制失败，请手动复制"));
 }
 
 const queryParams = reactive<ProviderPageQuery>({
@@ -909,6 +932,8 @@ async function fetchData() {
         supportLanguages: s.supportLanguages,
         totalQuestions: s.totalQuestions,
         tag: s.tag,
+        shareCode: s.shareCode,
+        shareUrl: s.shareUrl,
         createTime: s.createTime,
         sortOrder: s.sortOrder,
         status: s.status,
@@ -937,7 +962,9 @@ async function fetchData() {
         supportLanguages: item.supportLanguages,
         logo: item.logo,
         totalQuestions: item.totalQuestions,
-        tag: (item as any).tag,
+        tag: item.tag,
+        shareCode: item.shareCode,
+        shareUrl: item.shareUrl,
         createTime: item.createTime,
         sortOrder: item.sortOrder,
         status: item.status,
@@ -1016,6 +1043,9 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "editSubject":
       // 统一编辑题库信息
       handleEditSubject(row);
+      break;
+    case "copyShareUrl":
+      copyShareUrl(row);
       break;
     case "move":
       moveDialog.visible = true;
@@ -1887,6 +1917,13 @@ onMounted(() => {
   .el-form-item__label {
     font-weight: 500;
   }
+}
+
+.share-actions {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
 }
 
 .dialog-footer {

@@ -125,6 +125,10 @@ export interface SubjectVO {
   pdfName?: string;
   /** 小程序码 URL（懒加载缓存） */
   miniappQrUrl?: string;
+  /** 分享码 */
+  shareCode?: string;
+  /** Web 端分享链接 */
+  shareUrl?: string;
   /** 科目标签/分类 */
   tag?: string;
   /** 排序值 */
