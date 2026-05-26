@@ -81,7 +81,11 @@
               </span>
               <span class="text-xs text-blue-400">案例背景</span>
             </div>
-            <div class="text-sm text-gray-700 leading-relaxed" v-html="displayCaseContent"></div>
+            <div
+              class="text-gray-700 leading-relaxed break-words"
+              :class="caseFontSizeClass"
+              v-html="formattedCaseContent"
+            ></div>
           </div>
 
           <!-- 题号 + 题型 + 题干 -->
@@ -261,6 +265,7 @@ import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionPageQuery } from "@/api/exam/question-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import { formatRichText } from "@/utils/rich-text";
 
 defineOptions({
   name: "PracticeView",
@@ -296,6 +301,15 @@ const fontSizeClass = computed(() => {
     large: "text-base",
   };
   return map[fontSize.value] || "text-sm";
+});
+
+const caseFontSizeClass = computed(() => {
+  const map: Record<FontSize, string> = {
+    small: "text-xs",
+    medium: "text-xs sm:text-sm",
+    large: "text-sm sm:text-base",
+  };
+  return map[fontSize.value] || "text-xs sm:text-sm";
 });
 
 // 当前题目（空对象兜底）
@@ -390,6 +404,8 @@ const displayCaseContent = computed(() => {
   if (questionLocale.value === "zh") return caseContentZh || caseContentEn || "";
   return caseContentEn || caseContentZh || "";
 });
+
+const formattedCaseContent = computed(() => formatRichText(displayCaseContent.value));
 
 // 是否为正确选项
 function isCorrectOption(label: string): boolean {
