@@ -48,6 +48,12 @@
                 >
                   简答题
                 </el-dropdown-item>
+                <el-dropdown-item
+                  :class="{ 'is-active': queryParams.type === 'DRAG_MATCH' }"
+                  @click="handleTypeFilter('DRAG_MATCH')"
+                >
+                  拖放题
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -124,7 +130,12 @@
                 </div>
                 <!-- 中文选项 -->
                 <div
-                  v-if="row.optionsZh && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  v-if="
+                    row.optionsZh &&
+                    row.type !== 'SHORT_ANSWER' &&
+                    row.type !== 'FILL_BLANK' &&
+                    row.type !== 'DRAG_MATCH'
+                  "
                   class="detail-block"
                 >
                   <div class="options-list">
@@ -136,6 +147,13 @@
                       <span class="option-key">{{ option.label }}</span>
                       <span class="option-text" v-html="option.value"></span>
                     </div>
+                  </div>
+                </div>
+                <!-- 拖放配置 -->
+                <div v-if="row.type === 'DRAG_MATCH'" class="detail-block">
+                  <div class="block-label">拖放配置</div>
+                  <div class="block-content">
+                    {{ formatDragMatchDetail(row.optionsZh, row.optionsEn) }}
                   </div>
                 </div>
                 <!-- 答案（中文区域总是显示） -->
@@ -171,7 +189,12 @@
                 </div>
                 <!-- 英文选项 -->
                 <div
-                  v-if="row.optionsEn && row.type !== 'SHORT_ANSWER' && row.type !== 'FILL_BLANK'"
+                  v-if="
+                    row.optionsEn &&
+                    row.type !== 'SHORT_ANSWER' &&
+                    row.type !== 'FILL_BLANK' &&
+                    row.type !== 'DRAG_MATCH'
+                  "
                   class="detail-block"
                 >
                   <div class="options-list">
@@ -288,6 +311,7 @@
             <el-radio label="JUDGE">判断题</el-radio>
             <el-radio label="FILL_BLANK">填空题</el-radio>
             <el-radio label="SHORT_ANSWER">简答题</el-radio>
+            <el-radio label="DRAG_MATCH">拖放题</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -313,6 +337,7 @@
               v-if="
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'DRAG_MATCH' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -340,7 +365,7 @@
               </el-button>
             </el-form-item>
 
-            <el-form-item label="解析">
+            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="解析">
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </el-tab-pane>
@@ -359,6 +384,7 @@
               v-if="
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'DRAG_MATCH' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -386,7 +412,7 @@
               </el-button>
             </el-form-item>
 
-            <el-form-item label="解析">
+            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="Explanation">
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </el-tab-pane>
@@ -404,6 +430,7 @@
               v-if="
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'DRAG_MATCH' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -431,7 +458,7 @@
               </el-button>
             </el-form-item>
 
-            <el-form-item label="解析">
+            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="解析">
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </template>
@@ -448,6 +475,7 @@
               v-if="
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
+                formData.type !== 'DRAG_MATCH' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="Options"
@@ -475,16 +503,47 @@
               </el-button>
             </el-form-item>
 
-            <el-form-item label="Explanation">
+            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="Explanation">
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </template>
         </template>
 
+        <!-- 拖放题配置 -->
+        <template v-if="formData.type === 'DRAG_MATCH'">
+          <el-form-item label="解析">
+            <RichTextField v-model="dragMatchExplanation" />
+          </el-form-item>
+          <el-form-item label="Tool池（| 分隔）">
+            <el-input
+              v-model="dragMatchTools"
+              type="textarea"
+              :rows="3"
+              placeholder="Tool A|Tool B|Tool C"
+            />
+          </el-form-item>
+          <el-form-item label="Purpose（| 分隔）">
+            <el-input
+              v-model="dragMatchPurposes"
+              type="textarea"
+              :rows="3"
+              placeholder="描述1|描述2"
+            />
+          </el-form-item>
+        </template>
+
         <!-- 答案（通用，不区分语言） -->
         <el-form-item label="答案" prop="answer">
+          <template v-if="formData.type === 'DRAG_MATCH'">
+            <el-input
+              v-model="formData.answer"
+              type="textarea"
+              :rows="2"
+              placeholder="槽位答案，| 分隔，如 Tool A|Tool B"
+            />
+          </template>
           <!-- 简答题使用富文本编辑器 -->
-          <template v-if="formData.type === 'SHORT_ANSWER'">
+          <template v-else-if="formData.type === 'SHORT_ANSWER'">
             <RichTextField v-model="formData.answer" />
           </template>
           <!-- 单选题 -->
@@ -568,8 +627,19 @@ import QuestionAPI, {
   type QuestionForm,
 } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
+import { hasRichContent } from "@/utils/rich-text";
 import { formatDateTime } from "@/utils/datetime";
 import RichTextField from "@/components/RichTextField/index.vue";
+import {
+  buildDragMatchOptionsJson,
+  dragMatchOptionsToFields,
+  dragMatchSummary,
+  resolveDragMatchOptionsRaw,
+  applyDragMatchOptionsToForm,
+  resolveDragMatchExplanation,
+  applyDragMatchExplanation,
+  validateDragMatchAnswer,
+} from "@/utils/dragMatch";
 
 defineOptions({
   name: "QuestionManagement",
@@ -625,6 +695,12 @@ const optionsListEn = ref<{ label: string; value: string }[]>([
 // 多选题答案数组
 const multipleAnswers = ref<string[]>([]);
 
+// 拖放题编辑字段
+const dragMatchTools = ref("");
+const dragMatchPurposes = ref("");
+const dragMatchExplanation = ref("");
+const dragMatchExplanationTarget = ref<"zh" | "en">("zh");
+
 // 当前选中的题型标签
 const currentTypeLabel = computed(() => {
   const typeMap: Record<string, string> = {
@@ -634,26 +710,82 @@ const currentTypeLabel = computed(() => {
     JUDGE: "判断题",
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
+    DRAG_MATCH: "拖放题",
   };
   return typeMap[queryParams.type || ""] || "全部题型";
 });
+
+function formatDragMatchDetail(optionsZh?: string, optionsEn?: string): string {
+  const raw = resolveDragMatchOptionsRaw(optionsZh, optionsEn);
+  const summary = dragMatchSummary(raw);
+  const { tools, purposes } = dragMatchOptionsToFields(raw);
+  const parts = [summary];
+  if (tools) parts.push(`Tool: ${tools}`);
+  if (purposes) parts.push(`Purpose: ${purposes}`);
+  return parts.filter(Boolean).join(" · ") || "—";
+}
 
 // 表单验证规则 - 根据科目支持的语言动态设置
 const rules = computed(() => {
   const baseRules: any = {
     type: [{ required: true, message: "请选择题型", trigger: "change" }],
-    answer: [{ required: true, message: "请选择答案", trigger: "change" }],
+    answer: [
+      {
+        validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+          if (!value || !String(value).trim()) {
+            callback(
+              new Error(formData.type === "DRAG_MATCH" ? "请输入槽位答案" : "请选择或填写答案")
+            );
+            return;
+          }
+          callback();
+        },
+        trigger: "blur",
+      },
+    ],
   };
 
   const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
+  const hasZh = languages.includes("zh");
+  const hasEn = languages.includes("en");
 
-  // 根据支持的语言动态设置必填规则
-  if (languages.includes("zh")) {
-    baseRules.contentZh = [{ required: true, message: "请输入题目内容（中文）", trigger: "blur" }];
-  }
-
-  if (languages.includes("en")) {
-    baseRules.contentEn = [{ required: true, message: "请输入题目内容（英文）", trigger: "blur" }];
+  if (hasZh && hasEn) {
+    // 双语科目：至少一项有内容即可（兼容仅英文/仅中文导入的题库）
+    const bilingualContentRule = {
+      validator: (_rule: unknown, _value: string, callback: (error?: Error) => void) => {
+        if (hasRichContent(formData.contentZh) || hasRichContent(formData.contentEn)) {
+          callback();
+          return;
+        }
+        callback(new Error("请输入题目内容（中文或英文至少一项）"));
+      },
+      trigger: "blur",
+    };
+    baseRules.contentZh = [bilingualContentRule];
+    baseRules.contentEn = [bilingualContentRule];
+  } else {
+    if (hasZh) {
+      baseRules.contentZh = [
+        {
+          validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+            if (hasRichContent(value)) callback();
+            else callback(new Error("请输入题目内容（中文）"));
+          },
+          trigger: "blur",
+        },
+      ];
+    }
+    if (hasEn) {
+      baseRules.contentEn = [
+        {
+          validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+            if (hasRichContent(value)) callback();
+            else callback(new Error("请输入题目内容（英文）"));
+          },
+          trigger: "blur",
+        },
+      ];
+    }
   }
 
   return baseRules;
@@ -686,6 +818,7 @@ function getQuestionTypeText(type: string): string {
     JUDGE: "判断题",
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
+    DRAG_MATCH: "拖放题",
   };
   return typeMap[type] || type;
 }
@@ -698,6 +831,7 @@ function getQuestionTypeColor(type: string): string {
     JUDGE: "warning",
     FILL_BLANK: "danger",
     SHORT_ANSWER: "info",
+    DRAG_MATCH: "",
   };
   return colorMap[type] || "info";
 }
@@ -883,9 +1017,15 @@ function handleTypeChange() {
   // 重置答案
   formData.answer = "";
   multipleAnswers.value = [];
+  dragMatchTools.value = "";
+  dragMatchPurposes.value = "";
+  dragMatchExplanation.value = "";
+  dragMatchExplanationTarget.value = "zh";
 
-  // 如果是简答题，清空选项
-  if (formData.type === "SHORT_ANSWER") {
+  if (formData.type === "DRAG_MATCH") {
+    optionsList.value = [];
+    optionsListEn.value = [];
+  } else if (formData.type === "SHORT_ANSWER") {
     optionsList.value = [];
     optionsListEn.value = [];
   }
@@ -1040,8 +1180,18 @@ async function handleEdit(row: QuestionVO) {
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
 
-  // 简答题不需要解析选项
-  if (data.type === "SHORT_ANSWER") {
+  // 拖放题 / 简答题不需要解析选项
+  if (data.type === "DRAG_MATCH") {
+    const raw = resolveDragMatchOptionsRaw(data.optionsZh, data.optionsEn);
+    const fields = dragMatchOptionsToFields(raw);
+    dragMatchTools.value = fields.tools;
+    dragMatchPurposes.value = fields.purposes;
+    const exp = resolveDragMatchExplanation(data);
+    dragMatchExplanation.value = exp.value;
+    dragMatchExplanationTarget.value = exp.target;
+    optionsList.value = [];
+    optionsListEn.value = [];
+  } else if (data.type === "SHORT_ANSWER") {
     optionsList.value = [];
     optionsListEn.value = [];
   } else {
@@ -1063,6 +1213,20 @@ async function handleEdit(row: QuestionVO) {
   if (data.type === "MULTIPLE" && data.answer) {
     multipleAnswers.value = data.answer.split("");
   }
+
+  // 双语科目：英文导入时自动切到英文标签页，避免解析等字段看起来为空
+  if (hasBothLanguagesForEdit()) {
+    const zhEmpty = !(data.contentZh || "").trim() && !(data.explanationZh || "").trim();
+    const enHas = !!(data.contentEn || "").trim() || !!(data.explanationEn || "").trim();
+    if (zhEmpty && enHas) {
+      activeLanguageTab.value = "en";
+    } else {
+      activeLanguageTab.value = "zh";
+    }
+  }
+
+  await nextTick();
+  dataFormRef.value?.clearValidate?.();
 }
 
 // 删除
@@ -1100,12 +1264,53 @@ function handleDelete(id?: number) {
   });
 }
 
+function focusFirstInvalidField(invalidFields?: Record<string, { message?: string }[]>) {
+  if (!invalidFields) return;
+  const firstKey = Object.keys(invalidFields)[0];
+  if (!firstKey) return;
+  if (firstKey === "contentEn" || firstKey === "explanationEn") {
+    activeLanguageTab.value = "en";
+  } else if (firstKey === "contentZh" || firstKey === "explanationZh") {
+    activeLanguageTab.value = "zh";
+  }
+  const firstMsg = invalidFields[firstKey]?.[0]?.message;
+  ElMessage.warning(firstMsg || "请完善表单必填项");
+  nextTick(() => {
+    dataFormRef.value?.scrollToField?.(firstKey);
+  });
+}
+
 // 提交
 function handleSubmit() {
-  dataFormRef.value.validate((valid: boolean) => {
-    if (valid) {
-      // 简答题不需要选项
-      if (formData.type === "SHORT_ANSWER") {
+  dataFormRef.value?.validate(
+    (valid: boolean, invalidFields?: Record<string, { message?: string }[]>) => {
+      if (!valid) {
+        focusFirstInvalidField(invalidFields);
+        return;
+      }
+
+      if (formData.type === "DRAG_MATCH") {
+        const err = validateDragMatchAnswer(
+          dragMatchTools.value,
+          dragMatchPurposes.value,
+          formData.answer || ""
+        );
+        if (err) {
+          ElMessage.error(err);
+          return;
+        }
+        const built = buildDragMatchOptionsJson(dragMatchTools.value, dragMatchPurposes.value);
+        const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
+        const applied = applyDragMatchOptionsToForm(built.optionsJson, langs);
+        formData.optionsZh = applied.optionsZh;
+        formData.optionsEn = applied.optionsEn;
+        const expPatch = applyDragMatchExplanation(
+          dragMatchExplanation.value,
+          dragMatchExplanationTarget.value,
+          formData
+        );
+        Object.assign(formData, expPatch);
+      } else if (formData.type === "SHORT_ANSWER") {
         formData.optionsZh = "[]";
         formData.optionsEn = "[]";
       }
@@ -1146,7 +1351,7 @@ function handleSubmit() {
         fetchData();
       });
     }
-  });
+  );
 }
 
 // 关闭对话框
@@ -1183,6 +1388,10 @@ function resetForm() {
   ];
 
   multipleAnswers.value = [];
+  dragMatchTools.value = "";
+  dragMatchPurposes.value = "";
+  dragMatchExplanation.value = "";
+  dragMatchExplanationTarget.value = "zh";
 
   if (dataFormRef.value) {
     dataFormRef.value.resetFields();

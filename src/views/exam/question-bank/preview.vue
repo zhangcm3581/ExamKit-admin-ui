@@ -57,7 +57,12 @@
               <div v-else-if="row.type === 'FILL_BLANK'" class="short-answer-tip">
                 <el-text type="info" size="small">填空题（答案见答案列）</el-text>
               </div>
-              <!-- 其他题型显示选项 -->
+              <div v-else-if="row.type === 'DRAG_MATCH'" class="short-answer-tip">
+                <el-text type="info" size="small">
+                  {{ formatDragMatchPreview(row.options) }}
+                </el-text>
+              </div>
+              <!-- 选择题显示选项 -->
               <div
                 v-for="option in parseOptions(row.options)"
                 v-else
@@ -123,6 +128,7 @@
             <el-option label="判断题" value="JUDGE" />
             <el-option label="填空题" value="FILL_BLANK" />
             <el-option label="简答题" value="SHORT_ANSWER" />
+            <el-option label="拖放题" value="DRAG_MATCH" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
@@ -131,7 +137,11 @@
 
         <!-- 选项编辑 -->
         <el-form-item
-          v-if="editForm.type !== 'SHORT_ANSWER' && editForm.type !== 'FILL_BLANK'"
+          v-if="
+            editForm.type !== 'SHORT_ANSWER' &&
+            editForm.type !== 'FILL_BLANK' &&
+            editForm.type !== 'DRAG_MATCH'
+          "
           label="选项"
         >
           <div style="width: 100%">
@@ -277,6 +287,11 @@ import QuestionBankAPI, {
 } from "@/api/exam/question-bank-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import WangEditor from "@/components/WangEditor/index.vue";
+import { dragMatchOptionsToFields, dragMatchSummary } from "@/utils/dragMatch";
+import {
+  getQuestionTypeColor as resolveQuestionTypeColor,
+  getQuestionTypeLabel,
+} from "@/utils/questionType";
 
 defineOptions({
   name: "QuestionBankPreview",
@@ -321,6 +336,8 @@ const editForm = reactive({
 
 // 编辑选项（数组形式）
 const editOptions = ref<Array<{ label: string; value: string }>>([]);
+/** 拖放题原始 options JSON，编辑时保留不通过选项编辑器修改 */
+const editDragMatchOptions = ref("");
 
 const publishForm = reactive({
   subjectId: "",
@@ -420,29 +437,20 @@ const isCorrectOption = (answer: string, label: string) => {
   return answer.includes(label);
 };
 
-// 获取题型文本
-const getQuestionTypeText = (type: string) => {
-  const typeMap: Record<string, string> = {
-    SINGLE: "单选",
-    MULTIPLE: "多选",
-    JUDGE: "判断",
-    FILL_BLANK: "填空",
-    SHORT_ANSWER: "简答",
-  };
-  return typeMap[type] || type;
-};
+// 获取题型文本（预览表格用紧凑名）
+const getQuestionTypeText = (type: string) => getQuestionTypeLabel(type, true);
 
-// 获取题型颜色
-const getQuestionTypeColor = (type: string) => {
-  const colorMap: Record<string, string> = {
-    SINGLE: "primary",
-    MULTIPLE: "success",
-    JUDGE: "warning",
-    FILL_BLANK: "danger",
-    SHORT_ANSWER: "info",
-  };
-  return colorMap[type] || "";
-};
+const getQuestionTypeColor = resolveQuestionTypeColor;
+
+function formatDragMatchPreview(optionsJson: string): string {
+  const summary = dragMatchSummary(optionsJson);
+  const { tools, purposes } = dragMatchOptionsToFields(optionsJson);
+  if (!summary) return "拖放题";
+  const parts = [summary];
+  if (tools) parts.push(`Tool: ${tools}`);
+  if (purposes) parts.push(`Purpose: ${purposes}`);
+  return parts.join(" · ");
+}
 
 // 格式化HTML内容（去除<p>标签，保留换行）
 const formatHtmlContent = (html: string) => {
@@ -465,12 +473,20 @@ const handleEdit = (row: QuestionDraftItemVO) => {
     explanation: row.explanation || "",
   });
 
-  // 解析选项JSON(简答题无选项)
-  try {
-    editOptions.value = row.type === "SHORT_ANSWER" ? [] : JSON.parse(row.options);
-  } catch (error) {
+  // 解析选项 JSON（简答题/拖放题无 A-D 选项）
+  editDragMatchOptions.value = "";
+  if (row.type === "SHORT_ANSWER" || row.type === "DRAG_MATCH") {
     editOptions.value = [];
-    console.error("解析选项失败", error);
+    if (row.type === "DRAG_MATCH") {
+      editDragMatchOptions.value = row.options || "";
+    }
+  } else {
+    try {
+      editOptions.value = JSON.parse(row.options);
+    } catch (error) {
+      editOptions.value = [];
+      console.error("解析选项失败", error);
+    }
   }
 
   editDialogVisible.value = true;
@@ -478,9 +494,11 @@ const handleEdit = (row: QuestionDraftItemVO) => {
 
 // 题型切换处理
 const handleTypeChange = (newType: string) => {
-  if (newType === "SHORT_ANSWER") {
-    // 切换到简答题，清空选项
+  if (newType === "SHORT_ANSWER" || newType === "DRAG_MATCH") {
     editOptions.value = [];
+    if (newType !== "DRAG_MATCH") {
+      editDragMatchOptions.value = "";
+    }
   } else if (editOptions.value.length === 0) {
     // 从简答题切换到其他题型，初始化默认选项
     editOptions.value = [
@@ -494,7 +512,12 @@ const handleTypeChange = (newType: string) => {
 const handleSaveEdit = async () => {
   try {
     // 简答题选项为空数组，其他题型将选项数组转为JSON字符串
-    const optionsJson = editForm.type === "SHORT_ANSWER" ? "[]" : JSON.stringify(editOptions.value);
+    const optionsJson =
+      editForm.type === "SHORT_ANSWER"
+        ? "[]"
+        : editForm.type === "DRAG_MATCH"
+          ? editDragMatchOptions.value || "[]"
+          : JSON.stringify(editOptions.value);
 
     await QuestionBankAPI.updateDraft(editForm.id, {
       type: editForm.type,

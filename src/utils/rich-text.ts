@@ -124,6 +124,18 @@ function walkTextNodes(root: Node, preserveNewline: boolean) {
   for (const node of nodes) formatTextNode(node, preserveNewline);
 }
 
+/** 富文本是否非空（含纯图片题干） */
+export function hasRichContent(text: string | null | undefined): boolean {
+  if (!text || !text.trim()) return false;
+  const plain = text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (plain.length > 0) return true;
+  return /<img[\s/>]/i.test(text) || /<video[\s/>]/i.test(text);
+}
+
 export function formatRichText(text: string | null | undefined): string {
   if (!text) return "";
 

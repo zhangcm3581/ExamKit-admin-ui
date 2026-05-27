@@ -7,7 +7,7 @@
           <el-form-item label="题目内容">
             <RichTextField v-model="form.contentZh" />
           </el-form-item>
-          <el-form-item v-if="hasOptions" label="选项文本">
+          <el-form-item v-if="hasChoiceOptions" label="选项文本">
             <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
               <span class="qep-option-label">{{ opt.label }}</span>
               <div class="qep-option-editor">
@@ -15,7 +15,13 @@
               </div>
             </div>
           </el-form-item>
-          <el-form-item label="解析">
+          <el-form-item v-if="isDragMatch" label="Tool池（| 分隔）">
+            <el-input v-model="dragMatchTools" type="textarea" :rows="3" />
+          </el-form-item>
+          <el-form-item v-if="isDragMatch" label="Purpose（| 分隔）">
+            <el-input v-model="dragMatchPurposes" type="textarea" :rows="3" />
+          </el-form-item>
+          <el-form-item v-if="!isDragMatch" label="解析">
             <RichTextField v-model="form.explanationZh" />
           </el-form-item>
         </el-form>
@@ -25,7 +31,7 @@
           <el-form-item label="Question">
             <RichTextField v-model="form.contentEn" />
           </el-form-item>
-          <el-form-item v-if="hasOptions" label="Options">
+          <el-form-item v-if="hasChoiceOptions" label="Options">
             <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
               <span class="qep-option-label">{{ opt.label }}</span>
               <div class="qep-option-editor">
@@ -33,7 +39,7 @@
               </div>
             </div>
           </el-form-item>
-          <el-form-item label="Explanation">
+          <el-form-item v-if="!isDragMatch" label="Explanation">
             <RichTextField v-model="form.explanationEn" />
           </el-form-item>
         </el-form>
@@ -45,7 +51,7 @@
       <el-form-item label="题目内容">
         <RichTextField v-model="form.contentZh" />
       </el-form-item>
-      <el-form-item v-if="hasOptions" label="选项文本">
+      <el-form-item v-if="hasChoiceOptions" label="选项文本">
         <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
           <span class="qep-option-label">{{ opt.label }}</span>
           <div class="qep-option-editor">
@@ -53,7 +59,13 @@
           </div>
         </div>
       </el-form-item>
-      <el-form-item label="解析">
+      <el-form-item v-if="isDragMatch" label="Tool池（| 分隔）">
+        <el-input v-model="dragMatchTools" type="textarea" :rows="3" />
+      </el-form-item>
+      <el-form-item v-if="isDragMatch" label="Purpose（| 分隔）">
+        <el-input v-model="dragMatchPurposes" type="textarea" :rows="3" />
+      </el-form-item>
+      <el-form-item v-if="!isDragMatch" label="解析">
         <RichTextField v-model="form.explanationZh" />
       </el-form-item>
     </el-form>
@@ -63,7 +75,7 @@
       <el-form-item label="Question">
         <RichTextField v-model="form.contentEn" />
       </el-form-item>
-      <el-form-item v-if="hasOptions" label="Options">
+      <el-form-item v-if="hasChoiceOptions" label="Options">
         <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
           <span class="qep-option-label">{{ opt.label }}</span>
           <div class="qep-option-editor">
@@ -71,15 +83,36 @@
           </div>
         </div>
       </el-form-item>
-      <el-form-item label="Explanation">
+      <el-form-item v-if="isDragMatch" label="Tool Pool (| separated)">
+        <el-input v-model="dragMatchTools" type="textarea" :rows="3" />
+      </el-form-item>
+      <el-form-item v-if="isDragMatch" label="Purpose (| separated)">
+        <el-input v-model="dragMatchPurposes" type="textarea" :rows="3" />
+      </el-form-item>
+      <el-form-item v-if="!isDragMatch" label="Explanation">
         <RichTextField v-model="form.explanationEn" />
+      </el-form-item>
+    </el-form>
+
+    <!-- 拖放题：统一解析 -->
+    <el-form v-if="isDragMatch" label-position="top">
+      <el-form-item label="解析">
+        <RichTextField v-model="dragMatchExplanation" />
       </el-form-item>
     </el-form>
 
     <!-- 答案（不区分语言） -->
     <el-form label-position="top" class="qep-answer">
       <el-form-item label="答案">
-        <template v-if="form.type === 'SHORT_ANSWER'">
+        <template v-if="isDragMatch">
+          <el-input
+            v-model="form.answer"
+            type="textarea"
+            :rows="2"
+            placeholder="槽位答案，| 分隔"
+          />
+        </template>
+        <template v-else-if="form.type === 'SHORT_ANSWER'">
           <RichTextField v-model="form.answer" />
         </template>
         <template v-else-if="form.type === 'SINGLE'">
@@ -119,6 +152,15 @@ import { ref, reactive, computed, watch, onMounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/question-api";
 import RichTextField from "@/components/RichTextField/index.vue";
+import {
+  buildDragMatchOptionsJson,
+  dragMatchOptionsToFields,
+  resolveDragMatchOptionsRaw,
+  applyDragMatchOptionsToForm,
+  resolveDragMatchExplanation,
+  applyDragMatchExplanation,
+  validateDragMatchAnswer,
+} from "@/utils/dragMatch";
 
 interface Props {
   question: QuestionVO;
@@ -134,6 +176,10 @@ const emit = defineEmits<{
 
 const saving = ref(false);
 const activeTab = ref<"zh" | "en">("zh");
+const dragMatchTools = ref("");
+const dragMatchPurposes = ref("");
+const dragMatchExplanation = ref("");
+const dragMatchExplanationTarget = ref<"zh" | "en">("zh");
 
 const supportedLangs = computed(() =>
   (props.subjectSupportLanguages || "zh").split(",").filter(Boolean)
@@ -148,10 +194,13 @@ const onlyEn = computed(
   () => supportedLangs.value.includes("en") && !supportedLangs.value.includes("zh")
 );
 
-const hasOptions = computed(
+const isDragMatch = computed(() => form.type === "DRAG_MATCH");
+
+const hasChoiceOptions = computed(
   () =>
     props.question.type !== "JUDGE" &&
     props.question.type !== "SHORT_ANSWER" &&
+    props.question.type !== "DRAG_MATCH" &&
     props.question.type !== "FILL_BLANK"
 );
 
@@ -181,6 +230,17 @@ const form = reactive<QuestionForm>({
   explanationEn: props.question.explanationEn || "",
 });
 
+if (form.type === "DRAG_MATCH") {
+  const fields = dragMatchOptionsToFields(
+    resolveDragMatchOptionsRaw(props.question.optionsZh, props.question.optionsEn)
+  );
+  dragMatchTools.value = fields.tools;
+  dragMatchPurposes.value = fields.purposes;
+  const exp = resolveDragMatchExplanation(props.question);
+  dragMatchExplanation.value = exp.value;
+  dragMatchExplanationTarget.value = exp.target;
+}
+
 const optionsZh = ref(parseOptions(props.question.optionsZh));
 const optionsEn = ref(
   props.question.optionsEn
@@ -188,7 +248,6 @@ const optionsEn = ref(
     : optionsZh.value.map((o) => ({ label: o.label, value: "" }))
 );
 
-// 答案选项源：优先用中文选项，若中文为空（仅英文科目）则退回英文选项
 const answerOptions = computed(() =>
   optionsZh.value.length > 0 ? optionsZh.value : optionsEn.value
 );
@@ -213,6 +272,8 @@ watch(
     form.explanationZh,
     form.explanationEn,
     form.answer,
+    dragMatchTools.value,
+    dragMatchPurposes.value,
     JSON.stringify(optionsZh.value),
     JSON.stringify(optionsEn.value),
   ],
@@ -236,7 +297,23 @@ function onCancel() {
 function buildPayload(): QuestionForm {
   const payload: QuestionForm = { ...form };
 
-  if (form.type === "SHORT_ANSWER") {
+  if (form.type === "DRAG_MATCH") {
+    const err = validateDragMatchAnswer(
+      dragMatchTools.value,
+      dragMatchPurposes.value,
+      form.answer || ""
+    );
+    if (err) throw new Error(err);
+    const built = buildDragMatchOptionsJson(dragMatchTools.value, dragMatchPurposes.value);
+    const langs = (props.subjectSupportLanguages || "zh").split(",").filter(Boolean);
+    const applied = applyDragMatchOptionsToForm(built.optionsJson, langs);
+    payload.optionsZh = applied.optionsZh;
+    payload.optionsEn = applied.optionsEn;
+    Object.assign(
+      payload,
+      applyDragMatchExplanation(dragMatchExplanation.value, dragMatchExplanationTarget.value, form)
+    );
+  } else if (form.type === "SHORT_ANSWER") {
     payload.optionsZh = "[]";
     payload.optionsEn = "[]";
   } else if (form.type === "JUDGE") {
@@ -264,7 +341,8 @@ async function onSave() {
   }
   saving.value = true;
   try {
-    await QuestionAPI.update(form.id, buildPayload());
+    const payload = buildPayload();
+    await QuestionAPI.update(form.id, payload);
     let updated: QuestionVO;
     try {
       updated = await QuestionAPI.getFormData(form.id);
@@ -278,6 +356,8 @@ async function onSave() {
     ElMessage.success("题目已更新");
     dirty.value = false;
     emit("saved", updated);
+  } catch (e: any) {
+    ElMessage.error(e?.message || "保存失败");
   } finally {
     saving.value = false;
   }
