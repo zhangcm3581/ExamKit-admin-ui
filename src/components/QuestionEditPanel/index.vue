@@ -8,10 +8,12 @@
             <RichTextField v-model="form.contentZh" />
           </el-form-item>
           <el-form-item v-if="hasChoiceOptions" label="选项文本">
-            <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
-              <span class="qep-option-label">{{ opt.label }}</span>
-              <div class="qep-option-editor">
-                <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
+            <div class="qep-options-editor">
+              <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
+                <span class="qep-option-badge">{{ opt.label }}</span>
+                <div class="qep-option-editor">
+                  <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
+                </div>
               </div>
             </div>
           </el-form-item>
@@ -32,10 +34,12 @@
             <RichTextField v-model="form.contentEn" />
           </el-form-item>
           <el-form-item v-if="hasChoiceOptions" label="Options">
-            <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
-              <span class="qep-option-label">{{ opt.label }}</span>
-              <div class="qep-option-editor">
-                <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
+            <div class="qep-options-editor">
+              <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
+                <span class="qep-option-badge">{{ opt.label }}</span>
+                <div class="qep-option-editor">
+                  <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
+                </div>
               </div>
             </div>
           </el-form-item>
@@ -52,10 +56,12 @@
         <RichTextField v-model="form.contentZh" />
       </el-form-item>
       <el-form-item v-if="hasChoiceOptions" label="选项文本">
-        <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
-          <span class="qep-option-label">{{ opt.label }}</span>
-          <div class="qep-option-editor">
-            <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
+        <div class="qep-options-editor">
+          <div v-for="(opt, idx) in optionsZh" :key="`zh-${opt.label}`" class="qep-option-item">
+            <span class="qep-option-badge">{{ opt.label }}</span>
+            <div class="qep-option-editor">
+              <RichTextField v-model="optionsZh[idx].value" min-height="60px" />
+            </div>
           </div>
         </div>
       </el-form-item>
@@ -76,10 +82,12 @@
         <RichTextField v-model="form.contentEn" />
       </el-form-item>
       <el-form-item v-if="hasChoiceOptions" label="Options">
-        <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
-          <span class="qep-option-label">{{ opt.label }}</span>
-          <div class="qep-option-editor">
-            <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
+        <div class="qep-options-editor">
+          <div v-for="(opt, idx) in optionsEn" :key="`en-${opt.label}`" class="qep-option-item">
+            <span class="qep-option-badge">{{ opt.label }}</span>
+            <div class="qep-option-editor">
+              <RichTextField v-model="optionsEn[idx].value" min-height="60px" />
+            </div>
           </div>
         </div>
       </el-form-item>
@@ -382,24 +390,42 @@ async function onSave() {
   border-radius: 8px;
 }
 
-.qep-option-item {
+.qep-options-editor {
   display: flex;
-  gap: 8px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
-  margin-bottom: 8px;
 }
 
-.qep-option-label {
+.qep-option-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.qep-option-badge {
+  display: flex;
   flex-shrink: 0;
-  width: 28px;
-  padding-top: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 4px;
+  font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 6px;
 }
 
 .qep-option-editor {
   flex: 1;
+  min-width: 0;
 }
 
 .qep-actions {
