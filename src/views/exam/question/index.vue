@@ -326,25 +326,33 @@
               :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
               :required="subjectSupportLanguages.includes('zh')"
             >
-              <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
-                <span class="option-label">{{ option.label }}</span>
-                <div class="option-editor">
-                  <RichTextField v-model="option.value" min-height="60px" />
+              <div class="options-editor">
+                <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
+                  <span class="option-badge">{{ option.label }}</span>
+                  <div class="option-editor">
+                    <RichTextField v-model="option.value" min-height="60px" />
+                  </div>
+                  <el-button
+                    v-if="optionsList.length > 2"
+                    type="danger"
+                    text
+                    icon="Delete"
+                    class="option-delete-btn"
+                    @click="removeOption(index)"
+                  >
+                    删除
+                  </el-button>
                 </div>
                 <el-button
-                  v-if="optionsList.length > 2"
+                  class="add-option-btn"
                   type="primary"
-                  text
-                  icon="Delete"
-                  class="delete-btn"
-                  @click="removeOption(index)"
+                  plain
+                  icon="Plus"
+                  @click="addOption"
                 >
-                  删除
+                  添加选项
                 </el-button>
               </div>
-              <el-button style="margin-top: 12px" type="primary" plain @click="addOption">
-                添加选项
-              </el-button>
             </el-form-item>
 
             <el-form-item label="解析">
@@ -372,25 +380,37 @@
               :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
               :required="subjectSupportLanguages.includes('en')"
             >
-              <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
-                <span class="option-label">{{ option.label }}</span>
-                <div class="option-editor">
-                  <RichTextField v-model="option.value" min-height="60px" />
+              <div class="options-editor">
+                <div
+                  v-for="(option, index) in optionsListEn"
+                  :key="index"
+                  class="option-editor-item"
+                >
+                  <span class="option-badge">{{ option.label }}</span>
+                  <div class="option-editor">
+                    <RichTextField v-model="option.value" min-height="60px" />
+                  </div>
+                  <el-button
+                    v-if="optionsListEn.length > 2"
+                    type="danger"
+                    text
+                    icon="Delete"
+                    class="option-delete-btn"
+                    @click="removeOptionEn(index)"
+                  >
+                    删除
+                  </el-button>
                 </div>
                 <el-button
-                  v-if="optionsListEn.length > 2"
+                  class="add-option-btn"
                   type="primary"
-                  text
-                  icon="Delete"
-                  class="delete-btn"
-                  @click="removeOptionEn(index)"
+                  plain
+                  icon="Plus"
+                  @click="addOptionEn"
                 >
-                  删除
+                  添加选项
                 </el-button>
               </div>
-              <el-button style="margin-top: 12px" type="primary" plain @click="addOptionEn">
-                添加选项
-              </el-button>
             </el-form-item>
 
             <el-form-item label="解析">
@@ -417,25 +437,33 @@
               prop="optionsZh"
               :required="true"
             >
-              <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
-                <span class="option-label">{{ option.label }}</span>
-                <div class="option-editor">
-                  <RichTextField v-model="option.value" min-height="60px" />
+              <div class="options-editor">
+                <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
+                  <span class="option-badge">{{ option.label }}</span>
+                  <div class="option-editor">
+                    <RichTextField v-model="option.value" min-height="60px" />
+                  </div>
+                  <el-button
+                    v-if="optionsList.length > 2"
+                    type="danger"
+                    text
+                    icon="Delete"
+                    class="option-delete-btn"
+                    @click="removeOption(index)"
+                  >
+                    删除
+                  </el-button>
                 </div>
                 <el-button
-                  v-if="optionsList.length > 2"
+                  class="add-option-btn"
                   type="primary"
-                  text
-                  icon="Delete"
-                  class="delete-btn"
-                  @click="removeOption(index)"
+                  plain
+                  icon="Plus"
+                  @click="addOption"
                 >
-                  删除
+                  添加选项
                 </el-button>
               </div>
-              <el-button style="margin-top: 12px" type="primary" plain @click="addOption">
-                添加选项
-              </el-button>
             </el-form-item>
 
             <el-form-item label="解析">
@@ -461,25 +489,37 @@
               prop="optionsEn"
               :required="true"
             >
-              <div v-for="(option, index) in optionsListEn" :key="index" class="option-editor-item">
-                <span class="option-label">{{ option.label }}</span>
-                <div class="option-editor">
-                  <RichTextField v-model="option.value" min-height="60px" />
+              <div class="options-editor">
+                <div
+                  v-for="(option, index) in optionsListEn"
+                  :key="index"
+                  class="option-editor-item"
+                >
+                  <span class="option-badge">{{ option.label }}</span>
+                  <div class="option-editor">
+                    <RichTextField v-model="option.value" min-height="60px" />
+                  </div>
+                  <el-button
+                    v-if="optionsListEn.length > 2"
+                    type="danger"
+                    text
+                    icon="Delete"
+                    class="option-delete-btn"
+                    @click="removeOptionEn(index)"
+                  >
+                    Delete
+                  </el-button>
                 </div>
                 <el-button
-                  v-if="optionsListEn.length > 2"
+                  class="add-option-btn"
                   type="primary"
-                  text
-                  icon="Delete"
-                  class="delete-btn"
-                  @click="removeOptionEn(index)"
+                  plain
+                  icon="Plus"
+                  @click="addOptionEn"
                 >
-                  Delete
+                  Add Option
                 </el-button>
               </div>
-              <el-button style="margin-top: 12px" type="primary" plain @click="addOptionEn">
-                Add Option
-              </el-button>
             </el-form-item>
 
             <el-form-item label="Explanation">
@@ -1535,32 +1575,65 @@ onUnmounted(() => {
   }
 }
 
+.options-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
 .option-editor-item {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  margin-bottom: 16px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  transition: border-color 0.2s;
 
-  .option-label {
+  &:hover {
+    border-color: var(--el-border-color);
+  }
+
+  .option-badge {
+    display: flex;
     flex-shrink: 0;
-    min-width: 24px;
-    padding-top: 8px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-top: 4px;
     font-size: 14px;
-    font-weight: 400;
-    color: #606266;
+    font-weight: 600;
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    border-radius: 6px;
   }
 
   .option-editor {
     flex: 1;
+    min-width: 0;
   }
 
-  .delete-btn {
+  .option-delete-btn {
     flex-shrink: 0;
-    margin-top: 8px;
+    margin-top: 6px;
   }
 }
 
+.add-option-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
 .question-dialog {
+  :deep(.el-form-item__content) {
+    flex: 1;
+    min-width: 0;
+  }
+
   :deep(.el-dialog__header) {
     padding: 16px 20px;
     margin-right: 0;
