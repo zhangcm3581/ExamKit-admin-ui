@@ -494,6 +494,14 @@
           <template v-if="isTextAnswerType(formData.type)">
             <RichTextField v-model="formData.answer" />
           </template>
+          <!-- 填空题 -->
+          <template v-else-if="formData.type === 'FILL_BLANK'">
+            <el-input
+              v-model="formData.answer"
+              placeholder="请输入填空答案，多个空可用 | 分隔"
+              clearable
+            />
+          </template>
           <!-- 单选题 -->
           <template v-else-if="formData.type === 'SINGLE'">
             <el-radio-group v-model="formData.answer">
@@ -511,7 +519,7 @@
             </el-checkbox-group>
           </template>
           <!-- 判断题 -->
-          <template v-else>
+          <template v-else-if="formData.type === 'JUDGE'">
             <el-radio-group v-model="formData.answer">
               <el-radio label="A">正确</el-radio>
               <el-radio label="B">错误</el-radio>
@@ -899,8 +907,8 @@ function handleTypeChange() {
   formData.answer = "";
   multipleAnswers.value = [];
 
-  // 简答题/拖拽题不需要选项
-  if (isTextAnswerType(formData.type)) {
+  // 简答题/拖拽题/填空题不需要选项
+  if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
     optionsList.value = [];
     optionsListEn.value = [];
   }
@@ -1055,8 +1063,8 @@ async function handleEdit(row: QuestionVO) {
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
 
-  // 简答题/拖拽题不需要解析选项
-  if (isTextAnswerType(data.type)) {
+  // 简答题/拖拽题/填空题不需要解析选项
+  if (isTextAnswerType(data.type) || data.type === "FILL_BLANK") {
     optionsList.value = [];
     optionsListEn.value = [];
   } else {
@@ -1119,8 +1127,8 @@ function handleDelete(id?: number) {
 function handleSubmit() {
   dataFormRef.value.validate((valid: boolean) => {
     if (valid) {
-      // 简答题/拖拽题不需要选项
-      if (isTextAnswerType(formData.type)) {
+      // 简答题/拖拽题/填空题不需要选项
+      if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
         formData.optionsZh = "[]";
         formData.optionsEn = "[]";
       }
@@ -1136,7 +1144,7 @@ function handleSubmit() {
         ]);
       }
       // 单选/多选题
-      else {
+      else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
         // 构建中文选项JSON
         formData.optionsZh = JSON.stringify(optionsList.value);
         // 构建英文选项JSON（如果有内容）

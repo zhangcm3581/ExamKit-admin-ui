@@ -101,15 +101,19 @@
                   background-color: #198cff;
                 "
               >
-                {{ getQuestionTypeText(currentQuestion.type) }}
+                {{ getQuestionTypeLabel(currentQuestion.type || "") }}
               </span>
               <span class="font-semibold">{{ currentIndex + 1 }}/{{ questions.length }}、</span>
               <span v-html="displayContent"></span>
             </div>
           </div>
 
-          <!-- 选项列表 -->
-          <div v-if="displayOptions.length > 0" class="space-y-2 mb-4" :class="fontSizeClass">
+          <!-- 选项列表（单选/多选/判断） -->
+          <div
+            v-if="showChoiceOptions && displayOptions.length > 0"
+            class="space-y-2 mb-4"
+            :class="fontSizeClass"
+          >
             <div
               v-for="opt in displayOptions"
               :key="opt.label"
@@ -161,7 +165,7 @@
               <span>
                 正确答案:
                 <span class="font-medium text-green-600 ml-1">
-                  {{ currentQuestion.answer || "" }}
+                  {{ displayAnswer }}
                 </span>
               </span>
             </div>
@@ -266,6 +270,7 @@ import { ElMessage } from "element-plus";
 import QuestionAPI, { type QuestionVO, type QuestionPageQuery } from "@/api/exam/question-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import { formatRichText } from "@/utils/rich-text";
+import { getQuestionTypeLabel } from "@/utils/questionType";
 
 defineOptions({
   name: "PracticeView",
@@ -330,16 +335,30 @@ const currentBilingual = computed(() => {
   return !!(q && q.contentZh && q.contentEn);
 });
 
-// 题型映射
-function getQuestionTypeText(type?: string): string {
-  if (!type) return "";
-  const typeMap: Record<string, string> = {
-    SINGLE: "单选题",
-    MULTIPLE: "多选题",
-    JUDGE: "判断题",
-  };
-  return typeMap[type] || type;
-}
+/** 是否展示选项区（填空/简答/拖放无选项） */
+const showChoiceOptions = computed(() => {
+  const type = currentQuestion.value.type;
+  return type === "SINGLE" || type === "MULTIPLE" || type === "JUDGE";
+});
+
+/** 背题模式下的正确答案展示 */
+const displayAnswer = computed(() => {
+  const q = currentQuestion.value;
+  const ans = (q.answer || "").trim();
+  if (!ans) return "";
+  if (q.type === "FILL_BLANK") {
+    return ans
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join("、");
+  }
+  if (q.type === "JUDGE") {
+    if (ans === "A") return "正确";
+    if (ans === "B") return "错误";
+  }
+  return ans;
+});
 
 // 选项 JSON 解析（兼容 label/value 与 key/text 两套字段）
 function parseOptions(optionsStr: string | undefined): { label: string; value: string }[] {
