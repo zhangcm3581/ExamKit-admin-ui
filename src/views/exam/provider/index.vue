@@ -603,19 +603,6 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="价格（元）" prop="price">
-              <el-input-number
-                v-model="priceYuanCreate"
-                :min="1"
-                :max="999"
-                :precision="2"
-                :step="1"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="状态">
               <el-radio-group v-model="subjectCreateForm.status">
                 <el-radio :value="1">启用</el-radio>
@@ -896,21 +883,8 @@ const subjectCreateForm = reactive({
   tag: "",
   sortOrder: 0,
   status: 1,
-  price: 9800 as number | undefined,
   examInfoZh: "",
   examInfoEn: "",
-});
-
-// 新建 form 的元↔分转换
-const priceYuanCreate = computed({
-  get: () => (subjectCreateForm.price != null ? subjectCreateForm.price / 100 : 98),
-  set: (yuan: number | null | undefined) => {
-    if (yuan == null || Number.isNaN(yuan)) {
-      subjectCreateForm.price = undefined;
-    } else {
-      subjectCreateForm.price = Math.round(yuan * 100);
-    }
-  },
 });
 
 const selectedLanguagesForCreate = ref<string[]>([]);
@@ -924,7 +898,6 @@ watch(selectedLanguagesForCreate, (val) => {
 const subjectCreateRules = computed(() => {
   const rules: Partial<Record<string, any>> = {
     supportLanguages: [{ required: true, message: "请选择支持的语言", trigger: "change" }],
-    price: [{ required: true, message: "请输入价格", trigger: "change" }],
   };
 
   // 根据支持语言动态设置必填规则
@@ -1498,7 +1471,6 @@ function handleNewSubject() {
   subjectCreateForm.tag = "";
   subjectCreateForm.sortOrder = 0;
   subjectCreateForm.status = 1;
-  subjectCreateForm.price = 9800;
   subjectCreateForm.examInfoZh = "";
   subjectCreateForm.examInfoEn = "";
   selectedLanguagesForCreate.value = [];
@@ -1528,7 +1500,6 @@ function handleSubmitSubjectCreate() {
         tag: subjectCreateForm.tag,
         sortOrder: subjectCreateForm.sortOrder,
         status: subjectCreateForm.status,
-        price: subjectCreateForm.price,
         examInfoZh: subjectCreateForm.examInfoZh,
         examInfoEn: subjectCreateForm.examInfoEn,
       };
@@ -1566,7 +1537,6 @@ function handleSubjectCreateDialogClosed() {
     subjectCreateForm.tag = "";
     subjectCreateForm.sortOrder = 0;
     subjectCreateForm.status = 1;
-    subjectCreateForm.price = 9800;
     subjectCreateForm.examInfoZh = "";
     subjectCreateForm.examInfoEn = "";
     selectedLanguagesForCreate.value = [];
