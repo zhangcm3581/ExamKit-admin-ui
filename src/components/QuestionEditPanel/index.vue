@@ -115,6 +115,13 @@
         <template v-else-if="form.type === 'SHORT_ANSWER'">
           <RichTextField v-model="form.answer" />
         </template>
+        <template v-else-if="form.type === 'FILL_BLANK'">
+          <el-input
+            v-model="form.answer"
+            placeholder="请输入填空答案，多个空可用 | 分隔"
+            clearable
+          />
+        </template>
         <template v-else-if="form.type === 'SINGLE'">
           <el-radio-group v-model="form.answer">
             <el-radio v-for="opt in answerOptions" :key="opt.label" :label="opt.label">
@@ -129,7 +136,7 @@
             </el-checkbox>
           </el-checkbox-group>
         </template>
-        <template v-else>
+        <template v-else-if="form.type === 'JUDGE'">
           <el-radio-group v-model="form.answer">
             <el-radio label="A">正确</el-radio>
             <el-radio label="B">错误</el-radio>
@@ -313,7 +320,7 @@ function buildPayload(): QuestionForm {
       payload,
       applyDragMatchExplanation(dragMatchExplanation.value, dragMatchExplanationTarget.value, form)
     );
-  } else if (form.type === "SHORT_ANSWER") {
+  } else if (form.type === "SHORT_ANSWER" || form.type === "FILL_BLANK") {
     payload.optionsZh = "[]";
     payload.optionsEn = "[]";
   } else if (form.type === "JUDGE") {

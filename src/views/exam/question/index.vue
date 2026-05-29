@@ -546,6 +546,14 @@
           <template v-else-if="formData.type === 'SHORT_ANSWER'">
             <RichTextField v-model="formData.answer" />
           </template>
+          <!-- 填空题 -->
+          <template v-else-if="formData.type === 'FILL_BLANK'">
+            <el-input
+              v-model="formData.answer"
+              placeholder="请输入填空答案，多个空可用 | 分隔"
+              clearable
+            />
+          </template>
           <!-- 单选题 -->
           <template v-else-if="formData.type === 'SINGLE'">
             <el-radio-group v-model="formData.answer">
@@ -563,7 +571,7 @@
             </el-checkbox-group>
           </template>
           <!-- 判断题 -->
-          <template v-else>
+          <template v-else-if="formData.type === 'JUDGE'">
             <el-radio-group v-model="formData.answer">
               <el-radio label="A">正确</el-radio>
               <el-radio label="B">错误</el-radio>
@@ -1025,7 +1033,7 @@ function handleTypeChange() {
   if (formData.type === "DRAG_MATCH") {
     optionsList.value = [];
     optionsListEn.value = [];
-  } else if (formData.type === "SHORT_ANSWER") {
+  } else if (formData.type === "SHORT_ANSWER" || formData.type === "FILL_BLANK") {
     optionsList.value = [];
     optionsListEn.value = [];
   }
@@ -1191,7 +1199,7 @@ async function handleEdit(row: QuestionVO) {
     dragMatchExplanationTarget.value = exp.target;
     optionsList.value = [];
     optionsListEn.value = [];
-  } else if (data.type === "SHORT_ANSWER") {
+  } else if (data.type === "SHORT_ANSWER" || data.type === "FILL_BLANK") {
     optionsList.value = [];
     optionsListEn.value = [];
   } else {
@@ -1310,7 +1318,7 @@ function handleSubmit() {
           formData
         );
         Object.assign(formData, expPatch);
-      } else if (formData.type === "SHORT_ANSWER") {
+      } else if (formData.type === "SHORT_ANSWER" || formData.type === "FILL_BLANK") {
         formData.optionsZh = "[]";
         formData.optionsEn = "[]";
       }
@@ -1326,7 +1334,7 @@ function handleSubmit() {
         ]);
       }
       // 单选/多选题
-      else {
+      else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
         // 构建中文选项JSON
         formData.optionsZh = JSON.stringify(optionsList.value);
         // 构建英文选项JSON（如果有内容）
