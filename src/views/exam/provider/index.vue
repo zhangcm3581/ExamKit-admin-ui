@@ -585,11 +585,31 @@
 
         <el-row :gutter="20">
           <el-col :span="12">
+            <el-form-item label="标签" prop="tag">
+              <el-input v-model="subjectCreateForm.tag" placeholder="可选，如：PL 系列" clearable />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="排序" prop="sortOrder">
               <el-input-number
                 v-model="subjectCreateForm.sortOrder"
                 :min="0"
                 :max="9999"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="价格（元）" prop="price">
+              <el-input-number
+                v-model="priceYuanCreate"
+                :min="1"
+                :max="999"
+                :precision="2"
+                :step="1"
                 controls-position="right"
                 style="width: 100%"
               />
@@ -873,6 +893,7 @@ const subjectCreateForm = reactive({
   supportLanguages: "",
   descriptionZh: "",
   descriptionEn: "",
+  tag: "",
   sortOrder: 0,
   status: 1,
   examInfoZh: "",
@@ -1456,10 +1477,12 @@ function handleNewSubject() {
   // 先重置表单数据，避免显示上次创建的信息
   subjectCreateForm.nameZh = "";
   subjectCreateForm.nameEn = "";
+  subjectCreateForm.miniappDisplayName = "";
   subjectCreateForm.providerId = undefined;
   subjectCreateForm.supportLanguages = "";
   subjectCreateForm.descriptionZh = "";
   subjectCreateForm.descriptionEn = "";
+  subjectCreateForm.tag = "";
   subjectCreateForm.sortOrder = 0;
   subjectCreateForm.status = 1;
   subjectCreateForm.examInfoZh = "";
@@ -1483,10 +1506,12 @@ function handleSubmitSubjectCreate() {
       const createData = {
         nameZh: subjectCreateForm.nameZh,
         nameEn: subjectCreateForm.nameEn,
+        miniappDisplayName: subjectCreateForm.miniappDisplayName,
         providerId: subjectCreateForm.providerId,
         supportLanguages: subjectCreateForm.supportLanguages,
         descriptionZh: subjectCreateForm.descriptionZh,
         descriptionEn: subjectCreateForm.descriptionEn,
+        tag: subjectCreateForm.tag,
         sortOrder: subjectCreateForm.sortOrder,
         status: subjectCreateForm.status,
         examInfoZh: subjectCreateForm.examInfoZh,
@@ -1518,10 +1543,12 @@ function handleSubjectCreateDialogClosed() {
 
     subjectCreateForm.nameZh = "";
     subjectCreateForm.nameEn = "";
+    subjectCreateForm.miniappDisplayName = "";
     subjectCreateForm.providerId = undefined;
     subjectCreateForm.supportLanguages = "";
     subjectCreateForm.descriptionZh = "";
     subjectCreateForm.descriptionEn = "";
+    subjectCreateForm.tag = "";
     subjectCreateForm.sortOrder = 0;
     subjectCreateForm.status = 1;
     subjectCreateForm.examInfoZh = "";
