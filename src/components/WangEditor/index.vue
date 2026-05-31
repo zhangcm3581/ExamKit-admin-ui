@@ -9,7 +9,7 @@
 -->
 
 <template>
-  <div style="z-index: 999; border: 1px solid var(--el-border-color)">
+  <div class="wang-editor-wrap">
     <!-- 工具栏 -->
     <Toolbar
       :editor="editorRef"
@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import "@wangeditor-next/editor/dist/css/style.css";
 import { Toolbar, Editor } from "@wangeditor-next/editor-for-vue";
-import { IToolbarConfig, IEditorConfig } from "@wangeditor-next/editor";
+import { IToolbarConfig, IEditorConfig, type IInsertImageConfig } from "@wangeditor-next/editor";
 
 // 文件上传 API
 import FileManageAPI from "@/api/file-api";
@@ -39,13 +39,30 @@ import FileManageAPI from "@/api/file-api";
 // 上传图片回调函数类型
 type InsertFnType = (_url: string, _alt: string, _href: string) => void;
 
+/** 网络图片地址校验（insertImage 菜单） */
+function checkImageUrl(src: string, alt: string, href: string): boolean | string {
+  const url = src?.trim();
+  if (!url) return "请输入图片地址";
+  if (!/^https?:\/\//i.test(url) && !url.startsWith("data:image/")) {
+    return "图片地址需以 http:// 或 https:// 开头";
+  }
+  void alt;
+  void href;
+  return true;
+}
+
+const insertImageMenuConf: Partial<IInsertImageConfig> = {
+  checkImage: checkImageUrl,
+  parseImageSrc: (src: string) => src.trim(),
+};
+
 const props = defineProps({
   height: {
     type: String,
     default: "500px",
   },
   toolbarKeys: {
-    type: Array as () => string[],
+    type: Array as () => IToolbarConfig["toolbarKeys"],
     default: undefined,
   },
   autoHeight: {
@@ -77,10 +94,40 @@ const modelValue = defineModel("modelValue", {
 // 编辑器实例，必须用 shallowRef，重要！
 const editorRef = shallowRef();
 
-// 工具栏配置：toolbarKeys 提供白名单时收窄菜单
-const toolbarConfig = computed<Partial<IToolbarConfig>>(() =>
-  props.toolbarKeys ? { toolbarKeys: props.toolbarKeys } : {}
-);
+/** 高于 Element Plus Dialog（约 2000+），避免编辑试题弹窗内图片/链接模态被遮挡 */
+const EDITOR_MODAL_Z_INDEX = 10000;
+
+// 工具栏配置：弹层挂到 body，避免 el-dialog / overflow 裁剪
+const toolbarConfig = computed<Partial<IToolbarConfig>>(() => ({
+  modalAppendToBody: true,
+  ...(props.toolbarKeys ? { toolbarKeys: props.toolbarKeys } : {}),
+}));
+
+function centerModalOnBody(modalOrPanel: { type?: string; $elem?: unknown }) {
+  if (modalOrPanel?.type !== "modal") return;
+  const raw = modalOrPanel.$elem as { elems?: HTMLElement[] } | HTMLElement | null;
+  const el =
+    raw && "elems" in raw && raw.elems?.[0]
+      ? raw.elems[0]
+      : raw instanceof HTMLElement
+        ? raw
+        : null;
+  if (!el?.classList?.contains("w-e-modal")) return;
+
+  requestAnimationFrame(() => {
+    const width = el.offsetWidth || 300;
+    const height = el.offsetHeight || 160;
+    Object.assign(el.style, {
+      position: "fixed",
+      left: "50%",
+      top: "50%",
+      right: "auto",
+      marginLeft: `${-width / 2}px`,
+      marginTop: `${-height / 2}px`,
+      zIndex: String(EDITOR_MODAL_Z_INDEX),
+    });
+  });
+}
 
 // 编辑器配置：placeholder 跟随 prop
 const editorConfig = computed<Partial<IEditorConfig>>(() => ({
@@ -88,14 +135,11 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
   MENU_CONF: {
     uploadImage: {
       customUpload(file: File, insertFn: InsertFnType) {
-        // 创建 FormData
         const formData = new FormData();
         formData.append("file", file);
 
-        // 上传图片到 COS
         FileManageAPI.upload(formData)
           .then((res) => {
-            // 插入图片（url, alt, href）
             insertFn(res.url, res.fileName, res.url);
           })
           .catch((error) => {
@@ -104,12 +148,14 @@ const editorConfig = computed<Partial<IEditorConfig>>(() => ({
           });
       },
     } as any,
+    insertImage: insertImageMenuConf,
   },
 }));
 
 // 记录 editor 实例，重要！
 const handleCreated = (editor: any) => {
   editorRef.value = editor;
+  editor.on?.("modalOrPanelShow", centerModalOnBody);
   emit("ready", editor);
 };
 
@@ -121,7 +167,28 @@ onBeforeUnmount(() => {
 });
 </script>
 
+<style scoped>
+.wang-editor-wrap {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color);
+}
+</style>
+
 <style>
+/* appendToBody 的模态框：居中且置于最前（与 centerModalOnBody 双保险） */
+body > .w-e-modal {
+  position: fixed !important;
+  inset: auto !important;
+  top: 50% !important;
+  right: auto !important;
+  left: 50% !important;
+  z-index: 10000 !important;
+  max-width: calc(100vw - 32px);
+  transform: translate(-50%, -50%) !important;
+}
+
 /* 覆盖 wangEditor-next 内核默认 p {margin:15px 0}/h1-h5 {margin:20px 0}，
    减小段落与标题的上下间距，让编辑视觉与前端 .rich-text-content 渲染更接近 */
 .w-e-text-container [data-slate-editor] p {
@@ -134,5 +201,26 @@ onBeforeUnmount(() => {
 .w-e-text-container [data-slate-editor] h4,
 .w-e-text-container [data-slate-editor] h5 {
   margin: 12px 0 6px 0;
+}
+
+/* 宽图/带 width 属性的图片不撑破编辑区与弹窗 */
+.wang-editor-wrap .w-e-text-container,
+.wang-editor-wrap .w-e-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.wang-editor-wrap .w-e-text-container [data-slate-editor] img {
+  box-sizing: border-box;
+  display: block;
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.wang-editor-wrap .w-e-text-container [data-slate-editor] table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 </style>

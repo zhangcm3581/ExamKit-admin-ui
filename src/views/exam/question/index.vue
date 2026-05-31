@@ -1784,6 +1784,8 @@ onUnmounted(() => {
     }
 
     .block-content {
+      max-width: 100%;
+      overflow-x: auto;
       line-height: 1.8;
       color: #303133;
       word-wrap: break-word;
@@ -1999,6 +2001,26 @@ onUnmounted(() => {
   :deep(.el-form-item__content) {
     flex: 1;
     min-width: 0;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  :deep(.el-tabs__content) {
+    overflow: visible;
+  }
+
+  :deep(.wang-editor-wrap),
+  :deep(.rtf-root) {
+    max-width: 100%;
+  }
+
+  :deep(.w-e-text-container [data-slate-editor] img),
+  :deep(.rtf-preview-html img),
+  :deep(.block-content img) {
+    display: block;
+    width: auto !important;
+    max-width: 100% !important;
+    height: auto !important;
   }
 
   :deep(.el-dialog__header) {
@@ -2009,6 +2031,7 @@ onUnmounted(() => {
 
   :deep(.el-dialog__body) {
     padding: 20px;
+    overflow-x: hidden;
   }
 
   :deep(.el-dialog__footer) {

@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import type { IToolbarConfig } from "@wangeditor-next/editor";
 import { formatRichText } from "@/utils/rich-text";
 
 defineProps({
@@ -51,7 +52,7 @@ const rootEl = ref<HTMLElement | null>(null);
 const formatted = computed(() => formatRichText(modelValue.value));
 
 // 工具栏白名单（wangEditor-next v5 menu key），用 "|" 做视觉分组
-const TOOLBAR_KEYS = [
+const TOOLBAR_KEYS: IToolbarConfig["toolbarKeys"] = [
   "headerSelect",
   "|",
   "bold",
@@ -64,7 +65,11 @@ const TOOLBAR_KEYS = [
   "justifyRight",
   "|",
   "insertLink",
-  "uploadImage",
+  {
+    key: "group-image",
+    title: "图片",
+    menuKeys: ["uploadImage", "insertImage"],
+  },
   "codeBlock",
   "|",
   "undo",
@@ -151,11 +156,15 @@ defineExpose({
 .rtf-root {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .rtf-preview {
+  max-width: 100%;
   min-height: 40px;
   padding: 8px 12px;
+  overflow-x: auto;
   font-size: 14px;
   line-height: 1.6;
   color: #303133;
@@ -187,5 +196,18 @@ defineExpose({
 
 .rtf-preview-html :deep(p + p) {
   margin-top: 4px;
+}
+
+.rtf-preview-html :deep(img) {
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.rtf-preview-html :deep(table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 </style>
