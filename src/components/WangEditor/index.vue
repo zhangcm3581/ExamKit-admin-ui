@@ -31,13 +31,19 @@
 <script setup lang="ts">
 import "@wangeditor-next/editor/dist/css/style.css";
 import { Toolbar, Editor } from "@wangeditor-next/editor-for-vue";
-import { IToolbarConfig, IEditorConfig, type IInsertImageConfig } from "@wangeditor-next/editor";
+import { IToolbarConfig, IEditorConfig } from "@wangeditor-next/editor";
 
 // 文件上传 API
 import FileManageAPI from "@/api/file-api";
 
 // 上传图片回调函数类型
 type InsertFnType = (_url: string, _alt: string, _href: string) => void;
+
+/** insertImage 菜单配置（@wangeditor-next/editor 未导出对应类型） */
+interface InsertImageMenuConf {
+  checkImage?: (src: string, alt: string, href: string) => boolean | string;
+  parseImageSrc?: (src: string) => string;
+}
 
 /** 网络图片地址校验（insertImage 菜单） */
 function checkImageUrl(src: string, alt: string, href: string): boolean | string {
@@ -51,7 +57,7 @@ function checkImageUrl(src: string, alt: string, href: string): boolean | string
   return true;
 }
 
-const insertImageMenuConf: Partial<IInsertImageConfig> = {
+const insertImageMenuConf: InsertImageMenuConf = {
   checkImage: checkImageUrl,
   parseImageSrc: (src: string) => src.trim(),
 };
