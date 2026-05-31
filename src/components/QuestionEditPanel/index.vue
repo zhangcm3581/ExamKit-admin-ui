@@ -138,6 +138,9 @@
         <DragMatchOptionsEditor
           ref="dragMatchEnEditorRef"
           v-model="form.optionsEn"
+          locale="en"
+          :zh-options-json="form.optionsZh"
+          :zh-answer="form.answer"
           :answer="form.answer"
         />
       </template>
@@ -351,12 +354,12 @@ function buildPayload(): QuestionForm | null {
     if (hasBothLanguages.value) {
       const enEditor = resolveEditorRef(dragMatchEnEditorRef.value);
       if (enEditor) {
-        const enErr = enEditor.validate();
+        const enErr = enEditor.validate(optionsZh, flushed.answer);
         if (enErr) {
           ElMessage.warning(enErr);
           return null;
         }
-        payload.optionsEn = enEditor.serialize().optionsJson;
+        payload.optionsEn = enEditor.serialize(optionsZh, flushed.answer).optionsJson;
         const biErr = validateDragMatchBilingualOptions(payload.optionsZh, payload.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);

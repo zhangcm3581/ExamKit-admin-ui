@@ -7,8 +7,8 @@ import { hasPerRowHotspotPools, parseHotspotOptions } from "./hotspot";
 import { parseDragMatchOptions } from "./dragMatch";
 
 export interface SpecializedOptionsEditorExpose {
-  validate: () => string | null;
-  serialize: () => { optionsJson: string; answer: string };
+  validate: (zhOptionsJson?: string, zhAnswer?: string) => string | null;
+  serialize: (zhOptionsJson?: string, zhAnswer?: string) => { optionsJson: string; answer: string };
   isValid: () => boolean;
 }
 

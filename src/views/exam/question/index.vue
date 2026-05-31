@@ -346,6 +346,7 @@
 
             <DragMatchOptionsEditor
               v-else-if="isDragMatchType(formData.type)"
+              :key="`dm-zh-${formData.id ?? 'new'}-${formData.type}`"
               ref="dragMatchZhEditorRef"
               v-model="formData.optionsZh"
               v-model:answer="formData.answer"
@@ -419,8 +420,12 @@
 
             <DragMatchOptionsEditor
               v-else-if="isDragMatchType(formData.type)"
+              :key="`dm-en-${formData.id ?? 'new'}-${formData.type}`"
               ref="dragMatchEnEditorRef"
               v-model="formData.optionsEn"
+              locale="en"
+              :zh-options-json="formData.optionsZh"
+              :zh-answer="formData.answer"
               :answer="formData.answer"
             />
 
@@ -486,6 +491,7 @@
 
             <DragMatchOptionsEditor
               v-else-if="isDragMatchType(formData.type)"
+              :key="`dm-zh-solo-${formData.id ?? 'new'}-${formData.type}`"
               ref="dragMatchZhEditorRef"
               v-model="formData.optionsZh"
               v-model:answer="formData.answer"
@@ -1082,13 +1088,13 @@ function handleTypeChange() {
     optionsListEn.value = [];
     if (isHotspotType(formData.type)) {
       const empty = editorStateToOptionsJson(createDefaultEditorState());
-      if (!formData.optionsZh || formData.optionsZh === "[]") formData.optionsZh = empty;
-      if (!formData.optionsEn) formData.optionsEn = empty;
+      formData.optionsZh = empty;
+      formData.optionsEn = empty;
       formData.answer = "";
     } else if (isDragMatchType(formData.type)) {
       const empty = editorStateToDragMatchOptionsJson(createDefaultDragMatchEditorState());
-      if (!formData.optionsZh || formData.optionsZh === "[]") formData.optionsZh = empty;
-      if (!formData.optionsEn) formData.optionsEn = empty;
+      formData.optionsZh = empty;
+      formData.optionsEn = empty;
       formData.answer = "";
     }
   }
@@ -1357,12 +1363,12 @@ function applySpecializedEditorsFromForm(): boolean {
     if (hasBothLanguagesForEdit()) {
       const enEditor = resolveEditorRef(dragMatchEnEditorRef.value);
       if (enEditor) {
-        const enErr = enEditor.validate();
+        const enErr = enEditor.validate(optionsZh, flushed.answer);
         if (enErr) {
           ElMessage.warning(enErr);
           return false;
         }
-        formData.optionsEn = enEditor.serialize().optionsJson;
+        formData.optionsEn = enEditor.serialize(optionsZh, flushed.answer).optionsJson;
         const biErr = validateDragMatchBilingualOptions(optionsZh, formData.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);
