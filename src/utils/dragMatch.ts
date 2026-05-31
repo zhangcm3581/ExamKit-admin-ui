@@ -65,13 +65,31 @@ export function dragMatchOptionsToFields(raw: string | null | undefined): {
 
 export function buildDragMatchOptionsJson(
   toolsRaw: string,
-  purposesRaw: string
+  purposesRaw: string,
+  answerRaw = ""
 ): { optionsJson: string; error?: string } {
   const items = splitPipe(toolsRaw);
   const purposes = splitPipe(purposesRaw);
+  const answers = splitPipe(answerRaw);
   if (items.length === 0) return { optionsJson: "", error: "Tool池不能为空" };
-  if (purposes.length === 0) return { optionsJson: "", error: "Purpose不能为空" };
-  const slots = purposes.map((purpose, i) => ({ id: String(i + 1), purpose }));
+
+  let slotPurposes: string[];
+  if (purposes.length > 0) {
+    if (answers.length > 0 && purposes.length !== answers.length) {
+      return {
+        optionsJson: "",
+        error: `Purpose数量(${purposes.length})与槽位答案数量(${answers.length})不一致`,
+      };
+    }
+    slotPurposes = purposes;
+  } else {
+    if (answers.length === 0) {
+      return { optionsJson: "", error: "Purpose 与槽位答案不能同时为空，请先填写答案" };
+    }
+    slotPurposes = answers.map(() => "");
+  }
+
+  const slots = slotPurposes.map((purpose, i) => ({ id: String(i + 1), purpose }));
   return {
     optionsJson: JSON.stringify({ items, slots, reusable: true }),
   };
@@ -86,9 +104,8 @@ export function validateDragMatchAnswer(
   const purposes = splitPipe(purposesRaw);
   const answers = splitPipe(answerRaw);
   if (items.length === 0) return "Tool池不能为空";
-  if (purposes.length === 0) return "Purpose不能为空";
   if (answers.length === 0) return "槽位答案不能为空";
-  if (purposes.length !== answers.length) {
+  if (purposes.length > 0 && purposes.length !== answers.length) {
     return `Purpose数量(${purposes.length})与槽位答案数量(${answers.length})不一致`;
   }
   const lowerItems = items.map((s) => s.toLowerCase());

@@ -54,6 +54,12 @@
                 >
                   拖放题
                 </el-dropdown-item>
+                <el-dropdown-item
+                  :class="{ 'is-active': queryParams.type === 'HOTSPOT' }"
+                  @click="handleTypeFilter('HOTSPOT')"
+                >
+                  热点题
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -134,7 +140,8 @@
                     row.optionsZh &&
                     row.type !== 'SHORT_ANSWER' &&
                     row.type !== 'FILL_BLANK' &&
-                    row.type !== 'DRAG_MATCH'
+                    row.type !== 'DRAG_MATCH' &&
+                    row.type !== 'HOTSPOT'
                   "
                   class="detail-block"
                 >
@@ -154,6 +161,12 @@
                   <div class="block-label">拖放配置</div>
                   <div class="block-content">
                     {{ formatDragMatchDetail(row.optionsZh, row.optionsEn) }}
+                  </div>
+                </div>
+                <div v-if="row.type === 'HOTSPOT'" class="detail-block">
+                  <div class="block-label">热点配置</div>
+                  <div class="block-content">
+                    {{ formatHotspotDetail(row.optionsZh, row.optionsEn) }}
                   </div>
                 </div>
                 <!-- 答案（中文区域总是显示） -->
@@ -193,7 +206,8 @@
                     row.optionsEn &&
                     row.type !== 'SHORT_ANSWER' &&
                     row.type !== 'FILL_BLANK' &&
-                    row.type !== 'DRAG_MATCH'
+                    row.type !== 'DRAG_MATCH' &&
+                    row.type !== 'HOTSPOT'
                   "
                   class="detail-block"
                 >
@@ -312,6 +326,7 @@
             <el-radio label="FILL_BLANK">填空题</el-radio>
             <el-radio label="SHORT_ANSWER">简答题</el-radio>
             <el-radio label="DRAG_MATCH">拖放题</el-radio>
+            <el-radio label="HOTSPOT">热点题</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -338,6 +353,7 @@
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
                 formData.type !== 'DRAG_MATCH' &&
+                formData.type !== 'HOTSPOT' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -373,7 +389,10 @@
               </div>
             </el-form-item>
 
-            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="解析">
+            <el-form-item
+              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
+              label="解析"
+            >
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </el-tab-pane>
@@ -393,6 +412,7 @@
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
                 formData.type !== 'DRAG_MATCH' &&
+                formData.type !== 'HOTSPOT' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -432,7 +452,10 @@
               </div>
             </el-form-item>
 
-            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="Explanation">
+            <el-form-item
+              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
+              label="Explanation"
+            >
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </el-tab-pane>
@@ -451,6 +474,7 @@
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
                 formData.type !== 'DRAG_MATCH' &&
+                formData.type !== 'HOTSPOT' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="试题选项"
@@ -486,7 +510,10 @@
               </div>
             </el-form-item>
 
-            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="解析">
+            <el-form-item
+              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
+              label="解析"
+            >
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </template>
@@ -504,6 +531,7 @@
                 formData.type !== 'JUDGE' &&
                 formData.type !== 'SHORT_ANSWER' &&
                 formData.type !== 'DRAG_MATCH' &&
+                formData.type !== 'HOTSPOT' &&
                 formData.type !== 'FILL_BLANK'
               "
               label="Options"
@@ -543,7 +571,10 @@
               </div>
             </el-form-item>
 
-            <el-form-item v-if="formData.type !== 'DRAG_MATCH'" label="Explanation">
+            <el-form-item
+              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
+              label="Explanation"
+            >
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </template>
@@ -562,12 +593,41 @@
               placeholder="Tool A|Tool B|Tool C"
             />
           </el-form-item>
-          <el-form-item label="Purpose（| 分隔）">
+          <el-form-item label="Purpose（| 分隔，选填）">
             <el-input
               v-model="dragMatchPurposes"
               type="textarea"
               :rows="3"
-              placeholder="描述1|描述2"
+              placeholder="选填；无描述可留空，槽位数由答案决定。有描述时用 | 分隔，如 描述1|描述2"
+            />
+          </el-form-item>
+        </template>
+
+        <!-- 热点题配置 -->
+        <template v-if="formData.type === 'HOTSPOT'">
+          <el-form-item label="解析">
+            <RichTextField v-model="hotspotExplanation" />
+          </el-form-item>
+          <el-form-item label="交互模式">
+            <el-radio-group v-model="hotspotInteraction">
+              <el-radio label="dropdown">下拉</el-radio>
+              <el-radio label="yesno">判断 Yes/No</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item v-if="hotspotInteraction === 'dropdown'" label="选项池（| 分隔）">
+            <el-input v-model="hotspotItems" type="textarea" :rows="3" placeholder="选项1|选项2" />
+          </el-form-item>
+          <el-form-item v-if="hotspotInteraction === 'dropdown'" label="允许选项重复">
+            <el-switch v-model="hotspotReusable" />
+          </el-form-item>
+          <el-form-item
+            :label="hotspotInteraction === 'yesno' ? '陈述（| 分隔）' : '行描述（| 分隔）'"
+          >
+            <el-input
+              v-model="hotspotPrompts"
+              type="textarea"
+              :rows="3"
+              placeholder="描述1|描述2 或 Step 1|Step 2"
             />
           </el-form-item>
         </template>
@@ -580,6 +640,14 @@
               type="textarea"
               :rows="2"
               placeholder="槽位答案，| 分隔，如 Tool A|Tool B"
+            />
+          </template>
+          <template v-else-if="formData.type === 'HOTSPOT'">
+            <el-input
+              v-model="formData.answer"
+              type="textarea"
+              :rows="2"
+              :placeholder="hotspotInteraction === 'yesno' ? 'Y|N|Y 或 是|否' : '选项全文，| 分隔'"
             />
           </template>
           <!-- 简答题使用富文本编辑器 -->
@@ -688,6 +756,19 @@ import {
   applyDragMatchExplanation,
   validateDragMatchAnswer,
 } from "@/utils/dragMatch";
+import {
+  buildHotspotOptionsJson,
+  hotspotOptionsToFields,
+  hotspotSummary,
+  resolveHotspotOptionsRaw,
+  applyHotspotOptionsToForm,
+  resolveHotspotExplanation,
+  applyHotspotExplanation,
+  validateHotspotAnswer,
+  normalizeYesNoAnswerPipe,
+  parseHotspotOptions,
+  type HotspotInteraction,
+} from "@/utils/hotspot";
 
 defineOptions({
   name: "QuestionManagement",
@@ -749,6 +830,13 @@ const dragMatchPurposes = ref("");
 const dragMatchExplanation = ref("");
 const dragMatchExplanationTarget = ref<"zh" | "en">("zh");
 
+const hotspotInteraction = ref<HotspotInteraction>("dropdown");
+const hotspotItems = ref("");
+const hotspotPrompts = ref("");
+const hotspotReusable = ref(false);
+const hotspotExplanation = ref("");
+const hotspotExplanationTarget = ref<"zh" | "en">("zh");
+
 // 当前选中的题型标签
 const currentTypeLabel = computed(() => {
   const typeMap: Record<string, string> = {
@@ -759,9 +847,20 @@ const currentTypeLabel = computed(() => {
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
     DRAG_MATCH: "拖放题",
+    HOTSPOT: "热点题",
   };
   return typeMap[queryParams.type || ""] || "全部题型";
 });
+
+function formatHotspotDetail(optionsZh?: string, optionsEn?: string): string {
+  const raw = resolveHotspotOptionsRaw(optionsZh, optionsEn);
+  const summary = hotspotSummary(raw);
+  const { interaction, items, prompts } = hotspotOptionsToFields(raw);
+  const parts = [summary];
+  if (items) parts.push(`选项: ${items}`);
+  if (prompts) parts.push(`${interaction === "yesno" ? "陈述" : "行"}: ${prompts}`);
+  return parts.filter(Boolean).join(" · ") || "—";
+}
 
 function formatDragMatchDetail(optionsZh?: string, optionsEn?: string): string {
   const raw = resolveDragMatchOptionsRaw(optionsZh, optionsEn);
@@ -782,7 +881,11 @@ const rules = computed(() => {
         validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
           if (!value || !String(value).trim()) {
             callback(
-              new Error(formData.type === "DRAG_MATCH" ? "请输入槽位答案" : "请选择或填写答案")
+              new Error(
+                formData.type === "DRAG_MATCH" || formData.type === "HOTSPOT"
+                  ? "请输入答案"
+                  : "请选择或填写答案"
+              )
             );
             return;
           }
@@ -867,6 +970,7 @@ function getQuestionTypeText(type: string): string {
     FILL_BLANK: "填空题",
     SHORT_ANSWER: "简答题",
     DRAG_MATCH: "拖放题",
+    HOTSPOT: "热点题",
   };
   return typeMap[type] || type;
 }
@@ -880,6 +984,7 @@ function getQuestionTypeColor(type: string): string {
     FILL_BLANK: "danger",
     SHORT_ANSWER: "info",
     DRAG_MATCH: "",
+    HOTSPOT: "",
   };
   return colorMap[type] || "info";
 }
@@ -1069,8 +1174,14 @@ function handleTypeChange() {
   dragMatchPurposes.value = "";
   dragMatchExplanation.value = "";
   dragMatchExplanationTarget.value = "zh";
+  hotspotInteraction.value = "dropdown";
+  hotspotItems.value = "";
+  hotspotPrompts.value = "";
+  hotspotReusable.value = false;
+  hotspotExplanation.value = "";
+  hotspotExplanationTarget.value = "zh";
 
-  if (formData.type === "DRAG_MATCH") {
+  if (formData.type === "DRAG_MATCH" || formData.type === "HOTSPOT") {
     optionsList.value = [];
     optionsListEn.value = [];
   } else if (formData.type === "SHORT_ANSWER" || formData.type === "FILL_BLANK") {
@@ -1239,6 +1350,19 @@ async function handleEdit(row: QuestionVO) {
     dragMatchExplanationTarget.value = exp.target;
     optionsList.value = [];
     optionsListEn.value = [];
+  } else if (data.type === "HOTSPOT") {
+    const raw = resolveHotspotOptionsRaw(data.optionsZh, data.optionsEn);
+    const fields = hotspotOptionsToFields(raw);
+    hotspotInteraction.value = fields.interaction;
+    hotspotItems.value = fields.items;
+    hotspotPrompts.value = fields.prompts;
+    const opts = parseHotspotOptions(raw);
+    hotspotReusable.value = opts?.reusable === true;
+    const exp = resolveHotspotExplanation(data);
+    hotspotExplanation.value = exp.value;
+    hotspotExplanationTarget.value = exp.target;
+    optionsList.value = [];
+    optionsListEn.value = [];
   } else if (data.type === "SHORT_ANSWER" || data.type === "FILL_BLANK") {
     optionsList.value = [];
     optionsListEn.value = [];
@@ -1347,7 +1471,15 @@ function handleSubmit() {
           ElMessage.error(err);
           return;
         }
-        const built = buildDragMatchOptionsJson(dragMatchTools.value, dragMatchPurposes.value);
+        const built = buildDragMatchOptionsJson(
+          dragMatchTools.value,
+          dragMatchPurposes.value,
+          formData.answer || ""
+        );
+        if (built.error) {
+          ElMessage.error(built.error);
+          return;
+        }
         const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
         const applied = applyDragMatchOptionsToForm(built.optionsJson, langs);
         formData.optionsZh = applied.optionsZh;
@@ -1355,6 +1487,41 @@ function handleSubmit() {
         const expPatch = applyDragMatchExplanation(
           dragMatchExplanation.value,
           dragMatchExplanationTarget.value,
+          formData
+        );
+        Object.assign(formData, expPatch);
+      } else if (formData.type === "HOTSPOT") {
+        const err = validateHotspotAnswer(
+          hotspotInteraction.value,
+          hotspotItems.value,
+          hotspotPrompts.value,
+          formData.answer || "",
+          hotspotReusable.value
+        );
+        if (err) {
+          ElMessage.error(err);
+          return;
+        }
+        if (hotspotInteraction.value === "yesno") {
+          formData.answer = normalizeYesNoAnswerPipe(formData.answer || "");
+        }
+        const built = buildHotspotOptionsJson(
+          hotspotInteraction.value,
+          hotspotItems.value,
+          hotspotPrompts.value,
+          hotspotReusable.value
+        );
+        if (built.error) {
+          ElMessage.error(built.error);
+          return;
+        }
+        const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
+        const applied = applyHotspotOptionsToForm(built.optionsJson, langs);
+        formData.optionsZh = applied.optionsZh;
+        formData.optionsEn = applied.optionsEn;
+        const expPatch = applyHotspotExplanation(
+          hotspotExplanation.value,
+          hotspotExplanationTarget.value,
           formData
         );
         Object.assign(formData, expPatch);
@@ -1440,6 +1607,12 @@ function resetForm() {
   dragMatchPurposes.value = "";
   dragMatchExplanation.value = "";
   dragMatchExplanationTarget.value = "zh";
+  hotspotInteraction.value = "dropdown";
+  hotspotItems.value = "";
+  hotspotPrompts.value = "";
+  hotspotReusable.value = false;
+  hotspotExplanation.value = "";
+  hotspotExplanationTarget.value = "zh";
 
   if (dataFormRef.value) {
     dataFormRef.value.resetFields();
