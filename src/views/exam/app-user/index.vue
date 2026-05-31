@@ -72,11 +72,14 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="登录IP" min-width="140" align="center" show-overflow-tooltip>
+        <el-table-column label="登录IP" min-width="160" align="center" show-overflow-tooltip>
           <template #default="scope">
-            <span v-if="scope.row.lastLoginIp" style="font-family: monospace; font-size: 13px">
-              {{ scope.row.lastLoginIp }}
-            </span>
+            <div v-if="scope.row.lastLoginIp" class="ip-cell">
+              <span class="ip-text">{{ scope.row.lastLoginIp }}</span>
+              <el-button type="danger" link size="small" @click.stop="handleBlockIp(scope.row)">
+                拉黑
+              </el-button>
+            </div>
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
@@ -88,21 +91,39 @@
             <span v-else class="text-secondary">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="账号状态" width="100" align="center">
           <template #default="scope">
             <el-tag
-              :type="scope.row.emailVerified ? 'success' : 'warning'"
+              :type="scope.row.status === 1 ? 'success' : 'danger'"
               size="small"
               effect="plain"
             >
-              {{ scope.row.emailVerified ? "已验证" : "未验证" }}
+              {{ scope.row.status === 1 ? "正常" : "已禁用" }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
             <el-button type="primary" link size="small" @click.stop="openAuthDialog(scope.row)">
               题库权限
+            </el-button>
+            <el-button
+              v-if="scope.row.status === 1"
+              type="danger"
+              link
+              size="small"
+              @click.stop="handleDisableUser(scope.row)"
+            >
+              禁用
+            </el-button>
+            <el-button
+              v-else
+              type="success"
+              link
+              size="small"
+              @click.stop="handleEnableUser(scope.row)"
+            >
+              启用
             </el-button>
             <el-button
               v-if="!scope.row.emailVerified"
@@ -151,6 +172,7 @@ defineOptions({
 });
 
 import AppUserAPI, { type AppUserPageQuery, type AppUserVO } from "@/api/exam/app-user-api";
+import IpBlacklistAPI from "@/api/exam/ip-blacklist-api";
 import { formatDateTime } from "@/utils/datetime";
 
 const loading = ref(false);
@@ -214,6 +236,52 @@ function handleVerifyEmail(row: AppUserVO) {
       ElMessage.info("已取消验证");
     }
   );
+}
+
+function handleDisableUser(row: AppUserVO) {
+  ElMessageBox.confirm(
+    `确认禁用用户 "${row.nickname}" 吗？禁用后将无法登录，已登录会话会被踢下线。`,
+    "禁用确认",
+    { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+  ).then(() => {
+    AppUserAPI.updateStatus(row.id, 0).then(() => {
+      ElMessage.success("已禁用");
+      fetchData();
+    });
+  });
+}
+
+function handleEnableUser(row: AppUserVO) {
+  AppUserAPI.updateStatus(row.id, 1).then(() => {
+    ElMessage.success("已启用");
+    fetchData();
+  });
+}
+
+function handleBlockIp(row: AppUserVO) {
+  if (!row.lastLoginIp) return;
+  ElMessageBox.prompt(
+    `将 IP「${row.lastLoginIp}」加入黑名单，命中后无法访问服务。可改为网段，如 119.84.150.0/24`,
+    "拉黑 IP",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      inputValue: row.lastLoginIp,
+      inputPlaceholder: "IP 或 CIDR",
+    }
+  ).then(({ value }) => {
+    const ipValue = value?.trim();
+    if (!ipValue) {
+      ElMessage.warning("IP 不能为空");
+      return;
+    }
+    IpBlacklistAPI.create({
+      ipValue,
+      remark: `来自用户 ${row.nickname}（ID ${row.id}）`,
+    }).then(() => {
+      ElMessage.success("已加入 IP 黑名单");
+    });
+  });
 }
 
 onMounted(() => {
@@ -283,14 +351,25 @@ onMounted(() => {
   display: inline-flex;
   gap: 4px;
   align-items: center;
-  // 与同列 el-button size="small" 的高度一致，避免与「题库权限」错位
   height: 24px;
-  margin-left: 12px;
+  margin-left: 8px;
   font-size: 13px;
   font-weight: 500;
   line-height: 24px;
   vertical-align: middle;
   color: #67c23a;
+}
+
+.ip-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.ip-text {
+  font-family: monospace;
+  font-size: 13px;
 }
 
 :deep(.table-header) {

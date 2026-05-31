@@ -19,6 +19,15 @@ const AppUserAPI = {
       method: "put",
     });
   },
+
+  /** 禁用/启用用户 */
+  updateStatus(userId: number, status: 0 | 1) {
+    return request({
+      url: `${APP_USER_BASE_URL}/${userId}/status`,
+      method: "put",
+      data: { status },
+    });
+  },
 };
 
 export default AppUserAPI;
