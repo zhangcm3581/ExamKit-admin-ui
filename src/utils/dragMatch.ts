@@ -1,33 +1,29 @@
-/** 拖放题 pipe 解析与 options JSON 构建（与 web-app dragMatch.ts 对齐） */
+/**
+ * 拖放题（DRAG_MATCH）— 管理后台：解析 / 编辑态序列化
+ * Excel：C Tool 池、D Purpose、E 答案 — 换行分隔；Tool 池多段用 ;;
+ */
 
-export function splitPipe(raw: string): string[] {
-  if (!raw || !raw.trim()) return [];
-  const parts: string[] = [];
-  let current = "";
-  for (let i = 0; i < raw.length; i++) {
-    const c = raw[i];
-    if (c === "\\" && i + 1 < raw.length && raw[i + 1] === "|") {
-      current += "|";
-      i++;
-    } else if (c === "|") {
-      parts.push(current.trim());
-      current = "";
-    } else {
-      current += c;
-    }
-  }
-  parts.push(current.trim());
-  return parts.filter((p) => p.length > 0);
-}
+import { joinLines, splitLines, splitOptionPools, splitPipe } from "./hotspot";
 
-export function joinPipe(parts: string[]): string {
-  return parts.join("|");
+export interface DragMatchSlot {
+  id: string;
+  purpose: string;
 }
 
 export interface DragMatchOptions {
   items: string[];
-  slots: { id: string; purpose: string }[];
+  slots: DragMatchSlot[];
   reusable?: boolean;
+}
+
+export interface DragMatchEditorRow {
+  purpose: string;
+  answer: string;
+}
+
+export interface DragMatchEditorState {
+  toolsText: string;
+  rows: DragMatchEditorRow[];
 }
 
 export function parseDragMatchOptions(raw: string | null | undefined): DragMatchOptions | null {
@@ -44,139 +40,72 @@ export function parseDragMatchOptions(raw: string | null | undefined): DragMatch
           purpose: String(s?.purpose ?? "").trim(),
         }))
       : [];
-    if (items.length === 0 || slots.length === 0) return null;
+    if (!items.length || !slots.length) return null;
     return { items, slots, reusable: obj.reusable !== false };
   } catch {
     return null;
   }
 }
 
-export function dragMatchOptionsToFields(raw: string | null | undefined): {
-  tools: string;
-  purposes: string;
-} {
-  const opts = parseDragMatchOptions(raw);
-  if (!opts) return { tools: "", purposes: "" };
+export function parseToolsText(raw: string): string[] {
+  return splitOptionPools(raw).flatMap((pool) => pool);
+}
+
+export function createDefaultDragMatchEditorState(): DragMatchEditorState {
+  return { toolsText: "", rows: [{ purpose: "", answer: "" }] };
+}
+
+export function optionsToDragMatchEditorState(
+  optionsJson: string | undefined,
+  answerPipe: string | undefined
+): DragMatchEditorState {
+  const parsed = parseDragMatchOptions(optionsJson);
+  const answers = splitPipe(answerPipe || "");
+  if (!parsed) return createDefaultDragMatchEditorState();
   return {
-    tools: joinPipe(opts.items),
-    purposes: joinPipe(opts.slots.map((s) => s.purpose)),
+    toolsText: joinLines(parsed.items),
+    rows: parsed.slots.map((s, i) => ({
+      purpose: s.purpose,
+      answer: answers[i] || "",
+    })),
   };
 }
 
-export function buildDragMatchOptionsJson(
-  toolsRaw: string,
-  purposesRaw: string,
-  answerRaw = ""
-): { optionsJson: string; error?: string } {
-  const items = splitPipe(toolsRaw);
-  const purposes = splitPipe(purposesRaw);
-  const answers = splitPipe(answerRaw);
-  if (items.length === 0) return { optionsJson: "", error: "Tool池不能为空" };
-
-  let slotPurposes: string[];
-  if (purposes.length > 0) {
-    if (answers.length > 0 && purposes.length !== answers.length) {
-      return {
-        optionsJson: "",
-        error: `Purpose数量(${purposes.length})与槽位答案数量(${answers.length})不一致`,
-      };
-    }
-    slotPurposes = purposes;
-  } else {
-    if (answers.length === 0) {
-      return { optionsJson: "", error: "Purpose 与槽位答案不能同时为空，请先填写答案" };
-    }
-    slotPurposes = answers.map(() => "");
-  }
-
-  const slots = slotPurposes.map((purpose, i) => ({ id: String(i + 1), purpose }));
-  return {
-    optionsJson: JSON.stringify({ items, slots, reusable: true }),
-  };
+export function editorStateToDragMatchOptionsJson(state: DragMatchEditorState): string {
+  const tools = parseToolsText(state.toolsText);
+  const rows = state.rows.map((r, i) => ({
+    id: String(i + 1),
+    purpose: r.purpose.trim(),
+  }));
+  return JSON.stringify({ items: tools, slots: rows, reusable: true });
 }
 
-export function validateDragMatchAnswer(
-  toolsRaw: string,
-  purposesRaw: string,
-  answerRaw: string
-): string | null {
-  const items = splitPipe(toolsRaw);
-  const purposes = splitPipe(purposesRaw);
-  const answers = splitPipe(answerRaw);
-  if (items.length === 0) return "Tool池不能为空";
-  if (answers.length === 0) return "槽位答案不能为空";
-  if (purposes.length > 0 && purposes.length !== answers.length) {
-    return `Purpose数量(${purposes.length})与槽位答案数量(${answers.length})不一致`;
-  }
-  const lowerItems = items.map((s) => s.toLowerCase());
-  for (const ans of answers) {
-    if (!lowerItems.includes(ans.toLowerCase())) {
-      return `槽位答案「${ans}」不在 Tool 池中`;
+export function editorStateToDragMatchAnswer(state: DragMatchEditorState): string {
+  return state.rows.map((r) => r.answer.trim()).join("|");
+}
+
+export function validateDragMatchEditorState(state: DragMatchEditorState): string | null {
+  const tools = parseToolsText(state.toolsText);
+  if (!tools.length) return "Tool 池不能为空";
+  if (!state.rows.length) return "至少配置一个槽位";
+  for (let i = 0; i < state.rows.length; i++) {
+    const row = state.rows[i];
+    if (!row.answer.trim()) return `请为第 ${i + 1} 个槽位选择正确答案`;
+    if (!tools.some((t) => t.toLowerCase() === row.answer.trim().toLowerCase())) {
+      return `第 ${i + 1} 个槽位答案不在 Tool 池中`;
     }
   }
   return null;
 }
 
-export function dragMatchSummary(raw: string | null | undefined): string {
-  const opts = parseDragMatchOptions(raw);
-  if (!opts) return "";
-  return `Tool×${opts.items.length} / Slot×${opts.slots.length}`;
-}
-
-/** 从 optionsZh / optionsEn 中取有效的拖放题 options JSON（英文导入存在 optionsEn） */
-export function resolveDragMatchOptionsRaw(
-  optionsZh?: string | null,
-  optionsEn?: string | null
-): string {
-  for (const raw of [optionsZh, optionsEn]) {
-    if (raw && raw !== "[]" && parseDragMatchOptions(raw)) {
-      return raw;
-    }
-  }
-  return optionsZh || optionsEn || "";
-}
-
-/** 按科目支持语言写入拖放题 options */
-export function applyDragMatchOptionsToForm(
-  optionsJson: string,
-  languages: string[]
-): { optionsZh: string; optionsEn: string } {
-  const hasZh = languages.includes("zh");
-  const hasEn = languages.includes("en");
-  if (hasZh && hasEn) {
-    return { optionsZh: optionsJson, optionsEn: optionsJson };
-  }
-  if (hasEn) {
-    return { optionsZh: "[]", optionsEn: optionsJson };
-  }
-  return { optionsZh: optionsJson, optionsEn: "" };
-}
-
-/** 加载拖放题解析：英文导入在 explanationEn */
-export function resolveDragMatchExplanation(data: {
-  explanationZh?: string | null;
-  explanationEn?: string | null;
-  contentZh?: string | null;
-  contentEn?: string | null;
-}): { value: string; target: "zh" | "en" } {
-  const en = (data.explanationEn || "").trim();
-  const zh = (data.explanationZh || "").trim();
-  if (en) return { value: data.explanationEn || "", target: "en" };
-  if (zh) return { value: data.explanationZh || "", target: "zh" };
-  const enContent = (data.contentEn || "").trim();
-  const zhContent = (data.contentZh || "").trim();
-  if (enContent && !zhContent) return { value: "", target: "en" };
-  return { value: "", target: "zh" };
-}
-
-/** 保存拖放题解析到对应语言字段（不覆盖另一语言已有内容） */
-export function applyDragMatchExplanation(
-  value: string,
-  target: "zh" | "en",
-  current: { explanationZh?: string | null; explanationEn?: string | null }
-): { explanationZh?: string; explanationEn?: string } {
-  if (target === "en") {
-    return { explanationEn: value };
-  }
-  return { explanationZh: value };
+export function editorStateToDragMatchExcelFields(state: DragMatchEditorState): {
+  tools: string;
+  purposes: string;
+  answers: string;
+} {
+  return {
+    tools: state.toolsText,
+    purposes: joinLines(state.rows.map((r) => r.purpose)),
+    answers: joinLines(state.rows.map((r) => r.answer)),
+  };
 }

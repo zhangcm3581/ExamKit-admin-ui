@@ -135,16 +135,7 @@
                   <div class="block-content" v-html="row.contentZh"></div>
                 </div>
                 <!-- 中文选项 -->
-                <div
-                  v-if="
-                    row.optionsZh &&
-                    row.type !== 'SHORT_ANSWER' &&
-                    row.type !== 'FILL_BLANK' &&
-                    row.type !== 'DRAG_MATCH' &&
-                    row.type !== 'HOTSPOT'
-                  "
-                  class="detail-block"
-                >
+                <div v-if="row.optionsZh && hasChoiceOptions(row.type)" class="detail-block">
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsZh)"
@@ -156,17 +147,14 @@
                     </div>
                   </div>
                 </div>
-                <!-- 拖放配置 -->
-                <div v-if="row.type === 'DRAG_MATCH'" class="detail-block">
+                <div v-else-if="row.optionsZh && isHotspotType(row.type)" class="detail-block">
+                  <div class="block-label">热点配置</div>
+                  <div class="block-content">{{ formatHotspotOptionsSummary(row.optionsZh) }}</div>
+                </div>
+                <div v-else-if="row.optionsZh && isDragMatchType(row.type)" class="detail-block">
                   <div class="block-label">拖放配置</div>
                   <div class="block-content">
-                    {{ formatDragMatchDetail(row.optionsZh, row.optionsEn) }}
-                  </div>
-                </div>
-                <div v-if="row.type === 'HOTSPOT'" class="detail-block">
-                  <div class="block-label">热点配置</div>
-                  <div class="block-content">
-                    {{ formatHotspotDetail(row.optionsZh, row.optionsEn) }}
+                    {{ formatDragMatchOptionsSummary(row.optionsZh) }}
                   </div>
                 </div>
                 <!-- 答案（中文区域总是显示） -->
@@ -174,7 +162,7 @@
                   <div class="block-label">答案</div>
                   <!-- 简答题显示富文本答案 -->
                   <div
-                    v-if="row.type === 'SHORT_ANSWER'"
+                    v-if="isTextAnswerType(row.type)"
                     class="block-content"
                     v-html="row.answer"
                   ></div>
@@ -201,16 +189,7 @@
                   <div class="block-content" v-html="row.contentEn"></div>
                 </div>
                 <!-- 英文选项 -->
-                <div
-                  v-if="
-                    row.optionsEn &&
-                    row.type !== 'SHORT_ANSWER' &&
-                    row.type !== 'FILL_BLANK' &&
-                    row.type !== 'DRAG_MATCH' &&
-                    row.type !== 'HOTSPOT'
-                  "
-                  class="detail-block"
-                >
+                <div v-if="row.optionsEn && hasChoiceOptions(row.type)" class="detail-block">
                   <div class="options-list">
                     <div
                       v-for="option in parseOptions(row.optionsEn)"
@@ -222,12 +201,22 @@
                     </div>
                   </div>
                 </div>
+                <div v-else-if="row.optionsEn && isHotspotType(row.type)" class="detail-block">
+                  <div class="block-label">Hotspot</div>
+                  <div class="block-content">{{ formatHotspotOptionsSummary(row.optionsEn) }}</div>
+                </div>
+                <div v-else-if="row.optionsEn && isDragMatchType(row.type)" class="detail-block">
+                  <div class="block-label">Drag Match</div>
+                  <div class="block-content">
+                    {{ formatDragMatchOptionsSummary(row.optionsEn) }}
+                  </div>
+                </div>
                 <!-- 答案（英文区域） -->
                 <div class="detail-block">
                   <div class="block-label">Answer</div>
                   <!-- 简答题显示富文本答案 -->
                   <div
-                    v-if="row.type === 'SHORT_ANSWER'"
+                    v-if="isTextAnswerType(row.type)"
                     class="block-content"
                     v-html="row.answer"
                   ></div>
@@ -274,7 +263,7 @@
           <template #default="{ row }">
             <!-- 简答题显示富文本答案预览 -->
             <div
-              v-if="row.type === 'SHORT_ANSWER'"
+              v-if="isTextAnswerType(row.type)"
               class="answer-preview"
               v-html="getContentPreview(row.answer)"
             ></div>
@@ -348,14 +337,22 @@
               <RichTextField v-model="formData.contentZh" />
             </el-form-item>
 
+            <HotspotOptionsEditor
+              v-if="formData.type === 'HOTSPOT'"
+              ref="hotspotZhEditorRef"
+              v-model="formData.optionsZh"
+              v-model:answer="formData.answer"
+            />
+
+            <DragMatchOptionsEditor
+              v-else-if="isDragMatchType(formData.type)"
+              ref="dragMatchZhEditorRef"
+              v-model="formData.optionsZh"
+              v-model:answer="formData.answer"
+            />
+
             <el-form-item
-              v-if="
-                formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
-                formData.type !== 'DRAG_MATCH' &&
-                formData.type !== 'HOTSPOT' &&
-                formData.type !== 'FILL_BLANK'
-              "
+              v-else-if="hasChoiceOptions(formData.type)"
               label="试题选项"
               :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
               :required="subjectSupportLanguages.includes('zh')"
@@ -389,10 +386,7 @@
               </div>
             </el-form-item>
 
-            <el-form-item
-              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
-              label="解析"
-            >
+            <el-form-item label="解析">
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </el-tab-pane>
@@ -407,14 +401,31 @@
               <RichTextField v-model="formData.contentEn" />
             </el-form-item>
 
+            <el-alert
+              v-if="formData.type === 'HOTSPOT' || isDragMatchType(formData.type)"
+              type="info"
+              :closable="false"
+              show-icon
+              class="specialized-editor-bilingual-hint"
+              title="英文选项须与中文行数/槽位数一致；答案在「中文」页配置。"
+            />
+
+            <HotspotOptionsEditor
+              v-if="formData.type === 'HOTSPOT'"
+              ref="hotspotEnEditorRef"
+              v-model="formData.optionsEn"
+              :answer="formData.answer"
+            />
+
+            <DragMatchOptionsEditor
+              v-else-if="isDragMatchType(formData.type)"
+              ref="dragMatchEnEditorRef"
+              v-model="formData.optionsEn"
+              :answer="formData.answer"
+            />
+
             <el-form-item
-              v-if="
-                formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
-                formData.type !== 'DRAG_MATCH' &&
-                formData.type !== 'HOTSPOT' &&
-                formData.type !== 'FILL_BLANK'
-              "
+              v-else-if="hasChoiceOptions(formData.type)"
               label="试题选项"
               :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
               :required="subjectSupportLanguages.includes('en')"
@@ -452,10 +463,7 @@
               </div>
             </el-form-item>
 
-            <el-form-item
-              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
-              label="Explanation"
-            >
+            <el-form-item label="解析">
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </el-tab-pane>
@@ -469,14 +477,22 @@
               <RichTextField v-model="formData.contentZh" />
             </el-form-item>
 
+            <HotspotOptionsEditor
+              v-if="formData.type === 'HOTSPOT'"
+              ref="hotspotZhEditorRef"
+              v-model="formData.optionsZh"
+              v-model:answer="formData.answer"
+            />
+
+            <DragMatchOptionsEditor
+              v-else-if="isDragMatchType(formData.type)"
+              ref="dragMatchZhEditorRef"
+              v-model="formData.optionsZh"
+              v-model:answer="formData.answer"
+            />
+
             <el-form-item
-              v-if="
-                formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
-                formData.type !== 'DRAG_MATCH' &&
-                formData.type !== 'HOTSPOT' &&
-                formData.type !== 'FILL_BLANK'
-              "
+              v-else-if="hasChoiceOptions(formData.type)"
               label="试题选项"
               prop="optionsZh"
               :required="true"
@@ -510,10 +526,7 @@
               </div>
             </el-form-item>
 
-            <el-form-item
-              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
-              label="解析"
-            >
+            <el-form-item label="解析">
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
           </template>
@@ -526,14 +539,22 @@
               <RichTextField v-model="formData.contentEn" />
             </el-form-item>
 
+            <HotspotOptionsEditor
+              v-if="formData.type === 'HOTSPOT'"
+              ref="hotspotEnEditorRef"
+              v-model="formData.optionsEn"
+              v-model:answer="formData.answer"
+            />
+
+            <DragMatchOptionsEditor
+              v-else-if="isDragMatchType(formData.type)"
+              ref="dragMatchEnEditorRef"
+              v-model="formData.optionsEn"
+              v-model:answer="formData.answer"
+            />
+
             <el-form-item
-              v-if="
-                formData.type !== 'JUDGE' &&
-                formData.type !== 'SHORT_ANSWER' &&
-                formData.type !== 'DRAG_MATCH' &&
-                formData.type !== 'HOTSPOT' &&
-                formData.type !== 'FILL_BLANK'
-              "
+              v-else-if="hasChoiceOptions(formData.type)"
               label="Options"
               prop="optionsEn"
               :required="true"
@@ -571,87 +592,20 @@
               </div>
             </el-form-item>
 
-            <el-form-item
-              v-if="formData.type !== 'DRAG_MATCH' && formData.type !== 'HOTSPOT'"
-              label="Explanation"
-            >
+            <el-form-item label="Explanation">
               <RichTextField v-model="formData.explanationEn" />
             </el-form-item>
           </template>
         </template>
 
-        <!-- 拖放题配置 -->
-        <template v-if="formData.type === 'DRAG_MATCH'">
-          <el-form-item label="解析">
-            <RichTextField v-model="dragMatchExplanation" />
-          </el-form-item>
-          <el-form-item label="Tool池（| 分隔）">
-            <el-input
-              v-model="dragMatchTools"
-              type="textarea"
-              :rows="3"
-              placeholder="Tool A|Tool B|Tool C"
-            />
-          </el-form-item>
-          <el-form-item label="Purpose（| 分隔，选填）">
-            <el-input
-              v-model="dragMatchPurposes"
-              type="textarea"
-              :rows="3"
-              placeholder="选填；无描述可留空，槽位数由答案决定。有描述时用 | 分隔，如 描述1|描述2"
-            />
-          </el-form-item>
-        </template>
-
-        <!-- 热点题配置 -->
-        <template v-if="formData.type === 'HOTSPOT'">
-          <el-form-item label="解析">
-            <RichTextField v-model="hotspotExplanation" />
-          </el-form-item>
-          <el-form-item label="交互模式">
-            <el-radio-group v-model="hotspotInteraction">
-              <el-radio label="dropdown">下拉</el-radio>
-              <el-radio label="yesno">判断 Yes/No</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item v-if="hotspotInteraction === 'dropdown'" label="选项池（| 分隔）">
-            <el-input v-model="hotspotItems" type="textarea" :rows="3" placeholder="选项1|选项2" />
-          </el-form-item>
-          <el-form-item v-if="hotspotInteraction === 'dropdown'" label="允许选项重复">
-            <el-switch v-model="hotspotReusable" />
-          </el-form-item>
-          <el-form-item
-            :label="hotspotInteraction === 'yesno' ? '陈述（| 分隔）' : '行描述（| 分隔）'"
-          >
-            <el-input
-              v-model="hotspotPrompts"
-              type="textarea"
-              :rows="3"
-              placeholder="描述1|描述2 或 Step 1|Step 2"
-            />
-          </el-form-item>
-        </template>
-
-        <!-- 答案（通用，不区分语言） -->
-        <el-form-item label="答案" prop="answer">
-          <template v-if="formData.type === 'DRAG_MATCH'">
-            <el-input
-              v-model="formData.answer"
-              type="textarea"
-              :rows="2"
-              placeholder="槽位答案，| 分隔，如 Tool A|Tool B"
-            />
-          </template>
-          <template v-else-if="formData.type === 'HOTSPOT'">
-            <el-input
-              v-model="formData.answer"
-              type="textarea"
-              :rows="2"
-              :placeholder="hotspotInteraction === 'yesno' ? 'Y|N|Y 或 是|否' : '选项全文，| 分隔'"
-            />
-          </template>
+        <!-- 答案（通用；热点/拖放在专用编辑器内配置） -->
+        <el-form-item
+          v-if="formData.type !== 'HOTSPOT' && !isDragMatchType(formData.type)"
+          label="答案"
+          prop="answer"
+        >
           <!-- 简答题使用富文本编辑器 -->
-          <template v-else-if="formData.type === 'SHORT_ANSWER'">
+          <template v-if="isTextAnswerType(formData.type)">
             <RichTextField v-model="formData.answer" />
           </template>
           <!-- 填空题 -->
@@ -743,32 +697,32 @@ import QuestionAPI, {
   type QuestionForm,
 } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
-import { hasRichContent } from "@/utils/rich-text";
 import { formatDateTime } from "@/utils/datetime";
 import RichTextField from "@/components/RichTextField/index.vue";
+import HotspotOptionsEditor from "@/components/HotspotOptionsEditor/index.vue";
+import DragMatchOptionsEditor from "@/components/DragMatchOptionsEditor/index.vue";
 import {
-  buildDragMatchOptionsJson,
-  dragMatchOptionsToFields,
-  dragMatchSummary,
-  resolveDragMatchOptionsRaw,
-  applyDragMatchOptionsToForm,
-  resolveDragMatchExplanation,
-  applyDragMatchExplanation,
-  validateDragMatchAnswer,
+  createDefaultDragMatchEditorState,
+  editorStateToDragMatchOptionsJson,
+  parseDragMatchOptions,
 } from "@/utils/dragMatch";
 import {
-  buildHotspotOptionsJson,
-  hotspotOptionsToFields,
-  hotspotSummary,
-  resolveHotspotOptionsRaw,
-  applyHotspotOptionsToForm,
-  resolveHotspotExplanation,
-  applyHotspotExplanation,
-  validateHotspotAnswer,
-  normalizeYesNoAnswerPipe,
+  createDefaultEditorState,
+  editorStateToOptionsJson,
   parseHotspotOptions,
-  type HotspotInteraction,
 } from "@/utils/hotspot";
+import {
+  flushSpecializedEditor,
+  resolveEditorRef,
+  validateDragMatchBilingualOptions,
+  validateHotspotBilingualOptions,
+  type SpecializedOptionsEditorExpose,
+} from "@/utils/specializedQuestionEditor";
+import {
+  getQuestionTypeColor,
+  getQuestionTypeLabel,
+  normalizeQuestionTypeCode,
+} from "@/utils/questionType";
 
 defineOptions({
   name: "QuestionManagement",
@@ -778,6 +732,10 @@ defineOptions({
 const route = useRoute();
 const router = useRouter();
 const dataFormRef = ref();
+const hotspotZhEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
+const hotspotEnEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
+const dragMatchZhEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
+const dragMatchEnEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
@@ -824,19 +782,6 @@ const optionsListEn = ref<{ label: string; value: string }[]>([
 // 多选题答案数组
 const multipleAnswers = ref<string[]>([]);
 
-// 拖放题编辑字段
-const dragMatchTools = ref("");
-const dragMatchPurposes = ref("");
-const dragMatchExplanation = ref("");
-const dragMatchExplanationTarget = ref<"zh" | "en">("zh");
-
-const hotspotInteraction = ref<HotspotInteraction>("dropdown");
-const hotspotItems = ref("");
-const hotspotPrompts = ref("");
-const hotspotReusable = ref(false);
-const hotspotExplanation = ref("");
-const hotspotExplanationTarget = ref<"zh" | "en">("zh");
-
 // 当前选中的题型标签
 const currentTypeLabel = computed(() => {
   const typeMap: Record<string, string> = {
@@ -852,91 +797,75 @@ const currentTypeLabel = computed(() => {
   return typeMap[queryParams.type || ""] || "全部题型";
 });
 
-function formatHotspotDetail(optionsZh?: string, optionsEn?: string): string {
-  const raw = resolveHotspotOptionsRaw(optionsZh, optionsEn);
-  const summary = hotspotSummary(raw);
-  const { interaction, items, prompts } = hotspotOptionsToFields(raw);
-  const parts = [summary];
-  if (items) parts.push(`选项: ${items}`);
-  if (prompts) parts.push(`${interaction === "yesno" ? "陈述" : "行"}: ${prompts}`);
-  return parts.filter(Boolean).join(" · ") || "—";
+/** 拖放题：options 为 JSON，答案为 pipe，不走 A/B/C 与富文本答案 */
+function isDragMatchType(type?: string) {
+  return normalizeQuestionTypeCode(type || "") === "DRAG_MATCH";
 }
 
-function formatDragMatchDetail(optionsZh?: string, optionsEn?: string): string {
-  const raw = resolveDragMatchOptionsRaw(optionsZh, optionsEn);
-  const summary = dragMatchSummary(raw);
-  const { tools, purposes } = dragMatchOptionsToFields(raw);
-  const parts = [summary];
-  if (tools) parts.push(`Tool: ${tools}`);
-  if (purposes) parts.push(`Purpose: ${purposes}`);
-  return parts.filter(Boolean).join(" · ") || "—";
+// 无选项的文本答案题型（简答）
+function isTextAnswerType(type?: string) {
+  return type === "SHORT_ANSWER";
+}
+
+function isNoChoiceOptionsType(type?: string) {
+  return (
+    isTextAnswerType(type) || type === "FILL_BLANK" || isHotspotType(type) || isDragMatchType(type)
+  );
+}
+
+function isHotspotType(type?: string) {
+  return type === "HOTSPOT";
+}
+
+/** 使用 A/B/C 选项编辑器的题型 */
+function hasChoiceOptions(type?: string) {
+  return (
+    type !== "JUDGE" &&
+    !isTextAnswerType(type) &&
+    type !== "FILL_BLANK" &&
+    !isHotspotType(type) &&
+    !isDragMatchType(type)
+  );
+}
+
+function formatHotspotOptionsSummary(optionsStr?: string): string {
+  const opts = parseHotspotOptions(optionsStr);
+  if (!opts) return "—";
+  const mode =
+    opts.interaction === "yesno"
+      ? "判断"
+      : opts.rows.every((r) => (r.items?.length ?? 0) > 0)
+        ? "下拉·各行独立池"
+        : "下拉·共享池";
+  return `${mode}，${opts.rows.length} 行`;
+}
+
+function formatDragMatchOptionsSummary(optionsStr?: string): string {
+  const opts = parseDragMatchOptions(optionsStr);
+  if (!opts) return "—";
+  return `Tool ${opts.items.length} 项，${opts.slots.length} 槽位`;
 }
 
 // 表单验证规则 - 根据科目支持的语言动态设置
 const rules = computed(() => {
   const baseRules: any = {
     type: [{ required: true, message: "请选择题型", trigger: "change" }],
-    answer: [
-      {
-        validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
-          if (!value || !String(value).trim()) {
-            callback(
-              new Error(
-                formData.type === "DRAG_MATCH" || formData.type === "HOTSPOT"
-                  ? "请输入答案"
-                  : "请选择或填写答案"
-              )
-            );
-            return;
-          }
-          callback();
-        },
-        trigger: "blur",
-      },
-    ],
   };
 
-  const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
-  const hasZh = languages.includes("zh");
-  const hasEn = languages.includes("en");
+  // 热点/拖放答案在专用编辑器内校验，不走通用 answer 表单项
+  if (!isHotspotType(formData.type) && !isDragMatchType(formData.type)) {
+    baseRules.answer = [{ required: true, message: "请选择答案", trigger: "change" }];
+  }
 
-  if (hasZh && hasEn) {
-    // 双语科目：至少一项有内容即可（兼容仅英文/仅中文导入的题库）
-    const bilingualContentRule = {
-      validator: (_rule: unknown, _value: string, callback: (error?: Error) => void) => {
-        if (hasRichContent(formData.contentZh) || hasRichContent(formData.contentEn)) {
-          callback();
-          return;
-        }
-        callback(new Error("请输入题目内容（中文或英文至少一项）"));
-      },
-      trigger: "blur",
-    };
-    baseRules.contentZh = [bilingualContentRule];
-    baseRules.contentEn = [bilingualContentRule];
-  } else {
-    if (hasZh) {
-      baseRules.contentZh = [
-        {
-          validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
-            if (hasRichContent(value)) callback();
-            else callback(new Error("请输入题目内容（中文）"));
-          },
-          trigger: "blur",
-        },
-      ];
-    }
-    if (hasEn) {
-      baseRules.contentEn = [
-        {
-          validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
-            if (hasRichContent(value)) callback();
-            else callback(new Error("请输入题目内容（英文）"));
-          },
-          trigger: "blur",
-        },
-      ];
-    }
+  const languages = subjectSupportLanguages.value.split(",").filter(Boolean);
+
+  // 根据支持的语言动态设置必填规则
+  if (languages.includes("zh")) {
+    baseRules.contentZh = [{ required: true, message: "请输入题目内容（中文）", trigger: "blur" }];
+  }
+
+  if (languages.includes("en")) {
+    baseRules.contentEn = [{ required: true, message: "请输入题目内容（英文）", trigger: "blur" }];
   }
 
   return baseRules;
@@ -961,32 +890,8 @@ function hasBothLanguagesForEdit(): boolean {
   return languages.includes("zh") && languages.includes("en");
 }
 
-// 获取题型文本
 function getQuestionTypeText(type: string): string {
-  const typeMap: Record<string, string> = {
-    SINGLE: "单选题",
-    MULTIPLE: "多选题",
-    JUDGE: "判断题",
-    FILL_BLANK: "填空题",
-    SHORT_ANSWER: "简答题",
-    DRAG_MATCH: "拖放题",
-    HOTSPOT: "热点题",
-  };
-  return typeMap[type] || type;
-}
-
-// 获取题型颜色
-function getQuestionTypeColor(type: string): string {
-  const colorMap: Record<string, string> = {
-    SINGLE: "primary",
-    MULTIPLE: "success",
-    JUDGE: "warning",
-    FILL_BLANK: "danger",
-    SHORT_ANSWER: "info",
-    DRAG_MATCH: "",
-    HOTSPOT: "",
-  };
-  return colorMap[type] || "info";
+  return getQuestionTypeLabel(type);
 }
 
 // 解析选项JSON
@@ -1170,23 +1075,22 @@ function handleTypeChange() {
   // 重置答案
   formData.answer = "";
   multipleAnswers.value = [];
-  dragMatchTools.value = "";
-  dragMatchPurposes.value = "";
-  dragMatchExplanation.value = "";
-  dragMatchExplanationTarget.value = "zh";
-  hotspotInteraction.value = "dropdown";
-  hotspotItems.value = "";
-  hotspotPrompts.value = "";
-  hotspotReusable.value = false;
-  hotspotExplanation.value = "";
-  hotspotExplanationTarget.value = "zh";
 
-  if (formData.type === "DRAG_MATCH" || formData.type === "HOTSPOT") {
+  // 简答题/填空题/拖放题/热点题不需要 A/B/C 选项
+  if (isNoChoiceOptionsType(formData.type)) {
     optionsList.value = [];
     optionsListEn.value = [];
-  } else if (formData.type === "SHORT_ANSWER" || formData.type === "FILL_BLANK") {
-    optionsList.value = [];
-    optionsListEn.value = [];
+    if (isHotspotType(formData.type)) {
+      const empty = editorStateToOptionsJson(createDefaultEditorState());
+      if (!formData.optionsZh || formData.optionsZh === "[]") formData.optionsZh = empty;
+      if (!formData.optionsEn) formData.optionsEn = empty;
+      formData.answer = "";
+    } else if (isDragMatchType(formData.type)) {
+      const empty = editorStateToDragMatchOptionsJson(createDefaultDragMatchEditorState());
+      if (!formData.optionsZh || formData.optionsZh === "[]") formData.optionsZh = empty;
+      if (!formData.optionsEn) formData.optionsEn = empty;
+      formData.answer = "";
+    }
   }
   // 如果是判断题，重置选项
   else if (formData.type === "JUDGE") {
@@ -1338,32 +1242,12 @@ async function handleEdit(row: QuestionVO) {
 
   const data = await QuestionAPI.getFormData(row.id);
   Object.assign(formData, data);
+  if (data.type) {
+    formData.type = normalizeQuestionTypeCode(data.type);
+  }
 
-  // 拖放题 / 简答题不需要解析选项
-  if (data.type === "DRAG_MATCH") {
-    const raw = resolveDragMatchOptionsRaw(data.optionsZh, data.optionsEn);
-    const fields = dragMatchOptionsToFields(raw);
-    dragMatchTools.value = fields.tools;
-    dragMatchPurposes.value = fields.purposes;
-    const exp = resolveDragMatchExplanation(data);
-    dragMatchExplanation.value = exp.value;
-    dragMatchExplanationTarget.value = exp.target;
-    optionsList.value = [];
-    optionsListEn.value = [];
-  } else if (data.type === "HOTSPOT") {
-    const raw = resolveHotspotOptionsRaw(data.optionsZh, data.optionsEn);
-    const fields = hotspotOptionsToFields(raw);
-    hotspotInteraction.value = fields.interaction;
-    hotspotItems.value = fields.items;
-    hotspotPrompts.value = fields.prompts;
-    const opts = parseHotspotOptions(raw);
-    hotspotReusable.value = opts?.reusable === true;
-    const exp = resolveHotspotExplanation(data);
-    hotspotExplanation.value = exp.value;
-    hotspotExplanationTarget.value = exp.target;
-    optionsList.value = [];
-    optionsListEn.value = [];
-  } else if (data.type === "SHORT_ANSWER" || data.type === "FILL_BLANK") {
+  // 简答题/填空题/拖放题/热点题不需要 A/B/C 选项
+  if (isNoChoiceOptionsType(data.type)) {
     optionsList.value = [];
     optionsListEn.value = [];
   } else {
@@ -1385,20 +1269,6 @@ async function handleEdit(row: QuestionVO) {
   if (data.type === "MULTIPLE" && data.answer) {
     multipleAnswers.value = data.answer.split("");
   }
-
-  // 双语科目：英文导入时自动切到英文标签页，避免解析等字段看起来为空
-  if (hasBothLanguagesForEdit()) {
-    const zhEmpty = !(data.contentZh || "").trim() && !(data.explanationZh || "").trim();
-    const enHas = !!(data.contentEn || "").trim() || !!(data.explanationEn || "").trim();
-    if (zhEmpty && enHas) {
-      activeLanguageTab.value = "en";
-    } else {
-      activeLanguageTab.value = "zh";
-    }
-  }
-
-  await nextTick();
-  dataFormRef.value?.clearValidate?.();
 }
 
 // 删除
@@ -1436,137 +1306,119 @@ function handleDelete(id?: number) {
   });
 }
 
-function focusFirstInvalidField(invalidFields?: Record<string, { message?: string }[]>) {
-  if (!invalidFields) return;
-  const firstKey = Object.keys(invalidFields)[0];
-  if (!firstKey) return;
-  if (firstKey === "contentEn" || firstKey === "explanationEn") {
-    activeLanguageTab.value = "en";
-  } else if (firstKey === "contentZh" || firstKey === "explanationZh") {
-    activeLanguageTab.value = "zh";
+/** 提交前从专用编辑器 live state 刷入 formData（避免仅合法时才 v-model 回写） */
+function applySpecializedEditorsFromForm(): boolean {
+  const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
+  const enOnly = langs.includes("en") && !langs.includes("zh");
+
+  if (isHotspotType(formData.type)) {
+    const primaryRef = enOnly ? hotspotEnEditorRef : hotspotZhEditorRef;
+    const flushed = flushSpecializedEditor(resolveEditorRef(primaryRef.value));
+    if (!flushed) return false;
+    const optionsZh = flushed.optionsJson;
+    if (enOnly) {
+      formData.optionsEn = optionsZh;
+    } else {
+      formData.optionsZh = optionsZh;
+    }
+    formData.answer = flushed.answer;
+
+    if (hasBothLanguagesForEdit()) {
+      const enEditor = resolveEditorRef(hotspotEnEditorRef.value);
+      if (enEditor) {
+        const enErr = enEditor.validate();
+        if (enErr) {
+          ElMessage.warning(enErr);
+          return false;
+        }
+        formData.optionsEn = enEditor.serialize().optionsJson;
+        const biErr = validateHotspotBilingualOptions(optionsZh, formData.optionsEn);
+        if (biErr) {
+          ElMessage.warning(biErr);
+          return false;
+        }
+      }
+    }
+    return true;
   }
-  const firstMsg = invalidFields[firstKey]?.[0]?.message;
-  ElMessage.warning(firstMsg || "请完善表单必填项");
-  nextTick(() => {
-    dataFormRef.value?.scrollToField?.(firstKey);
-  });
+
+  if (isDragMatchType(formData.type)) {
+    const primaryRef = enOnly ? dragMatchEnEditorRef : dragMatchZhEditorRef;
+    const flushed = flushSpecializedEditor(resolveEditorRef(primaryRef.value));
+    if (!flushed) return false;
+    const optionsZh = flushed.optionsJson;
+    if (enOnly) {
+      formData.optionsEn = optionsZh;
+    } else {
+      formData.optionsZh = optionsZh;
+    }
+    formData.answer = flushed.answer;
+
+    if (hasBothLanguagesForEdit()) {
+      const enEditor = resolveEditorRef(dragMatchEnEditorRef.value);
+      if (enEditor) {
+        const enErr = enEditor.validate();
+        if (enErr) {
+          ElMessage.warning(enErr);
+          return false;
+        }
+        formData.optionsEn = enEditor.serialize().optionsJson;
+        const biErr = validateDragMatchBilingualOptions(optionsZh, formData.optionsEn);
+        if (biErr) {
+          ElMessage.warning(biErr);
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  return true;
 }
 
 // 提交
 function handleSubmit() {
-  dataFormRef.value?.validate(
-    (valid: boolean, invalidFields?: Record<string, { message?: string }[]>) => {
-      if (!valid) {
-        focusFirstInvalidField(invalidFields);
-        return;
-      }
+  if (
+    (isHotspotType(formData.type) || isDragMatchType(formData.type)) &&
+    !applySpecializedEditorsFromForm()
+  ) {
+    return;
+  }
 
-      if (formData.type === "DRAG_MATCH") {
-        const err = validateDragMatchAnswer(
-          dragMatchTools.value,
-          dragMatchPurposes.value,
-          formData.answer || ""
-        );
-        if (err) {
-          ElMessage.error(err);
-          return;
-        }
-        const built = buildDragMatchOptionsJson(
-          dragMatchTools.value,
-          dragMatchPurposes.value,
-          formData.answer || ""
-        );
-        if (built.error) {
-          ElMessage.error(built.error);
-          return;
-        }
-        const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
-        const applied = applyDragMatchOptionsToForm(built.optionsJson, langs);
-        formData.optionsZh = applied.optionsZh;
-        formData.optionsEn = applied.optionsEn;
-        const expPatch = applyDragMatchExplanation(
-          dragMatchExplanation.value,
-          dragMatchExplanationTarget.value,
-          formData
-        );
-        Object.assign(formData, expPatch);
-      } else if (formData.type === "HOTSPOT") {
-        const err = validateHotspotAnswer(
-          hotspotInteraction.value,
-          hotspotItems.value,
-          hotspotPrompts.value,
-          formData.answer || "",
-          hotspotReusable.value
-        );
-        if (err) {
-          ElMessage.error(err);
-          return;
-        }
-        if (hotspotInteraction.value === "yesno") {
-          formData.answer = normalizeYesNoAnswerPipe(formData.answer || "");
-        }
-        const built = buildHotspotOptionsJson(
-          hotspotInteraction.value,
-          hotspotItems.value,
-          hotspotPrompts.value,
-          hotspotReusable.value
-        );
-        if (built.error) {
-          ElMessage.error(built.error);
-          return;
-        }
-        const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
-        const applied = applyHotspotOptionsToForm(built.optionsJson, langs);
-        formData.optionsZh = applied.optionsZh;
-        formData.optionsEn = applied.optionsEn;
-        const expPatch = applyHotspotExplanation(
-          hotspotExplanation.value,
-          hotspotExplanationTarget.value,
-          formData
-        );
-        Object.assign(formData, expPatch);
-      } else if (formData.type === "SHORT_ANSWER" || formData.type === "FILL_BLANK") {
-        formData.optionsZh = "[]";
-        formData.optionsEn = "[]";
-      }
-      // 判断题固定选项
-      else if (formData.type === "JUDGE") {
-        formData.optionsZh = JSON.stringify([
-          { label: "A", value: "正确" },
-          { label: "B", value: "错误" },
-        ]);
-        formData.optionsEn = JSON.stringify([
-          { label: "A", value: "True" },
-          { label: "B", value: "False" },
-        ]);
-      }
-      // 单选/多选题
-      else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
-        // 构建中文选项JSON
-        formData.optionsZh = JSON.stringify(optionsList.value);
-        // 构建英文选项JSON（如果有内容）
-        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
-        if (hasEnglishOptions) {
-          formData.optionsEn = JSON.stringify(optionsListEn.value);
-        } else {
-          formData.optionsEn = "";
-        }
-      }
+  dataFormRef.value.validate((valid: boolean) => {
+    if (!valid) return;
 
-      // 设置科目ID
-      formData.subjectId = queryParams.subjectId;
-
-      const action = formData.id
-        ? QuestionAPI.update(formData.id, formData)
-        : QuestionAPI.create(formData);
-
-      action.then(() => {
-        ElMessage.success(formData.id ? "修改成功" : "新增成功");
-        dialog.visible = false;
-        fetchData();
-      });
+    // 简答题/填空题不需要 options；拖放/热点 options/answer 已由 applySpecializedEditorsFromForm 写入
+    if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
+      formData.optionsZh = "[]";
+      formData.optionsEn = "[]";
+    } else if (formData.type === "JUDGE") {
+      formData.optionsZh = JSON.stringify([
+        { label: "A", value: "正确" },
+        { label: "B", value: "错误" },
+      ]);
+      formData.optionsEn = JSON.stringify([
+        { label: "A", value: "True" },
+        { label: "B", value: "False" },
+      ]);
+    } else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
+      formData.optionsZh = JSON.stringify(optionsList.value);
+      const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
+      formData.optionsEn = hasEnglishOptions ? JSON.stringify(optionsListEn.value) : "";
     }
-  );
+
+    formData.subjectId = queryParams.subjectId;
+
+    const action = formData.id
+      ? QuestionAPI.update(formData.id, formData)
+      : QuestionAPI.create(formData);
+
+    action.then(() => {
+      ElMessage.success(formData.id ? "修改成功" : "新增成功");
+      dialog.visible = false;
+      fetchData();
+    });
+  });
 }
 
 // 关闭对话框
@@ -1603,16 +1455,6 @@ function resetForm() {
   ];
 
   multipleAnswers.value = [];
-  dragMatchTools.value = "";
-  dragMatchPurposes.value = "";
-  dragMatchExplanation.value = "";
-  dragMatchExplanationTarget.value = "zh";
-  hotspotInteraction.value = "dropdown";
-  hotspotItems.value = "";
-  hotspotPrompts.value = "";
-  hotspotReusable.value = false;
-  hotspotExplanation.value = "";
-  hotspotExplanationTarget.value = "zh";
 
   if (dataFormRef.value) {
     dataFormRef.value.resetFields();
@@ -1995,6 +1837,10 @@ onUnmounted(() => {
 .add-option-btn {
   align-self: flex-start;
   margin-top: 4px;
+}
+
+.specialized-editor-bilingual-hint {
+  margin-bottom: 12px;
 }
 
 .question-dialog {

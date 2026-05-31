@@ -57,12 +57,15 @@
               <div v-else-if="row.type === 'FILL_BLANK'" class="short-answer-tip">
                 <el-text type="info" size="small">填空题（答案见答案列）</el-text>
               </div>
+              <div v-else-if="row.type === 'HOTSPOT'" class="short-answer-tip">
+                <el-text type="info" size="small">{{ formatHotspotSummary(row.options) }}</el-text>
+              </div>
               <div v-else-if="row.type === 'DRAG_MATCH'" class="short-answer-tip">
                 <el-text type="info" size="small">
-                  {{ formatDragMatchPreview(row.options) }}
+                  {{ formatDragMatchSummary(row.options) }}
                 </el-text>
               </div>
-              <!-- 选择题显示选项 -->
+              <!-- 其他题型显示选项 -->
               <div
                 v-for="option in parseOptions(row.options)"
                 v-else
@@ -129,17 +132,33 @@
             <el-option label="填空题" value="FILL_BLANK" />
             <el-option label="简答题" value="SHORT_ANSWER" />
             <el-option label="拖放题" value="DRAG_MATCH" />
+            <el-option label="热点题" value="HOTSPOT" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
           <WangEditor v-model="editForm.content" height="250px" />
         </el-form-item>
 
+        <HotspotOptionsEditor
+          v-if="editForm.type === 'HOTSPOT'"
+          ref="hotspotEditorRef"
+          v-model="editForm.options"
+          v-model:answer="editForm.answer"
+        />
+
+        <DragMatchOptionsEditor
+          v-else-if="editForm.type === 'DRAG_MATCH'"
+          ref="dragMatchEditorRef"
+          v-model="editForm.options"
+          v-model:answer="editForm.answer"
+        />
+
         <!-- 选项编辑 -->
         <el-form-item
           v-if="
             editForm.type !== 'SHORT_ANSWER' &&
             editForm.type !== 'FILL_BLANK' &&
+            editForm.type !== 'HOTSPOT' &&
             editForm.type !== 'DRAG_MATCH'
           "
           label="选项"
@@ -154,7 +173,10 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="答案">
+        <el-form-item
+          v-if="editForm.type !== 'HOTSPOT' && editForm.type !== 'DRAG_MATCH'"
+          label="答案"
+        >
           <!-- 简答题使用富文本编辑器 -->
           <WangEditor
             v-if="editForm.type === 'SHORT_ANSWER'"
@@ -287,11 +309,23 @@ import QuestionBankAPI, {
 } from "@/api/exam/question-bank-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import WangEditor from "@/components/WangEditor/index.vue";
-import { dragMatchOptionsToFields, dragMatchSummary } from "@/utils/dragMatch";
+import HotspotOptionsEditor from "@/components/HotspotOptionsEditor/index.vue";
+import DragMatchOptionsEditor from "@/components/DragMatchOptionsEditor/index.vue";
 import {
-  getQuestionTypeColor as resolveQuestionTypeColor,
-  getQuestionTypeLabel,
-} from "@/utils/questionType";
+  createDefaultDragMatchEditorState,
+  editorStateToDragMatchOptionsJson,
+  parseDragMatchOptions,
+} from "@/utils/dragMatch";
+import {
+  createDefaultEditorState,
+  editorStateToOptionsJson,
+  parseHotspotOptions,
+} from "@/utils/hotspot";
+import {
+  flushSpecializedEditor,
+  type SpecializedOptionsEditorExpose,
+} from "@/utils/specializedQuestionEditor";
+import { normalizeQuestionTypeCode } from "@/utils/questionType";
 
 defineOptions({
   name: "QuestionBankPreview",
@@ -301,6 +335,8 @@ defineOptions({
 const route = useRoute();
 const router = useRouter();
 
+const hotspotEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
+const dragMatchEditorRef = ref<SpecializedOptionsEditorExpose | null>(null);
 const loading = ref(false);
 const editDialogVisible = ref(false);
 const publishDialogVisible = ref(false);
@@ -330,14 +366,13 @@ const editForm = reactive({
   questionNumber: 0,
   type: "",
   content: "",
+  options: "",
   answer: "",
   explanation: "",
 });
 
 // 编辑选项（数组形式）
 const editOptions = ref<Array<{ label: string; value: string }>>([]);
-/** 拖放题原始 options JSON，编辑时保留不通过选项编辑器修改 */
-const editDragMatchOptions = ref("");
 
 const publishForm = reactive({
   subjectId: "",
@@ -437,20 +472,46 @@ const isCorrectOption = (answer: string, label: string) => {
   return answer.includes(label);
 };
 
-// 获取题型文本（预览表格用紧凑名）
-const getQuestionTypeText = (type: string) => getQuestionTypeLabel(type, true);
+// 获取题型文本
+const getQuestionTypeText = (type: string) => {
+  const typeMap: Record<string, string> = {
+    SINGLE: "单选",
+    MULTIPLE: "多选",
+    JUDGE: "判断",
+    FILL_BLANK: "填空",
+    SHORT_ANSWER: "简答",
+    DRAG_MATCH: "拖放",
+    HOTSPOT: "热点",
+  };
+  return typeMap[type] || type;
+};
 
-const getQuestionTypeColor = resolveQuestionTypeColor;
-
-function formatDragMatchPreview(optionsJson: string): string {
-  const summary = dragMatchSummary(optionsJson);
-  const { tools, purposes } = dragMatchOptionsToFields(optionsJson);
-  if (!summary) return "拖放题";
-  const parts = [summary];
-  if (tools) parts.push(`Tool: ${tools}`);
-  if (purposes) parts.push(`Purpose: ${purposes}`);
-  return parts.join(" · ");
+function formatHotspotSummary(optionsJson: string): string {
+  const opts = parseHotspotOptions(optionsJson);
+  if (!opts) return "热点题";
+  const mode = opts.interaction === "yesno" ? "判断" : "下拉";
+  return `热点·${mode}·${opts.rows.length}行`;
 }
+
+function formatDragMatchSummary(optionsJson: string): string {
+  const opts = parseDragMatchOptions(optionsJson);
+  if (!opts) return "拖放题";
+  return `拖放·Tool ${opts.items.length} 项·${opts.slots.length} 槽`;
+}
+
+// 获取题型颜色
+const getQuestionTypeColor = (type: string) => {
+  const colorMap: Record<string, string> = {
+    SINGLE: "primary",
+    MULTIPLE: "success",
+    JUDGE: "warning",
+    FILL_BLANK: "danger",
+    SHORT_ANSWER: "info",
+    DRAG_MATCH: "",
+    HOTSPOT: "success",
+  };
+  return colorMap[type] || "";
+};
 
 // 格式化HTML内容（去除<p>标签，保留换行）
 const formatHtmlContent = (html: string) => {
@@ -467,26 +528,23 @@ const handleEdit = (row: QuestionDraftItemVO) => {
   Object.assign(editForm, {
     id: row.id,
     questionNumber: row.questionNumber,
-    type: row.type,
+    type: normalizeQuestionTypeCode(row.type),
     content: row.content,
+    options: row.options || "",
     answer: row.answer,
     explanation: row.explanation || "",
   });
 
-  // 解析选项 JSON（简答题/拖放题无 A-D 选项）
-  editDragMatchOptions.value = "";
-  if (row.type === "SHORT_ANSWER" || row.type === "DRAG_MATCH") {
-    editOptions.value = [];
-    if (row.type === "DRAG_MATCH") {
-      editDragMatchOptions.value = row.options || "";
-    }
-  } else {
-    try {
-      editOptions.value = JSON.parse(row.options);
-    } catch (error) {
+  try {
+    const type = normalizeQuestionTypeCode(row.type);
+    if (type === "SHORT_ANSWER" || type === "HOTSPOT" || type === "DRAG_MATCH") {
       editOptions.value = [];
-      console.error("解析选项失败", error);
+    } else {
+      editOptions.value = JSON.parse(row.options);
     }
+  } catch (error) {
+    editOptions.value = [];
+    console.error("解析选项失败", error);
   }
 
   editDialogVisible.value = true;
@@ -494,10 +552,17 @@ const handleEdit = (row: QuestionDraftItemVO) => {
 
 // 题型切换处理
 const handleTypeChange = (newType: string) => {
-  if (newType === "SHORT_ANSWER" || newType === "DRAG_MATCH") {
+  const type = normalizeQuestionTypeCode(newType);
+  editForm.type = type;
+  if (type === "SHORT_ANSWER" || type === "HOTSPOT" || type === "DRAG_MATCH") {
     editOptions.value = [];
-    if (newType !== "DRAG_MATCH") {
-      editDragMatchOptions.value = "";
+    editForm.answer = "";
+    if (type === "HOTSPOT") {
+      editForm.options = editorStateToOptionsJson(createDefaultEditorState());
+    } else if (type === "DRAG_MATCH") {
+      editForm.options = editorStateToDragMatchOptionsJson(createDefaultDragMatchEditorState());
+    } else {
+      editForm.options = "[]";
     }
   } else if (editOptions.value.length === 0) {
     // 从简答题切换到其他题型，初始化默认选项
@@ -511,19 +576,28 @@ const handleTypeChange = (newType: string) => {
 // 保存编辑
 const handleSaveEdit = async () => {
   try {
-    // 简答题选项为空数组，其他题型将选项数组转为JSON字符串
-    const optionsJson =
-      editForm.type === "SHORT_ANSWER"
-        ? "[]"
-        : editForm.type === "DRAG_MATCH"
-          ? editDragMatchOptions.value || "[]"
-          : JSON.stringify(editOptions.value);
+    let optionsJson = "[]";
+    let answer = editForm.answer;
+
+    if (editForm.type === "HOTSPOT") {
+      const flushed = flushSpecializedEditor(hotspotEditorRef.value);
+      if (!flushed) return;
+      optionsJson = flushed.optionsJson;
+      answer = flushed.answer;
+    } else if (editForm.type === "DRAG_MATCH") {
+      const flushed = flushSpecializedEditor(dragMatchEditorRef.value);
+      if (!flushed) return;
+      optionsJson = flushed.optionsJson;
+      answer = flushed.answer;
+    } else if (editForm.type !== "SHORT_ANSWER") {
+      optionsJson = JSON.stringify(editOptions.value);
+    }
 
     await QuestionBankAPI.updateDraft(editForm.id, {
       type: editForm.type,
       content: editForm.content,
       options: optionsJson,
-      answer: editForm.answer,
+      answer,
       explanation: editForm.explanation,
     });
     ElMessage.success("保存成功");
