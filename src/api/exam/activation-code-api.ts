@@ -46,6 +46,14 @@ const ActivationCodeAPI = {
       method: "post",
     });
   },
+
+  /** 删除激活码：仅未使用状态可删除 */
+  delete(id: number) {
+    return request<any, void>({
+      url: `${ACTIVATION_CODE_BASE_URL}/${id}`,
+      method: "delete",
+    });
+  },
 };
 
 export default ActivationCodeAPI;

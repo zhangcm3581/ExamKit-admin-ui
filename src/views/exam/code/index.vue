@@ -145,7 +145,18 @@
         <el-table-column label="操作" width="110" fixed="right" align="center">
           <template #default="scope">
             <el-button
-              v-if="scope.row.canRecycle"
+              v-if="scope.row.status === 0"
+              type="danger"
+              size="small"
+              text
+              bg
+              :icon="Delete"
+              @click="onDelete(scope.row)"
+            >
+              删除
+            </el-button>
+            <el-button
+              v-else-if="scope.row.canRecycle"
               type="danger"
               size="small"
               text
@@ -336,7 +347,7 @@
 </template>
 
 <script setup lang="ts">
-import { CircleClose, DocumentCopy } from "@element-plus/icons-vue";
+import { CircleClose, Delete, DocumentCopy } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import * as XLSX from "xlsx";
 
@@ -619,6 +630,22 @@ function statusTagType(status: number): "success" | "info" | "warning" | "danger
       >
     )[status] || "info"
   );
+}
+
+// 删除未使用的激活码
+async function onDelete(row: ActivationCodeVO) {
+  try {
+    await ElMessageBox.confirm(`确认删除激活码「${row.code}」吗？删除后不可恢复。`, "删除确认", {
+      type: "warning",
+      confirmButtonText: "确定删除",
+      cancelButtonText: "取消",
+    });
+  } catch {
+    return;
+  }
+  await ActivationCodeAPI.delete(row.id);
+  ElMessage.success("已删除");
+  fetchData();
 }
 
 // 回收激活码
