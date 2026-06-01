@@ -44,6 +44,8 @@ export interface QuestionVO {
   optionsEn?: string;
   /** 答案 */
   answer: string;
+  /** 英文答案（热点/拖放题双语科目） */
+  answerEn?: string;
   /** 答案解析(中文) */
   explanationZh?: string;
   /** 答案解析(英文) */
@@ -72,6 +74,8 @@ export interface QuestionForm {
   optionsEn?: string;
   /** 答案 */
   answer?: string;
+  /** 英文答案（热点/拖放题双语科目） */
+  answerEn?: string;
   /** 答案解析(中文) */
   explanationZh?: string;
   /** 答案解析(英文) */

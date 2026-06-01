@@ -408,14 +408,14 @@
               :closable="false"
               show-icon
               class="specialized-editor-bilingual-hint"
-              title="英文选项须与中文行数/槽位数一致；答案在「中文」页配置。"
+              title="英文 Tab 须单独配置选项池/Tool 池与答案（结构与中文行数/槽位数一致）。"
             />
 
             <HotspotOptionsEditor
               v-if="formData.type === 'HOTSPOT'"
               ref="hotspotEnEditorRef"
               v-model="formData.optionsEn"
-              :answer="formData.answer"
+              v-model:answer="formData.answerEn"
             />
 
             <DragMatchOptionsEditor
@@ -423,10 +423,7 @@
               :key="`dm-en-${formData.id ?? 'new'}-${formData.type}`"
               ref="dragMatchEnEditorRef"
               v-model="formData.optionsEn"
-              locale="en"
-              :zh-options-json="formData.optionsZh"
-              :zh-answer="formData.answer"
-              :answer="formData.answer"
+              v-model:answer="formData.answerEn"
             />
 
             <el-form-item
@@ -720,6 +717,7 @@ import {
 import {
   flushSpecializedEditor,
   resolveEditorRef,
+  requiresLocalizedAnswerEn,
   validateDragMatchBilingualOptions,
   validateHotspotBilingualOptions,
   type SpecializedOptionsEditorExpose,
@@ -1091,11 +1089,13 @@ function handleTypeChange() {
       formData.optionsZh = empty;
       formData.optionsEn = empty;
       formData.answer = "";
+      formData.answerEn = "";
     } else if (isDragMatchType(formData.type)) {
       const empty = editorStateToDragMatchOptionsJson(createDefaultDragMatchEditorState());
       formData.optionsZh = empty;
       formData.optionsEn = empty;
       formData.answer = "";
+      formData.answerEn = "";
     }
   }
   // 如果是判断题，重置选项
@@ -1312,6 +1312,21 @@ function handleDelete(id?: number) {
   });
 }
 
+function validateBilingualSpecializedAnswers(): boolean {
+  if (!requiresLocalizedAnswerEn(subjectSupportLanguages.value, formData.type)) {
+    return true;
+  }
+  if (!formData.answer?.trim()) {
+    ElMessage.warning("请在中文章节配置热点/拖放答案");
+    return false;
+  }
+  if (!formData.answerEn?.trim()) {
+    ElMessage.warning("请在英文章节配置热点/拖放答案");
+    return false;
+  }
+  return true;
+}
+
 /** 提交前从专用编辑器 live state 刷入 formData（避免仅合法时才 v-model 回写） */
 function applySpecializedEditorsFromForm(): boolean {
   const langs = subjectSupportLanguages.value.split(",").filter(Boolean);
@@ -1337,7 +1352,9 @@ function applySpecializedEditorsFromForm(): boolean {
           ElMessage.warning(enErr);
           return false;
         }
-        formData.optionsEn = enEditor.serialize().optionsJson;
+        const enSerialized = enEditor.serialize();
+        formData.optionsEn = enSerialized.optionsJson;
+        formData.answerEn = enSerialized.answer;
         const biErr = validateHotspotBilingualOptions(optionsZh, formData.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);
@@ -1345,7 +1362,7 @@ function applySpecializedEditorsFromForm(): boolean {
         }
       }
     }
-    return true;
+    return validateBilingualSpecializedAnswers();
   }
 
   if (isDragMatchType(formData.type)) {
@@ -1363,12 +1380,14 @@ function applySpecializedEditorsFromForm(): boolean {
     if (hasBothLanguagesForEdit()) {
       const enEditor = resolveEditorRef(dragMatchEnEditorRef.value);
       if (enEditor) {
-        const enErr = enEditor.validate(optionsZh, flushed.answer);
+        const enErr = enEditor.validate();
         if (enErr) {
           ElMessage.warning(enErr);
           return false;
         }
-        formData.optionsEn = enEditor.serialize(optionsZh, flushed.answer).optionsJson;
+        const enSerialized = enEditor.serialize();
+        formData.optionsEn = enSerialized.optionsJson;
+        formData.answerEn = enSerialized.answer;
         const biErr = validateDragMatchBilingualOptions(optionsZh, formData.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);
@@ -1376,7 +1395,7 @@ function applySpecializedEditorsFromForm(): boolean {
         }
       }
     }
-    return true;
+    return validateBilingualSpecializedAnswers();
   }
 
   return true;
@@ -1443,6 +1462,7 @@ function resetForm() {
   formData.optionsZh = "";
   formData.optionsEn = "";
   formData.answer = "";
+  formData.answerEn = "";
   formData.explanationZh = "";
   formData.explanationEn = "";
 

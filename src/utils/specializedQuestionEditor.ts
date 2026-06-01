@@ -7,9 +7,23 @@ import { hasPerRowHotspotPools, parseHotspotOptions } from "./hotspot";
 import { parseDragMatchOptions } from "./dragMatch";
 
 export interface SpecializedOptionsEditorExpose {
-  validate: (zhOptionsJson?: string, zhAnswer?: string) => string | null;
-  serialize: (zhOptionsJson?: string, zhAnswer?: string) => { optionsJson: string; answer: string };
+  validate: () => string | null;
+  serialize: () => { optionsJson: string; answer: string };
   isValid: () => boolean;
+}
+
+/** 双语科目下热点/拖放题须单独配置 answerEn */
+export function requiresLocalizedAnswerEn(
+  supportLanguages: string | undefined,
+  type: string | undefined
+): boolean {
+  if (!supportLanguages || !type) return false;
+  const langs = supportLanguages
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!langs.includes("zh") || !langs.includes("en")) return false;
+  return type === "HOTSPOT" || type === "DRAG_MATCH";
 }
 
 export function resolveEditorRef<T>(refValue: T | T[] | null | undefined): T | null {

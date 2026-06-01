@@ -1,10 +1,7 @@
 <template>
   <div class="dm-editor">
     <el-form label-position="top">
-      <el-form-item
-        v-if="locale !== 'en'"
-        label="Tool 池（每行一项；多段用 ;; 分隔后合并为同一池）"
-      >
+      <el-form-item label="Tool 池（每行一项；多段用 ;; 分隔后合并为同一池）">
         <el-input
           v-model="state.toolsText"
           type="textarea"
@@ -13,13 +10,7 @@
         />
       </el-form-item>
 
-      <el-form-item
-        :label="
-          locale === 'en'
-            ? '槽位配置（英文 Purpose，须与中文槽位数一致）'
-            : '槽位配置（Purpose + 正确答案）'
-        "
-      >
+      <el-form-item label="槽位配置（Purpose + 正确答案）">
         <div class="dm-editor__rows">
           <div v-for="(row, idx) in state.rows" :key="idx" class="dm-editor__row-card">
             <div class="dm-editor__row-head">
@@ -34,7 +25,7 @@
               :rows="2"
               placeholder="Purpose 描述（可留空）"
             />
-            <div v-if="locale !== 'en'" class="dm-editor__answer mt-2">
+            <div class="dm-editor__answer mt-2">
               <span class="dm-editor__answer-label">正确答案（须在 Tool 池中）</span>
               <el-select
                 v-model="row.answer"
@@ -61,23 +52,17 @@ import { computed, reactive, ref, watch } from "vue";
 import {
   createDefaultDragMatchEditorState,
   editorStateToDragMatchAnswer,
-  editorStateToDragMatchEnglishOptionsJson,
   editorStateToDragMatchOptionsJson,
   isChoiceOptionsJson,
   optionsToDragMatchEditorState,
-  parseDragMatchOptions,
   parseToolsText,
   validateDragMatchEditorState,
-  validateDragMatchEnglishEditorState,
   type DragMatchEditorState,
 } from "@/utils/dragMatch";
+
 const props = defineProps<{
   modelValue?: string;
   answer?: string;
-  /** 双语英文区：不编辑 Tool/答案，提交时与中文对齐 */
-  locale?: "zh" | "en";
-  zhOptionsJson?: string;
-  zhAnswer?: string;
 }>();
 
 const emit = defineEmits<{
@@ -89,8 +74,6 @@ const emit = defineEmits<{
 const state = reactive<DragMatchEditorState>(createDefaultDragMatchEditorState());
 const validationError = ref("");
 let syncing = false;
-
-const locale = computed(() => props.locale ?? "zh");
 
 const toolChoices = computed(() => parseToolsText(state.toolsText));
 
@@ -113,26 +96,9 @@ watch(
   { immediate: true }
 );
 
-/** 英文区槽位数随中文 options 对齐 */
-watch(
-  () => props.zhOptionsJson,
-  (zhJson) => {
-    if (props.locale !== "en" || !zhJson) return;
-    const zh = parseDragMatchOptions(zhJson);
-    if (!zh) return;
-    const len = zh.slots.length;
-    while (state.rows.length < len) state.rows.push({ purpose: "", answer: "" });
-    while (state.rows.length > len) state.rows.pop();
-  },
-  { immediate: true }
-);
-
 function emitChanges() {
   if (syncing) return;
-  const err =
-    props.locale === "en" && props.zhOptionsJson
-      ? validateDragMatchEnglishEditorState(props.zhOptionsJson, props.zhAnswer || "", state)
-      : validateDragMatchEditorState(state);
+  const err = validateDragMatchEditorState(state);
   validationError.value = err || "";
   emit("valid", !err);
   if (err) return;
@@ -154,33 +120,14 @@ function removeRow(idx: number) {
   state.rows.splice(idx, 1);
 }
 
-function validate(zhOptionsJson?: string, zhAnswer?: string): string | null {
-  const zhJson = zhOptionsJson ?? props.zhOptionsJson;
-  const zhAns = zhAnswer ?? props.zhAnswer ?? "";
-  if (props.locale === "en" && zhJson) {
-    const err = validateDragMatchEnglishEditorState(zhJson, zhAns, state);
-    validationError.value = err || "";
-    emit("valid", !err);
-    return err;
-  }
+function validate(): string | null {
   const err = validateDragMatchEditorState(state);
   validationError.value = err || "";
   emit("valid", !err);
   return err;
 }
 
-function serialize(
-  zhOptionsJson?: string,
-  zhAnswer?: string
-): { optionsJson: string; answer: string } {
-  const zhJson = zhOptionsJson ?? props.zhOptionsJson;
-  const zhAns = zhAnswer ?? props.zhAnswer ?? "";
-  if (props.locale === "en" && zhJson) {
-    const json =
-      editorStateToDragMatchEnglishOptionsJson(zhJson, state) ||
-      editorStateToDragMatchOptionsJson(state);
-    return { optionsJson: json, answer: zhAns };
-  }
+function serialize(): { optionsJson: string; answer: string } {
   return {
     optionsJson: editorStateToDragMatchOptionsJson(state),
     answer: editorStateToDragMatchAnswer(state),
@@ -190,7 +137,7 @@ function serialize(
 defineExpose({
   validate,
   serialize,
-  isValid: () => validate() === null,
+  isValid: () => validateDragMatchEditorState(state) === null,
 });
 </script>
 

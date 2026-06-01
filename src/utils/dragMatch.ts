@@ -103,55 +103,6 @@ export function editorStateToDragMatchAnswer(state: DragMatchEditorState): strin
   return state.rows.map((r) => r.answer.trim()).join("|");
 }
 
-/** 双语英文区：槽位与 Purpose 对齐中文，Tool/答案沿用中文配置 */
-export function mergeDragMatchEnglishEditorState(
-  zhOptionsJson: string,
-  zhAnswer: string,
-  enState: DragMatchEditorState
-): DragMatchEditorState | null {
-  const zh = parseDragMatchOptions(zhOptionsJson);
-  if (!zh) return null;
-  const answers = splitPipe(zhAnswer || "");
-  return {
-    toolsText: joinLines(zh.items),
-    rows: zh.slots.map((s, i) => ({
-      purpose: (enState.rows[i]?.purpose ?? "").trim(),
-      answer: answers[i] || "",
-    })),
-  };
-}
-
-export function validateDragMatchEnglishEditorState(
-  zhOptionsJson: string,
-  zhAnswer: string,
-  enState: DragMatchEditorState
-): string | null {
-  const zh = parseDragMatchOptions(zhOptionsJson);
-  if (!zh) return "请先完善中文拖放配置";
-  if (enState.rows.length !== zh.slots.length) {
-    return "英文槽位数须与中文一致";
-  }
-  const merged = mergeDragMatchEnglishEditorState(zhOptionsJson, zhAnswer, enState);
-  if (!merged) return "请先完善中文拖放配置";
-  return validateDragMatchEditorState(merged);
-}
-
-export function editorStateToDragMatchEnglishOptionsJson(
-  zhOptionsJson: string,
-  enState: DragMatchEditorState
-): string | null {
-  const zh = parseDragMatchOptions(zhOptionsJson);
-  if (!zh) return null;
-  const merged: DragMatchEditorState = {
-    toolsText: joinLines(zh.items),
-    rows: zh.slots.map((s, i) => ({
-      purpose: (enState.rows[i]?.purpose ?? "").trim(),
-      answer: "",
-    })),
-  };
-  return editorStateToDragMatchOptionsJson(merged);
-}
-
 export function validateDragMatchEditorState(state: DragMatchEditorState): string | null {
   const tools = parseToolsText(state.toolsText);
   if (!tools.length) return "Tool 池不能为空";

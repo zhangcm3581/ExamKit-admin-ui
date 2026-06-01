@@ -104,12 +104,12 @@
           :closable="false"
           show-icon
           class="qep-bilingual-hint"
-          title="英文选项须与中文行数/槽位数一致；答案在上方中文配置区编辑。"
+          title="英文须单独配置选项池与答案（行数/模式与中文一致）。"
         />
         <HotspotOptionsEditor
           ref="hotspotEnEditorRef"
           v-model="form.optionsEn"
-          :answer="form.answer"
+          v-model:answer="form.answerEn"
         />
       </template>
     </section>
@@ -133,15 +133,12 @@
           :closable="false"
           show-icon
           class="qep-bilingual-hint"
-          title="英文槽位须与中文一致；答案在上方中文配置区编辑。"
+          title="英文须单独配置 Tool 池与答案（槽位数与中文一致）。"
         />
         <DragMatchOptionsEditor
           ref="dragMatchEnEditorRef"
           v-model="form.optionsEn"
-          locale="en"
-          :zh-options-json="form.optionsZh"
-          :zh-answer="form.answer"
-          :answer="form.answer"
+          v-model:answer="form.answerEn"
         />
       </template>
     </section>
@@ -204,6 +201,7 @@ import DragMatchOptionsEditor from "@/components/DragMatchOptionsEditor/index.vu
 import {
   flushSpecializedEditor,
   resolveEditorRef,
+  requiresLocalizedAnswerEn,
   validateDragMatchBilingualOptions,
   validateHotspotBilingualOptions,
   type SpecializedOptionsEditorExpose,
@@ -273,6 +271,7 @@ const form = reactive<QuestionForm>({
   optionsZh: props.question.optionsZh || "",
   optionsEn: props.question.optionsEn || "",
   answer: props.question.answer || "",
+  answerEn: props.question.answerEn || "",
   explanationZh: props.question.explanationZh || "",
   explanationEn: props.question.explanationEn || "",
 });
@@ -354,18 +353,27 @@ function buildPayload(): QuestionForm | null {
     if (hasBothLanguages.value) {
       const enEditor = resolveEditorRef(dragMatchEnEditorRef.value);
       if (enEditor) {
-        const enErr = enEditor.validate(optionsZh, flushed.answer);
+        const enErr = enEditor.validate();
         if (enErr) {
           ElMessage.warning(enErr);
           return null;
         }
-        payload.optionsEn = enEditor.serialize(optionsZh, flushed.answer).optionsJson;
+        const enSerialized = enEditor.serialize();
+        payload.optionsEn = enSerialized.optionsJson;
+        payload.answerEn = enSerialized.answer;
         const biErr = validateDragMatchBilingualOptions(payload.optionsZh, payload.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);
           return null;
         }
       }
+    }
+    if (
+      requiresLocalizedAnswerEn(props.subjectSupportLanguages, form.type) &&
+      (!payload.answer?.trim() || !payload.answerEn?.trim())
+    ) {
+      ElMessage.warning("双语科目热点/拖放题须分别配置中英文答案");
+      return null;
     }
   } else if (form.type === "HOTSPOT") {
     const primaryRef = onlyEn.value ? hotspotEnEditorRef : hotspotZhEditorRef;
@@ -389,13 +397,22 @@ function buildPayload(): QuestionForm | null {
           ElMessage.warning(enErr);
           return null;
         }
-        payload.optionsEn = enEditor.serialize().optionsJson;
+        const enSerialized = enEditor.serialize();
+        payload.optionsEn = enSerialized.optionsJson;
+        payload.answerEn = enSerialized.answer;
         const biErr = validateHotspotBilingualOptions(payload.optionsZh, payload.optionsEn);
         if (biErr) {
           ElMessage.warning(biErr);
           return null;
         }
       }
+    }
+    if (
+      requiresLocalizedAnswerEn(props.subjectSupportLanguages, form.type) &&
+      (!payload.answer?.trim() || !payload.answerEn?.trim())
+    ) {
+      ElMessage.warning("双语科目热点/拖放题须分别配置中英文答案");
+      return null;
     }
   } else if (form.type === "JUDGE") {
     payload.optionsZh = JSON.stringify([
