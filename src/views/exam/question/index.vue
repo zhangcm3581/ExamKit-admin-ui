@@ -302,7 +302,7 @@
     <el-dialog
       v-model="dialog.visible"
       :title="dialog.title"
-      width="1000px"
+      :width="dialogWidth"
       class="question-dialog"
       @close="handleCloseDialog"
     >
@@ -319,157 +319,180 @@
           </el-radio-group>
         </el-form-item>
 
-        <!-- 中英文内容切换标签页 -->
-        <!-- 同时支持中英文时显示标签页 -->
-        <el-tabs
-          v-if="hasBothLanguagesForEdit()"
-          v-model="activeLanguageTab"
-          type="border-card"
-          class="language-tabs"
-        >
-          <!-- 中文标签页 -->
-          <el-tab-pane label="中文" name="zh">
-            <el-form-item
-              label="试题题目"
-              :prop="subjectSupportLanguages.includes('zh') ? 'contentZh' : ''"
-              :required="subjectSupportLanguages.includes('zh')"
-            >
-              <RichTextField v-model="formData.contentZh" />
-            </el-form-item>
+        <!-- 双语：热点/拖放题用中英左右对照，其余题型用标签页 -->
+        <template v-if="hasBothLanguagesForEdit()">
+          <!-- 热点题 / 拖放题：中英左右对照 -->
+          <div v-if="isSpecializedType(formData.type)" class="bilingual-columns">
+            <div class="bilingual-col">
+              <div class="bilingual-col__title">中文</div>
+              <el-form-item
+                label="试题题目"
+                :prop="subjectSupportLanguages.includes('zh') ? 'contentZh' : ''"
+                :required="subjectSupportLanguages.includes('zh')"
+              >
+                <RichTextField v-model="formData.contentZh" />
+              </el-form-item>
 
-            <HotspotOptionsEditor
-              v-if="formData.type === 'HOTSPOT'"
-              ref="hotspotZhEditorRef"
-              v-model="formData.optionsZh"
-              v-model:answer="formData.answer"
-            />
+              <HotspotOptionsEditor
+                v-if="formData.type === 'HOTSPOT'"
+                ref="hotspotZhEditorRef"
+                v-model="formData.optionsZh"
+                v-model:answer="formData.answer"
+              />
+              <DragMatchOptionsEditor
+                v-else-if="isDragMatchType(formData.type)"
+                :key="`dm-zh-${formData.id ?? 'new'}-${formData.type}`"
+                ref="dragMatchZhEditorRef"
+                v-model="formData.optionsZh"
+                v-model:answer="formData.answer"
+              />
 
-            <DragMatchOptionsEditor
-              v-else-if="isDragMatchType(formData.type)"
-              :key="`dm-zh-${formData.id ?? 'new'}-${formData.type}`"
-              ref="dragMatchZhEditorRef"
-              v-model="formData.optionsZh"
-              v-model:answer="formData.answer"
-            />
+              <el-form-item label="解析">
+                <RichTextField v-model="formData.explanationZh" />
+              </el-form-item>
+            </div>
 
-            <el-form-item
-              v-else-if="hasChoiceOptions(formData.type)"
-              label="试题选项"
-              :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
-              :required="subjectSupportLanguages.includes('zh')"
-            >
-              <div class="options-editor">
-                <div v-for="(option, index) in optionsList" :key="index" class="option-editor-item">
-                  <span class="option-badge">{{ option.label }}</span>
-                  <div class="option-editor">
-                    <RichTextField v-model="option.value" min-height="60px" />
+            <div class="bilingual-col">
+              <div class="bilingual-col__title">英文</div>
+              <el-form-item
+                label="试题题目"
+                :prop="subjectSupportLanguages.includes('en') ? 'contentEn' : ''"
+                :required="subjectSupportLanguages.includes('en')"
+              >
+                <RichTextField v-model="formData.contentEn" />
+              </el-form-item>
+
+              <HotspotOptionsEditor
+                v-if="formData.type === 'HOTSPOT'"
+                ref="hotspotEnEditorRef"
+                v-model="formData.optionsEn"
+                v-model:answer="formData.answerEn"
+              />
+              <DragMatchOptionsEditor
+                v-else-if="isDragMatchType(formData.type)"
+                :key="`dm-en-${formData.id ?? 'new'}-${formData.type}`"
+                ref="dragMatchEnEditorRef"
+                v-model="formData.optionsEn"
+                v-model:answer="formData.answerEn"
+              />
+
+              <el-form-item label="解析">
+                <RichTextField v-model="formData.explanationEn" />
+              </el-form-item>
+            </div>
+          </div>
+
+          <!-- 其余题型：中英文标签页 -->
+          <el-tabs v-else v-model="activeLanguageTab" type="border-card" class="language-tabs">
+            <!-- 中文标签页 -->
+            <el-tab-pane label="中文" name="zh">
+              <el-form-item
+                label="试题题目"
+                :prop="subjectSupportLanguages.includes('zh') ? 'contentZh' : ''"
+                :required="subjectSupportLanguages.includes('zh')"
+              >
+                <RichTextField v-model="formData.contentZh" />
+              </el-form-item>
+
+              <el-form-item
+                v-if="hasChoiceOptions(formData.type)"
+                label="试题选项"
+                :prop="subjectSupportLanguages.includes('zh') ? 'optionsZh' : ''"
+                :required="subjectSupportLanguages.includes('zh')"
+              >
+                <div class="options-editor">
+                  <div
+                    v-for="(option, index) in optionsList"
+                    :key="index"
+                    class="option-editor-item"
+                  >
+                    <span class="option-badge">{{ option.label }}</span>
+                    <div class="option-editor">
+                      <RichTextField v-model="option.value" min-height="60px" />
+                    </div>
+                    <el-button
+                      v-if="optionsList.length > 2"
+                      type="danger"
+                      text
+                      icon="Delete"
+                      class="option-delete-btn"
+                      @click="removeOption(index)"
+                    >
+                      删除
+                    </el-button>
                   </div>
                   <el-button
-                    v-if="optionsList.length > 2"
-                    type="danger"
-                    text
-                    icon="Delete"
-                    class="option-delete-btn"
-                    @click="removeOption(index)"
+                    class="add-option-btn"
+                    type="primary"
+                    plain
+                    icon="Plus"
+                    @click="addOption"
                   >
-                    删除
+                    添加选项
                   </el-button>
                 </div>
-                <el-button
-                  class="add-option-btn"
-                  type="primary"
-                  plain
-                  icon="Plus"
-                  @click="addOption"
-                >
-                  添加选项
-                </el-button>
-              </div>
-            </el-form-item>
+              </el-form-item>
 
-            <el-form-item label="解析">
-              <RichTextField v-model="formData.explanationZh" />
-            </el-form-item>
-          </el-tab-pane>
+              <el-form-item label="解析">
+                <RichTextField v-model="formData.explanationZh" />
+              </el-form-item>
+            </el-tab-pane>
 
-          <!-- 英文标签页 -->
-          <el-tab-pane label="英文" name="en">
-            <el-form-item
-              label="试题题目"
-              :prop="subjectSupportLanguages.includes('en') ? 'contentEn' : ''"
-              :required="subjectSupportLanguages.includes('en')"
-            >
-              <RichTextField v-model="formData.contentEn" />
-            </el-form-item>
+            <!-- 英文标签页 -->
+            <el-tab-pane label="英文" name="en">
+              <el-form-item
+                label="试题题目"
+                :prop="subjectSupportLanguages.includes('en') ? 'contentEn' : ''"
+                :required="subjectSupportLanguages.includes('en')"
+              >
+                <RichTextField v-model="formData.contentEn" />
+              </el-form-item>
 
-            <el-alert
-              v-if="formData.type === 'HOTSPOT' || isDragMatchType(formData.type)"
-              type="info"
-              :closable="false"
-              show-icon
-              class="specialized-editor-bilingual-hint"
-              title="英文 Tab 须单独配置选项池/Tool 池与答案（结构与中文行数/槽位数一致）。"
-            />
-
-            <HotspotOptionsEditor
-              v-if="formData.type === 'HOTSPOT'"
-              ref="hotspotEnEditorRef"
-              v-model="formData.optionsEn"
-              v-model:answer="formData.answerEn"
-            />
-
-            <DragMatchOptionsEditor
-              v-else-if="isDragMatchType(formData.type)"
-              :key="`dm-en-${formData.id ?? 'new'}-${formData.type}`"
-              ref="dragMatchEnEditorRef"
-              v-model="formData.optionsEn"
-              v-model:answer="formData.answerEn"
-            />
-
-            <el-form-item
-              v-else-if="hasChoiceOptions(formData.type)"
-              label="试题选项"
-              :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
-              :required="subjectSupportLanguages.includes('en')"
-            >
-              <div class="options-editor">
-                <div
-                  v-for="(option, index) in optionsListEn"
-                  :key="index"
-                  class="option-editor-item"
-                >
-                  <span class="option-badge">{{ option.label }}</span>
-                  <div class="option-editor">
-                    <RichTextField v-model="option.value" min-height="60px" />
+              <el-form-item
+                v-if="hasChoiceOptions(formData.type)"
+                label="试题选项"
+                :prop="subjectSupportLanguages.includes('en') ? 'optionsEn' : ''"
+                :required="subjectSupportLanguages.includes('en')"
+              >
+                <div class="options-editor">
+                  <div
+                    v-for="(option, index) in optionsListEn"
+                    :key="index"
+                    class="option-editor-item"
+                  >
+                    <span class="option-badge">{{ option.label }}</span>
+                    <div class="option-editor">
+                      <RichTextField v-model="option.value" min-height="60px" />
+                    </div>
+                    <el-button
+                      v-if="optionsListEn.length > 2"
+                      type="danger"
+                      text
+                      icon="Delete"
+                      class="option-delete-btn"
+                      @click="removeOptionEn(index)"
+                    >
+                      删除
+                    </el-button>
                   </div>
                   <el-button
-                    v-if="optionsListEn.length > 2"
-                    type="danger"
-                    text
-                    icon="Delete"
-                    class="option-delete-btn"
-                    @click="removeOptionEn(index)"
+                    class="add-option-btn"
+                    type="primary"
+                    plain
+                    icon="Plus"
+                    @click="addOptionEn"
                   >
-                    删除
+                    添加选项
                   </el-button>
                 </div>
-                <el-button
-                  class="add-option-btn"
-                  type="primary"
-                  plain
-                  icon="Plus"
-                  @click="addOptionEn"
-                >
-                  添加选项
-                </el-button>
-              </div>
-            </el-form-item>
+              </el-form-item>
 
-            <el-form-item label="解析">
-              <RichTextField v-model="formData.explanationEn" />
-            </el-form-item>
-          </el-tab-pane>
-        </el-tabs>
+              <el-form-item label="解析">
+                <RichTextField v-model="formData.explanationEn" />
+              </el-form-item>
+            </el-tab-pane>
+          </el-tabs>
+        </template>
 
         <!-- 单语言时直接显示内容，不使用标签页 -->
         <template v-else>
@@ -820,6 +843,16 @@ function isNoChoiceOptionsType(type?: string) {
 function isHotspotType(type?: string) {
   return type === "HOTSPOT";
 }
+
+/** 热点/拖放题：编辑弹窗用中英左右对照布局 */
+function isSpecializedType(type?: string) {
+  return isHotspotType(type) || isDragMatchType(type);
+}
+
+/** 编辑弹窗宽度：热点/拖放双语对照更宽，窄屏自适应不溢出 */
+const dialogWidth = computed(() =>
+  isSpecializedType(formData.type) ? "min(1320px, 94vw)" : "1000px"
+);
 
 /** 使用 A/B/C 选项编辑器的题型 */
 function hasChoiceOptions(type?: string) {
@@ -1867,6 +1900,35 @@ onUnmounted(() => {
 
 .specialized-editor-bilingual-hint {
   margin-bottom: 12px;
+}
+
+/* 热点/拖放题：中英左右对照 */
+.bilingual-columns {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.bilingual-col {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.bilingual-col__title {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+@media (max-width: 992px) {
+  .bilingual-columns {
+    flex-direction: column;
+  }
 }
 
 .question-dialog {

@@ -42,35 +42,9 @@
         </el-radio-group>
       </el-form-item>
 
-      <template v-if="state.interaction === 'dropdown'">
-        <el-form-item label="选项池模式">
-          <el-radio-group v-model="state.poolMode">
-            <el-radio label="shared">共享选项池（排序/术语题）</el-radio>
-            <el-radio label="perRow">各行独立选项池</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item v-if="state.poolMode === 'shared'" label="选项池（每行一个选项）">
-          <el-input
-            v-model="state.sharedItemsText"
-            type="textarea"
-            :rows="5"
-            placeholder="选项1&#10;选项2&#10;选项3"
-          />
-        </el-form-item>
-
-        <el-form-item v-if="state.poolMode === 'shared'">
-          <template #label>
-            <span>允许选项重复</span>
-            <span class="hotspot-editor__hint">（关闭时各下拉不能选同一项）</span>
-          </template>
-          <el-switch v-model="state.reusable" />
-        </el-form-item>
-
-        <p v-if="state.poolMode === 'perRow'" class="hotspot-editor__tip">
-          各行独立池：在下方每一行的「本行选项」中填写，每行一个选项、换行分隔。
-        </p>
-      </template>
+      <p v-if="state.interaction === 'dropdown'" class="hotspot-editor__tip">
+        每行独立配置选项池：左侧填写题干，右侧逐行填写本行选项，并点击选择正确答案。
+      </p>
 
       <el-form-item label="行配置">
         <div class="hotspot-editor__rows">
@@ -81,37 +55,54 @@
                 删除
               </el-button>
             </div>
-            <el-input v-model="row.prompt" type="textarea" :rows="2" placeholder="行描述 / 陈述" />
-            <el-input
-              v-if="state.interaction === 'dropdown' && state.poolMode === 'perRow'"
-              v-model="row.itemsText"
-              type="textarea"
-              :rows="4"
-              class="mt-2"
-              placeholder="本行选项（每行一个）"
-            />
-            <div class="hotspot-editor__row-answer mt-2">
-              <span class="hotspot-editor__row-answer-label">正确答案</span>
-              <el-select
-                v-if="state.interaction === 'dropdown'"
-                v-model="row.answer"
-                placeholder="选择答案"
-                filterable
-                allow-create
-                default-first-option
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="item in rowAnswerChoices(idx)"
-                  :key="item"
-                  :label="item"
-                  :value="item"
+
+            <div
+              class="hotspot-editor__row-body"
+              :class="{ 'is-dropdown': state.interaction === 'dropdown' }"
+            >
+              <!-- 左：行描述（文本多时自动换行） -->
+              <div class="hotspot-editor__row-prompt">
+                <span class="hotspot-editor__field-label">行描述 / 陈述</span>
+                <el-input
+                  v-model="row.prompt"
+                  type="textarea"
+                  :autosize="{ minRows: 2 }"
+                  placeholder="行描述 / 陈述"
                 />
-              </el-select>
-              <el-radio-group v-else v-model="row.answer">
-                <el-radio label="Y">Y / 是</el-radio>
-                <el-radio label="N">N / 否</el-radio>
-              </el-radio-group>
+              </div>
+
+              <!-- 右：本行选项池 + 正确答案（下拉题，单选可见全部选项） -->
+              <div v-if="state.interaction === 'dropdown'" class="hotspot-editor__row-pool">
+                <span class="hotspot-editor__field-label">本行选项池（每行一个）</span>
+                <el-input
+                  v-model="row.itemsText"
+                  type="textarea"
+                  :autosize="{ minRows: 3 }"
+                  placeholder="选项1&#10;选项2&#10;选项3"
+                />
+                <span class="hotspot-editor__field-label hotspot-editor__field-label--mt">
+                  正确答案（点击选择）
+                </span>
+                <el-radio-group
+                  v-if="rowAnswerChoices(idx).length"
+                  v-model="row.answer"
+                  class="hotspot-editor__answer-radios"
+                >
+                  <el-radio v-for="item in rowAnswerChoices(idx)" :key="item" :label="item" border>
+                    {{ item }}
+                  </el-radio>
+                </el-radio-group>
+                <p v-else class="hotspot-editor__tip">请先在上方填写本行选项</p>
+              </div>
+
+              <!-- 右：Y/No（判断题） -->
+              <div v-else class="hotspot-editor__row-pool">
+                <span class="hotspot-editor__field-label">正确答案</span>
+                <el-radio-group v-model="row.answer">
+                  <el-radio label="Y">Y / 是</el-radio>
+                  <el-radio label="N">N / 否</el-radio>
+                </el-radio-group>
+              </div>
             </div>
           </div>
           <el-button type="primary" plain icon="Plus" @click="addRow">添加一行</el-button>
@@ -129,6 +120,7 @@ import {
   editorStateToAnswer,
   editorStateToOptionsJson,
   getHotspotRowItems,
+  joinLines,
   optionsToEditorState,
   parseHotspotOptions,
   splitLines,
@@ -157,6 +149,19 @@ let syncing = false;
 function syncFromProps() {
   syncing = true;
   const next = optionsToEditorState(props.modelValue, props.answer);
+  // 统一为各行独立选项池：旧的共享池数据迁移为每行同一份选项
+  if (next.interaction === "dropdown") {
+    if (next.poolMode === "shared") {
+      const shared = splitLines(next.sharedItemsText);
+      next.rows = next.rows.map((r) => ({
+        ...r,
+        itemsText: r.itemsText?.trim() ? r.itemsText : joinLines(shared),
+      }));
+    }
+    next.poolMode = "perRow";
+    next.sharedItemsText = "";
+    next.reusable = true;
+  }
   Object.assign(state, next);
   const parsed = parseHotspotOptions(props.modelValue);
   const parts = splitPipe(props.answer || "");
@@ -226,6 +231,11 @@ function onInteractionChange() {
       r.itemsText = "";
       if (r.answer !== "Y" && r.answer !== "N") r.answer = "Y";
     });
+  } else {
+    // 下拉题统一各行独立选项池
+    state.poolMode = "perRow";
+    state.sharedItemsText = "";
+    state.reusable = true;
   }
 }
 
@@ -337,19 +347,67 @@ defineExpose({
   font-weight: 600;
 }
 
-.hotspot-editor__row-answer {
+.hotspot-editor__row-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
 }
 
-.hotspot-editor__row-answer-label {
+/* 下拉题：左行描述、右选项池 */
+.hotspot-editor__row-body.is-dropdown {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.hotspot-editor__row-prompt,
+.hotspot-editor__row-pool {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hotspot-editor__field-label {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
+.hotspot-editor__field-label--mt {
+  margin-top: 6px;
+}
+
+/* 正确答案：竖排可见全部选项，长文本换行 */
+.hotspot-editor__answer-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.hotspot-editor__answer-radios :deep(.el-radio.is-bordered) {
+  width: 100%;
+  height: auto;
+  min-height: 34px;
+  padding: 8px 12px;
+  margin-right: 0;
+}
+
+.hotspot-editor__answer-radios :deep(.el-radio__label) {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .mt-2 {
   margin-top: 8px;
+}
+
+/* 窄屏（双语对照列内）行描述与选项池上下堆叠 */
+@media (max-width: 768px) {
+  .hotspot-editor__row-body.is-dropdown {
+    flex-direction: column;
+  }
 }
 
 .hotspot-editor__error {

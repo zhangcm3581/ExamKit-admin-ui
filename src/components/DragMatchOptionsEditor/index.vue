@@ -26,17 +26,15 @@
               placeholder="Purpose 描述（可留空）"
             />
             <div class="dm-editor__answer mt-2">
-              <span class="dm-editor__answer-label">正确答案（须在 Tool 池中）</span>
-              <el-select
+              <span class="dm-editor__answer-label">正确答案（点击选择，须在 Tool 池中）</span>
+              <el-radio-group
+                v-if="toolChoices.length"
                 v-model="row.answer"
-                placeholder="选择 Tool"
-                filterable
-                allow-create
-                default-first-option
-                style="width: 100%"
+                class="dm-editor__answer-radios"
               >
-                <el-option v-for="t in toolChoices" :key="t" :label="t" :value="t" />
-              </el-select>
+                <el-radio v-for="t in toolChoices" :key="t" :label="t" border>{{ t }}</el-radio>
+              </el-radio-group>
+              <p v-else class="dm-editor__tip">请先在上方填写 Tool 池</p>
             </div>
           </div>
           <el-button type="primary" plain icon="Plus" @click="addRow">添加槽位</el-button>
@@ -167,6 +165,36 @@ defineExpose({
 
 .dm-editor__answer-label {
   font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 正确答案：竖排可见全部 Tool，长文本换行 */
+.dm-editor__answer-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 6px;
+}
+
+.dm-editor__answer-radios :deep(.el-radio.is-bordered) {
+  width: 100%;
+  height: auto;
+  min-height: 34px;
+  padding: 8px 12px;
+  margin-right: 0;
+}
+
+.dm-editor__answer-radios :deep(.el-radio__label) {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.dm-editor__tip {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
 
