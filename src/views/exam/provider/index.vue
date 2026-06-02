@@ -847,7 +847,7 @@ function openMiniappQr(row: { id: string }) {
 
 const queryParams = reactive<ProviderPageQuery>({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 20,
 });
 
 const tableData = ref<TableRow[]>([]);
@@ -1586,10 +1586,15 @@ function handleConfirmMove() {
 
 // 上传题库(工具栏按钮)
 function handleToolbarUpload() {
-  // 跳转到新的题库上传页面
+  // 跳转到新的题库上传页面；带上当前文件夹，发布后可返回原 Provider 目录
+  const query: Record<string, string> = { activeMenu: "/exam/provider" };
+  if (currentFolder.value) {
+    query.folderId = String(currentFolder.value.id);
+    query.folderName = currentFolder.value.folderName || "";
+  }
   router.push({
     path: "/exam/question-bank/upload",
-    query: { activeMenu: "/exam/provider" },
+    query,
   });
 }
 

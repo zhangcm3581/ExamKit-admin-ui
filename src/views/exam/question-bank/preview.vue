@@ -640,7 +640,7 @@ const handleConfirmPublish = async () => {
     publishDialogVisible.value = false;
 
     setTimeout(() => {
-      router.push("/exam/provider");
+      router.push(buildProviderReturn());
     }, 1000);
   } catch (error: any) {
     ElMessage.error("发布失败");
@@ -683,12 +683,20 @@ const getSubjectSingleName = (subject: SubjectVO) => {
   return subject.nameZh || subject.nameEn || "未命名科目";
 };
 
+// 构造返回 Provider 的目标（带回文件夹上下文）
+const buildProviderReturn = () => {
+  const path = (route.query.activeMenu as string) || "/exam/provider";
+  const query: Record<string, string> = {};
+  if (route.query.folderId) query.folderId = String(route.query.folderId);
+  if (route.query.folderName) query.folderName = String(route.query.folderName);
+  return { path, query };
+};
+
 // 返回
 const handleBack = () => {
-  // 优先使用activeMenu参数
-  const activeMenu = route.query.activeMenu as string;
-  if (activeMenu) {
-    router.push(activeMenu);
+  // 优先使用 activeMenu 参数，并带回文件夹上下文
+  if (route.query.activeMenu || route.query.folderId) {
+    router.push(buildProviderReturn());
   } else {
     router.back();
   }

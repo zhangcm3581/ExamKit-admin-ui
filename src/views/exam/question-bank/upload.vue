@@ -192,6 +192,13 @@ const handleFileUpload = async (file: File) => {
       if (route.query.activeMenu) {
         query.activeMenu = route.query.activeMenu;
       }
+      // 透传文件夹上下文，发布/返回时回到原 Provider 目录
+      if (route.query.folderId) {
+        query.folderId = route.query.folderId;
+      }
+      if (route.query.folderName) {
+        query.folderName = route.query.folderName;
+      }
       await router.push({
         name: "QuestionBankPreview",
         query,
