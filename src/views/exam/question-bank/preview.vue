@@ -200,16 +200,20 @@
     <el-dialog
       v-model="publishDialogVisible"
       title="发布到科目"
-      width="700px"
+      width="820px"
+      top="6vh"
+      class="publish-subject-dialog"
       :close-on-click-modal="false"
     >
-      <el-form ref="publishFormRef" :model="publishForm" label-width="120px">
+      <el-form ref="publishFormRef" :model="publishForm" label-width="84px">
         <el-form-item label="选择科目">
           <el-select
             v-model="publishForm.subjectId"
             placeholder="请选择科目"
             filterable
+            popper-class="publish-subject-popper"
             :filter-method="filterSubjects"
+            style="width: 100%"
             @change="handleSubjectChange"
           >
             <el-option
@@ -709,70 +713,75 @@ onMounted(async () => {
 </script>
 
 <style lang="scss">
-/* 科目选项双语显示样式 - 全局样式 */
-.subject-option-bilingual {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-  width: 100% !important;
-  min-height: 50px !important;
-  padding: 8px 0 !important;
-  line-height: 1.4 !important;
-
-  .subject-name-primary {
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    color: #303133 !important;
-    overflow-wrap: break-word !important;
-    white-space: normal !important;
+/* 发布科目下拉框（仅作用于该选择框，避免污染全局其他下拉框） */
+.publish-subject-popper {
+  /* 限制下拉框内部滚动区域高度，避免选项过多时超出弹窗 */
+  .el-select-dropdown__wrap,
+  .el-scrollbar__wrap {
+    max-height: 280px !important;
   }
 
-  .subject-name-secondary {
-    padding-top: 6px !important;
-    font-size: 12px !important;
-    color: #909399 !important;
-    overflow-wrap: break-word !important;
+  /* 下拉菜单内边距调整 */
+  .el-select-dropdown__list {
+    padding: 6px !important;
+  }
+
+  /* 紧凑型 el-option，明显区分但不过高 */
+  .el-select-dropdown__item {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 8px 14px !important;
+    margin-bottom: 4px !important;
+    line-height: 1.4 !important;
     white-space: normal !important;
-    border-top: 1px dashed #d9d9d9 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e4e7ed !important;
+    border-radius: 4px !important;
+    transition: all 0.2s;
+  }
+
+  .el-select-dropdown__item:hover {
+    background-color: #f5f7fa !important;
+    border-color: #c0c4cc !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .el-select-dropdown__item.selected {
+    background-color: #ecf5ff !important;
+    border-color: #409eff !important;
+  }
+
+  /* 科目选项双语显示（紧凑） */
+  .subject-option-bilingual {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    width: 100% !important;
+    line-height: 1.35 !important;
+
+    .subject-name-primary {
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      color: #303133 !important;
+      overflow-wrap: break-word !important;
+      white-space: normal !important;
+    }
+
+    .subject-name-secondary {
+      padding-top: 3px !important;
+      margin-top: 1px !important;
+      font-size: 12px !important;
+      color: #909399 !important;
+      overflow-wrap: break-word !important;
+      white-space: normal !important;
+      border-top: 1px dashed #d9d9d9 !important;
+    }
   }
 }
 
-/* 确保 el-option 有足够的高度和明显的区分 */
-.el-select-dropdown__item {
-  height: auto !important;
-  min-height: 34px !important;
-  padding: 12px 20px !important;
-  margin-bottom: 2px !important;
-  line-height: normal !important;
-  background-color: #ffffff !important;
-  border: 1px solid #e4e7ed !important;
-  border-radius: 4px !important;
-  transition: all 0.2s;
-}
-
-.el-select-dropdown__item:hover {
-  background-color: #f5f7fa !important;
-  border-color: #c0c4cc !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
-}
-
-.el-select-dropdown__item.selected {
-  background-color: #ecf5ff !important;
-  border-color: #409eff !important;
-}
-
-/* 下拉菜单内边距调整 */
-.el-select-dropdown__list {
-  padding: 6px !important;
-}
-
-/* 发布弹窗样式优化 */
-.el-dialog {
-  min-height: 400px;
-}
-
-.el-select-dropdown {
-  max-height: 450px !important;
+/* 发布弹窗样式优化（仅作用于该弹窗） */
+.publish-subject-dialog {
+  min-height: 420px;
 }
 
 /* 选中科目详情卡片 */

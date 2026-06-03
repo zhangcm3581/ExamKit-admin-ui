@@ -180,94 +180,94 @@
       />
     </el-card>
 
-    <!-- 激活码弹窗 — 票据风 -->
+    <!-- 激活码弹窗 -->
     <el-dialog
       v-model="codesVisible"
-      width="520px"
+      width="760px"
       destroy-on-close
+      align-center
       append-to-body
+      class="codes-dialog"
       :show-close="false"
-      class="examkit-codes-dialog"
     >
-      <template #header>
-        <div class="rcpt-head">
-          <div class="rcpt-eyebrow">
-            <span class="rcpt-eyebrow-en">ACTIVATION CODES</span>
-            <button class="rcpt-close" aria-label="关闭" @click="codesVisible = false">×</button>
-          </div>
-          <h2 class="rcpt-title">激活码明细</h2>
-          <div class="rcpt-meta">
-            <span class="rcpt-meta-label">订单号</span>
-            <span class="rcpt-meta-value" :title="currentOrderNo">{{ currentOrderNo }}</span>
-          </div>
-        </div>
-      </template>
-
-      <div v-loading="codesLoading" class="rcpt-body">
-        <!-- 计数条 -->
-        <div class="rcpt-counts">
-          <span class="rcpt-count rcpt-count-total">
-            <span class="rcpt-count-num">{{ codes.length }}</span>
-            <span class="rcpt-count-label">总计</span>
-          </span>
-          <span class="rcpt-dash" />
-          <template v-for="seg in countSegments" :key="seg.key">
-            <span v-if="seg.value > 0" class="rcpt-count" :class="`rcpt-count-${seg.key}`">
-              <span class="rcpt-count-num">{{ seg.value }}</span>
-              <span class="rcpt-count-label">{{ seg.label }}</span>
-            </span>
-          </template>
-        </div>
-
-        <div class="rcpt-divider" aria-hidden="true" />
-
-        <!-- 空态 -->
-        <div v-if="!codesLoading && !codes.length" class="rcpt-empty">
-          <span class="rcpt-empty-glyph">∅</span>
-          <span class="rcpt-empty-text">该订单暂无激活码</span>
-        </div>
-
-        <!-- 列表 -->
-        <ul v-else class="rcpt-list">
-          <li
-            v-for="(c, i) in codes"
-            :key="c.code"
-            class="rcpt-row"
-            :class="`is-${c.status}`"
-            @click="copyOne(c.code)"
-          >
-            <div class="rcpt-row-seq">{{ String(i + 1).padStart(2, "0") }}</div>
-            <div class="rcpt-row-main">
-              <div class="rcpt-row-code">{{ c.code }}</div>
-              <div class="rcpt-row-meta">
-                <span class="rcpt-row-dot" />
-                <span class="rcpt-row-status">{{ codeStatusLabel(c.status) }}</span>
-                <span class="rcpt-row-sep">·</span>
-                <span>有效 {{ c.validDays }} 天</span>
-                <template v-if="c.usedAt">
-                  <span class="rcpt-row-sep">·</span>
-                  <span>{{ formatDateTime(c.usedAt) }} 已激活</span>
-                </template>
+      <template #header="{ close }">
+        <div class="codes-dialog-header">
+          <div class="header-main">
+            <div class="header-icon">
+              <el-icon><Key /></el-icon>
+            </div>
+            <div class="header-text">
+              <div class="header-title">激活码明细</div>
+              <div v-if="currentOrderNo" class="header-subtitle">
+                <span class="mono order-no">{{ currentOrderNo }}</span>
+                <el-icon class="header-copy-icon" title="复制订单号" @click="copy(currentOrderNo)">
+                  <DocumentCopy />
+                </el-icon>
               </div>
             </div>
-            <div class="rcpt-row-action" aria-label="复制">
-              <el-icon><CopyDocument /></el-icon>
-            </div>
-          </li>
-        </ul>
-
-        <div class="rcpt-divider rcpt-divider-end" aria-hidden="true" />
-      </div>
-
-      <template #footer>
-        <div class="rcpt-foot">
-          <span class="rcpt-foot-hint">单击任意一行即可复制</span>
-          <button class="rcpt-foot-btn" :disabled="!codes.length" @click="copyAll">
-            <el-icon class="rcpt-foot-btn-icon"><CopyDocument /></el-icon>
-            <span>复制全部</span>
-          </button>
+          </div>
+          <el-icon class="header-close" @click="close">
+            <Close />
+          </el-icon>
         </div>
       </template>
+
+      <div v-loading="codesLoading" class="codes-dialog-body">
+        <div class="codes-stats">
+          <div class="stat-item stat-total">
+            <div class="stat-label">总数</div>
+            <div class="stat-value">{{ codes.length }}</div>
+          </div>
+          <div class="stat-item stat-unused">
+            <div class="stat-label">未使用</div>
+            <div class="stat-value">{{ codeSummary.unused }}</div>
+          </div>
+          <div class="stat-item stat-used">
+            <div class="stat-label">已使用</div>
+            <div class="stat-value">{{ codeSummary.used }}</div>
+          </div>
+          <div class="stat-item stat-expired">
+            <div class="stat-label">已过期</div>
+            <div class="stat-value">{{ codeSummary.expired }}</div>
+          </div>
+          <div class="stats-spacer" />
+          <el-button type="primary" :icon="CopyDocument" :disabled="!codes.length" @click="copyAll">
+            复制全部
+          </el-button>
+        </div>
+
+        <el-table :data="codes" max-height="460" class="codes-table" size="default">
+          <el-table-column label="#" type="index" width="50" align="center" />
+          <el-table-column label="激活码" min-width="220">
+            <template #default="{ row }">
+              <div class="code-chip" @click="copyOne(row.code)">
+                <span class="code-text">{{ row.code }}</span>
+                <el-icon class="code-chip-icon">
+                  <DocumentCopy />
+                </el-icon>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="有效天数" prop="validDays" width="90" align="center">
+            <template #default="{ row }">
+              <span class="days-pill">{{ row.validDays }}天</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="codeStatusTag(row.status)" size="small" effect="light" round>
+                {{ codeStatusLabel(row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="激活时间" width="170" align="center">
+            <template #default="{ row }">
+              <span v-if="row.usedAt" class="nowrap">{{ formatDateTime(row.usedAt) }}</span>
+              <span v-else class="text-secondary">—</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -275,7 +275,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
-import { Search, Refresh, CopyDocument, DocumentCopy } from "@element-plus/icons-vue";
+import { Search, Refresh, CopyDocument, DocumentCopy, Key, Close } from "@element-plus/icons-vue";
 import AppOrderAdminAPI, {
   type AppOrderAdminPageQuery,
   type AppOrderAdminVO,
@@ -348,6 +348,9 @@ const payTypeLabel = (s: string) =>
   (({ NATIVE: "扫码", H5: "H5", JSAPI: "小程序" }) as Record<string, string>)[s] ?? s;
 const codeStatusLabel = (s: number) =>
   (({ 0: "未使用", 1: "已使用", 2: "已过期", 3: "已回收" }) as Record<number, string>)[s] ?? "未知";
+const codeStatusTag = (s: number): TagType =>
+  (({ 0: "warning", 1: "success", 2: "info", 3: "danger" }) as Record<number, TagType>)[s] ??
+  "info";
 
 const codesVisible = ref(false);
 const codesLoading = ref(false);
@@ -364,13 +367,6 @@ const codeSummary = computed(() => {
   }
   return acc;
 });
-
-const countSegments = computed(() => [
-  { key: "unused", label: "未使用", value: codeSummary.value.unused },
-  { key: "used", label: "已使用", value: codeSummary.value.used },
-  { key: "expired", label: "已过期", value: codeSummary.value.expired },
-  { key: "recycled", label: "已回收", value: codeSummary.value.recycled },
-]);
 
 async function openCodes(row: AppOrderAdminVO) {
   currentOrderNo.value = row.orderNo;
@@ -584,411 +580,251 @@ onMounted(loadOrders);
 </style>
 
 <style lang="scss">
-/* 票据风激活码弹窗 — 非 scoped，命中 append-to-body 后的 DOM */
-$rcpt-paper: #fbfaf5;
-$rcpt-ink: #1a1a1a;
-$rcpt-ink-soft: #555048;
-$rcpt-ink-mute: #8b857a;
-$rcpt-accent: #d4644a;
-
-$mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-
-.examkit-codes-dialog {
-  --dlg-pad-x: 32px;
-  position: relative;
+/* 激活码弹窗 — 非 scoped（el-dialog 渲染到 body），统一命名空间到 .codes-dialog */
+.codes-dialog {
   overflow: hidden;
-
-  background-color: $rcpt-paper !important;
-  background-image:
-    radial-gradient(rgba(180, 165, 130, 0.06) 1px, transparent 1px),
-    linear-gradient(180deg, $rcpt-paper 0%, #f7f4eb 100%);
-  background-size:
-    3px 3px,
-    100% 100%;
-  border-radius: 4px !important;
+  border-radius: 14px;
   box-shadow:
-    0 24px 48px -16px rgba(26, 21, 16, 0.28),
-    0 4px 12px rgba(26, 21, 16, 0.08) !important;
+    0 20px 60px -20px rgba(0, 21, 41, 0.25),
+    0 8px 24px -8px rgba(0, 21, 41, 0.12);
 
   .el-dialog__header {
-    padding: 26px var(--dlg-pad-x) 14px !important;
-    margin: 0 !important;
-    border: none !important;
+    padding: 0;
+    margin: 0;
   }
 
   .el-dialog__body {
-    padding: 0 !important;
+    padding: 0;
   }
 
-  .el-dialog__footer {
-    padding: 16px var(--dlg-pad-x) 24px !important;
-    border: none !important;
-  }
-
-  /* ====== Header ====== */
-  .rcpt-head {
-    color: $rcpt-ink;
-  }
-
-  .rcpt-eyebrow {
+  .codes-dialog-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .rcpt-eyebrow-en {
-    font-family: $mono;
-    font-size: 10px;
-    font-weight: 600;
-    color: $rcpt-ink-mute;
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-  }
-
-  .rcpt-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    margin: -4px -6px 0 0;
-    font-size: 20px;
-    line-height: 1;
-    color: $rcpt-ink-mute;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    border-radius: 2px;
-    transition: all 0.15s;
-
-    &:hover {
-      color: $rcpt-ink;
-      background: rgba(26, 21, 16, 0.06);
-    }
-  }
-
-  .rcpt-title {
-    margin: 0 0 14px;
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.2;
-    color: $rcpt-ink;
-    letter-spacing: -0.01em;
-  }
-
-  .rcpt-meta {
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-    padding-bottom: 14px;
-    border-bottom: 1.5px dashed rgba(42, 37, 32, 0.22);
-  }
-
-  .rcpt-meta-label {
-    flex-shrink: 0;
-    font-family: $mono;
-    font-size: 11px;
-    font-weight: 600;
-    color: $rcpt-ink-mute;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-  }
-
-  .rcpt-meta-value {
+    padding: 22px 24px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: $mono;
-    font-size: 13px;
-    font-weight: 600;
-    color: $rcpt-ink;
-    white-space: nowrap;
-  }
+    background: linear-gradient(135deg, #4f7df3 0%, #6b8df4 45%, #8aa3f7 100%);
 
-  /* ====== Counts ====== */
-  .rcpt-body {
-    padding: 18px var(--dlg-pad-x) 0;
-  }
-
-  .rcpt-counts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 14px;
-  }
-
-  .rcpt-count {
-    display: inline-flex;
-    gap: 5px;
-    align-items: baseline;
-    font-family: $mono;
-    line-height: 1;
-  }
-
-  .rcpt-count-num {
-    font-size: 18px;
-    font-weight: 700;
-    font-feature-settings: "tnum";
-    color: $rcpt-ink;
-  }
-
-  .rcpt-count-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: $rcpt-ink-mute;
-    letter-spacing: 0.08em;
-  }
-
-  .rcpt-count-total .rcpt-count-num {
-    color: $rcpt-accent;
-  }
-
-  .rcpt-dash {
-    flex: 1;
-    min-width: 16px;
-    height: 0;
-    border-top: 1.5px dashed rgba(42, 37, 32, 0.22);
-  }
-
-  /* ====== Divider ====== */
-  .rcpt-divider {
-    height: 0;
-    margin: 4px 0 6px;
-    border-top: 1.5px dashed rgba(42, 37, 32, 0.22);
-  }
-
-  .rcpt-divider-end {
-    margin: 8px 0 0;
-  }
-
-  /* ====== List ====== */
-  .rcpt-list {
-    max-height: 52vh;
-    padding: 0;
-    margin: 0;
-    overflow-y: auto;
-    list-style: none;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: rgba(42, 37, 32, 0.2);
-      border-radius: 3px;
-    }
-  }
-
-  .rcpt-row {
-    display: grid;
-    grid-template-columns: 32px 1fr auto;
-    gap: 14px;
-    align-items: center;
-    padding: 14px 4px;
-    cursor: pointer;
-    border-bottom: 1px solid rgba(42, 37, 32, 0.08);
-    transition: background 0.15s;
-
-    &:last-child {
-      border-bottom: none;
+    &::before {
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+      content: "";
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+      border-radius: 50%;
     }
 
-    &:hover {
-      background: rgba(212, 100, 74, 0.04);
+    .header-main {
+      z-index: 1;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
 
-      .rcpt-row-action {
-        color: $rcpt-accent;
+    .header-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      font-size: 22px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+    }
+
+    .header-text {
+      line-height: 1.35;
+    }
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.3px;
+    }
+
+    .header-subtitle {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 4px;
+      color: rgba(255, 255, 255, 0.88);
+
+      .order-no {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 12.5px;
+        letter-spacing: 0.3px;
+      }
+    }
+
+    .header-copy-icon {
+      cursor: pointer;
+      opacity: 0.85;
+      transition: opacity 0.15s;
+
+      &:hover {
         opacity: 1;
       }
     }
 
-    &:active {
-      background: rgba(212, 100, 74, 0.08);
+    .header-close {
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background-color 0.15s;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.18);
+      }
     }
   }
 
-  .rcpt-row-seq {
-    font-family: $mono;
-    font-size: 11px;
-    font-weight: 600;
-    color: $rcpt-ink-mute;
-    text-align: center;
-    letter-spacing: 0.1em;
+  .codes-dialog-body {
+    padding: 20px 24px 24px;
+    background: #fff;
   }
 
-  .rcpt-row-main {
-    min-width: 0;
-  }
-
-  .rcpt-row-code {
-    font-family: $mono;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: $rcpt-ink;
-    letter-spacing: 0.04em;
-    word-break: break-all;
-    user-select: all;
-  }
-
-  .rcpt-row-meta {
+  .codes-stats {
     display: flex;
-    gap: 5px;
-    align-items: center;
-    margin-top: 6px;
-    font-family: $mono;
-    font-size: 11px;
-    line-height: 1;
-    color: $rcpt-ink-mute;
-  }
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 18px;
 
-  .rcpt-row-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    background: currentColor;
-    border-radius: 50%;
-  }
+    .stat-item {
+      display: flex;
+      flex: 0 0 auto;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 84px;
+      padding: 10px 16px;
+      line-height: 1.2;
+      background: #fafbfd;
+      border: 1px solid var(--el-border-color-lighter);
+      border-radius: 10px;
 
-  .rcpt-row-status {
-    font-weight: 600;
-    letter-spacing: 0.04em;
-  }
+      .stat-label {
+        font-size: 12px;
+        color: var(--el-text-color-secondary);
+      }
 
-  .rcpt-row-sep {
-    margin: 0 1px;
-    opacity: 0.5;
-  }
+      .stat-value {
+        margin-top: 4px;
+        font-size: 20px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--el-text-color-primary);
+      }
 
-  .rcpt-row.is-0 {
-    .rcpt-row-dot,
-    .rcpt-row-status {
-      color: #c87a2e;
+      &.stat-unused {
+        background: linear-gradient(180deg, #fff8ec 0%, #fffdf7 100%);
+        border-color: #fde8c5;
+
+        .stat-value {
+          color: #e6a23c;
+        }
+      }
+
+      &.stat-used {
+        background: linear-gradient(180deg, #effaf0 0%, #f8fdf9 100%);
+        border-color: #c8eccc;
+
+        .stat-value {
+          color: #67c23a;
+        }
+      }
+
+      &.stat-expired {
+        background: linear-gradient(180deg, #f6f7fa 0%, #fcfcfd 100%);
+        border-color: #e4e7ed;
+
+        .stat-value {
+          color: #909399;
+        }
+      }
     }
-  }
-  .rcpt-row.is-1 {
-    .rcpt-row-dot,
-    .rcpt-row-status {
-      color: #5a8a3a;
-    }
-    .rcpt-row-code {
-      color: $rcpt-ink-soft;
-      text-decoration: line-through;
-      text-decoration-thickness: 1.5px;
-      text-decoration-color: rgba(90, 138, 58, 0.4);
-    }
-  }
-  .rcpt-row.is-2 {
-    .rcpt-row-dot,
-    .rcpt-row-status {
-      color: #8b857a;
-    }
-    .rcpt-row-code {
-      color: $rcpt-ink-mute;
-      opacity: 0.7;
-    }
-  }
-  .rcpt-row.is-3 {
-    .rcpt-row-dot,
-    .rcpt-row-status {
-      color: #b04030;
-    }
-    .rcpt-row-code {
-      color: $rcpt-ink-mute;
-      text-decoration: line-through;
-      text-decoration-color: rgba(176, 64, 48, 0.5);
+
+    .stats-spacer {
+      flex: 1;
     }
   }
 
-  .rcpt-row-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    font-size: 15px;
-    color: $rcpt-ink-mute;
-    opacity: 0.5;
-    transition: all 0.15s;
+  .codes-table {
+    overflow: hidden;
+    border-radius: 10px;
+
+    .el-table__header th {
+      font-weight: 600;
+      color: var(--el-text-color-regular);
+      background-color: #f5f7fa;
+    }
+
+    .el-table__row td {
+      padding: 10px 0;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .text-secondary {
+      color: var(--el-text-color-secondary);
+    }
   }
 
-  /* ====== Empty ====== */
-  .rcpt-empty {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    align-items: center;
-    justify-content: center;
-    padding: 56px 0 40px;
-  }
-
-  .rcpt-empty-glyph {
-    font-family: $mono;
-    font-size: 48px;
-    font-weight: 300;
-    line-height: 1;
-    color: rgba(42, 37, 32, 0.18);
-  }
-
-  .rcpt-empty-text {
-    font-size: 13px;
-    color: $rcpt-ink-mute;
-    letter-spacing: 0.04em;
-  }
-
-  /* ====== Footer ====== */
-  .rcpt-foot {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .rcpt-foot-hint {
-    font-family: $mono;
-    font-size: 11px;
-    color: $rcpt-ink-mute;
-    letter-spacing: 0.06em;
-  }
-
-  .rcpt-foot-btn {
+  .code-chip {
     display: inline-flex;
     gap: 8px;
     align-items: center;
-    padding: 10px 20px;
-    font-family: $mono;
-    font-size: 12px;
+    padding: 5px 12px;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 13px;
     font-weight: 600;
-    color: $rcpt-paper;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    color: var(--el-color-primary);
+    letter-spacing: 0.6px;
     cursor: pointer;
-    background: $rcpt-ink;
-    border: none;
-    border-radius: 2px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
-    transition: all 0.15s;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, #fff 100%);
+    border: 1px dashed var(--el-color-primary-light-5);
+    border-radius: 8px;
+    transition: all 0.15s ease;
 
-    &:hover:not(:disabled) {
-      background: $rcpt-accent;
-      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
-      transform: translateY(-1px);
+    &:hover {
+      background: var(--el-color-primary-light-8);
+      border-style: solid;
+
+      .code-chip-icon {
+        opacity: 1;
+      }
     }
 
-    &:active:not(:disabled) {
-      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
-      transform: translateY(1px);
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.35;
+    .code-chip-icon {
+      font-size: 13px;
+      color: var(--el-color-primary);
+      opacity: 0.6;
+      transition: opacity 0.15s;
     }
   }
 
-  .rcpt-foot-btn-icon {
-    font-size: 14px;
+  .days-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-text-color-regular);
+    background: var(--el-fill-color-light);
+    border-radius: 999px;
   }
 }
 </style>

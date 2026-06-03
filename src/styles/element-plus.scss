@@ -44,7 +44,11 @@ $border: 1px solid var(--el-border-color-light);
   justify-content: flex-end;
 }
 
-// Element Plus 对话框按钮加粗
-:deep(.el-dialog__footer) .el-button {
+// 全局统一：所有按钮（操作按钮、弹窗/抽屉底部按钮等）使用粗体
+:root {
+  --el-button-font-weight: bold;
+}
+
+.el-button {
   font-weight: bold;
 }
