@@ -122,7 +122,7 @@
     <el-dialog
       v-model="processDialogVisible"
       title="纠错处理"
-      width="1000px"
+      :width="processDialogWidth"
       destroy-on-close
       :before-close="handleDialogBeforeClose"
     >
@@ -188,9 +188,70 @@
             </div>
           </div>
 
+          <!-- 热点题：下拉 / 判断 -->
+          <div v-if="hotspotView" class="qp-interactive">
+            <div
+              v-if="hotspotView.interaction === 'dropdown' && !hotspotView.perRow"
+              class="qp-pool"
+            >
+              <span class="qp-pool-label">选项池</span>
+              <span v-for="it in hotspotView.sharedItems" :key="it" class="qp-chip">{{ it }}</span>
+            </div>
+            <div v-for="(row, i) in hotspotView.rows" :key="i" class="qp-hs-row">
+              <div class="qp-hs-prompt">
+                <span v-if="row.label" class="qp-hs-rowlabel">{{ row.label }}</span>
+                <span v-html="formatRichText(row.prompt)"></span>
+              </div>
+              <div v-if="hotspotView.interaction === 'dropdown'" class="qp-dropdown">
+                <span class="qp-dropdown-value">{{ row.answer || "—" }}</span>
+                <span class="qp-dropdown-arrow">▾</span>
+              </div>
+              <span
+                v-else
+                class="qp-yesno"
+                :class="yesNoText(row.answer) === '是' ? 'is-yes' : 'is-no'"
+              >
+                {{ yesNoText(row.answer) }}
+              </span>
+            </div>
+            <div
+              v-if="hotspotView.interaction === 'dropdown' && hotspotView.perRow"
+              class="qp-perrow-pools"
+            >
+              <div v-for="(row, i) in hotspotView.rows" :key="i" class="qp-pool">
+                <span class="qp-pool-label">第{{ i + 1 }}行</span>
+                <span
+                  v-for="it in row.items"
+                  :key="it"
+                  class="qp-chip"
+                  :class="{ 'qp-chip-correct': isCorrectItem(it, row.answer) }"
+                >
+                  {{ it }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 拖放题：Tool 池 + 槽位 -->
+          <div v-else-if="dragMatchView" class="qp-interactive">
+            <div class="qp-pool">
+              <span class="qp-pool-label">Tool 池</span>
+              <span v-for="it in dragMatchView.items" :key="it" class="qp-chip">{{ it }}</span>
+            </div>
+            <div v-for="(slot, i) in dragMatchView.slots" :key="i" class="qp-hs-row">
+              <div class="qp-hs-prompt">
+                <span class="qp-hs-rowlabel">{{ i + 1 }}</span>
+                <span v-html="formatRichText(slot.purpose)"></span>
+              </div>
+              <div class="qp-dropdown">
+                <span class="qp-dropdown-value">{{ slot.answer || "—" }}</span>
+              </div>
+            </div>
+          </div>
+
           <!-- 答案解析区 -->
           <div class="qp-answer-section">
-            <div class="qp-answer-line">
+            <div v-if="!isSpecialized" class="qp-answer-line">
               <span class="qp-answer-title">正确答案</span>
               <span class="qp-answer-value">{{ questionDetail.answer }}</span>
             </div>
@@ -287,6 +348,13 @@ import QuestionAPI, { type QuestionVO } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
 import QuestionEditPanel from "@/components/QuestionEditPanel/index.vue";
 import { formatRichText } from "@/utils/rich-text";
+import {
+  parseHotspotOptions,
+  getHotspotRowItems,
+  hasPerRowHotspotPools,
+  splitPipe,
+} from "@/utils/hotspot";
+import { parseDragMatchOptions } from "@/utils/dragMatch";
 
 const loading = ref(false);
 const tableData = ref<ReportVO[]>([]);
@@ -358,6 +426,84 @@ const hasBilingual = computed(() => {
   if (!questionDetail.value) return false;
   return !!(questionDetail.value.contentZh && questionDetail.value.contentEn);
 });
+
+// 当前语言对应的答案（热点/拖放双语科目英文答案存于 answerEn；缺失回退中文答案）
+function localizedAnswer(): string {
+  if (!questionDetail.value) return "";
+  return questionLocale.value === "en"
+    ? questionDetail.value.answerEn || questionDetail.value.answer
+    : questionDetail.value.answer;
+}
+
+// 热点题预览结构（行 + 下拉/判断 + 正确答案）
+// 优先用当前语言的选项结构，缺失（单语科目另一语言存为 "[]"）则回退另一语言
+const hotspotView = computed(() => {
+  if (!questionDetail.value || questionDetail.value.type !== "HOTSPOT") return null;
+  const preferEn = questionLocale.value === "en";
+  const opts =
+    parseHotspotOptions(
+      preferEn ? questionDetail.value.optionsEn : questionDetail.value.optionsZh
+    ) ??
+    parseHotspotOptions(preferEn ? questionDetail.value.optionsZh : questionDetail.value.optionsEn);
+  if (!opts) return null;
+  const answers = splitPipe(localizedAnswer());
+  const perRow = opts.interaction === "dropdown" && hasPerRowHotspotPools(opts);
+  return {
+    interaction: opts.interaction,
+    perRow,
+    sharedItems: opts.items ?? [],
+    rows: opts.rows.map((r, i) => ({
+      prompt: r.prompt,
+      label: r.label || "",
+      items: opts.interaction === "dropdown" ? getHotspotRowItems(opts, i) : [],
+      answer: (answers[i] || "").trim(),
+    })),
+  };
+});
+
+// 拖放题预览结构（Tool 池 + 槽位 + 正确答案）
+const dragMatchView = computed(() => {
+  if (!questionDetail.value || questionDetail.value.type !== "DRAG_MATCH") return null;
+  const preferEn = questionLocale.value === "en";
+  const opts =
+    parseDragMatchOptions(
+      preferEn ? questionDetail.value.optionsEn : questionDetail.value.optionsZh
+    ) ??
+    parseDragMatchOptions(
+      preferEn ? questionDetail.value.optionsZh : questionDetail.value.optionsEn
+    );
+  if (!opts) return null;
+  const answers = splitPipe(localizedAnswer());
+  return {
+    items: opts.items,
+    slots: opts.slots.map((s, i) => ({
+      purpose: s.purpose,
+      answer: (answers[i] || "").trim(),
+    })),
+  };
+});
+
+const isSpecialized = computed(
+  () => questionDetail.value?.type === "HOTSPOT" || questionDetail.value?.type === "DRAG_MATCH"
+);
+
+// 编辑双语热点/拖放题时用左右对照布局，需更宽的弹窗（与「试题管理」编辑弹窗一致）
+const processDialogWidth = computed(() => {
+  const langs = (subjectSupportLanguages.value || "zh").split(",").filter(Boolean);
+  const bilingual = langs.includes("zh") && langs.includes("en");
+  return editing.value && isSpecialized.value && bilingual ? "min(1320px, 94vw)" : "1000px";
+});
+
+function yesNoText(answer: string): string {
+  const t = (answer || "").trim().toUpperCase();
+  if (t === "Y" || t === "YES" || answer === "是") return "是";
+  if (t === "N" || t === "NO" || answer === "否") return "否";
+  return answer || "-";
+}
+
+function isCorrectItem(item: string, answer: string): boolean {
+  return item.trim().toLowerCase() === (answer || "").trim().toLowerCase();
+}
 
 onMounted(() => {
   fetchData();
@@ -521,6 +667,11 @@ function handleDialogCancel() {
 
 async function submitProcess() {
   if (!currentReport.value) return;
+  // 若处于编辑态，点击「提交」时一并保存题目修改，无需先单独点保存
+  if (editing.value && editPanelRef.value) {
+    const ok = await editPanelRef.value.save();
+    if (!ok) return;
+  }
   if (!processForm.handlerRemark.trim()) {
     ElMessage.warning("请输入回复内容");
     return;
@@ -674,6 +825,133 @@ async function submitProcess() {
 
 .qp-option-text :deep(p) {
   margin: 0;
+}
+
+/* 热点 / 拖放题 交互预览 */
+.qp-interactive {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.qp-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.qp-perrow-pools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.qp-pool-label {
+  flex-shrink: 0;
+  margin-right: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.qp-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.qp-chip-correct {
+  font-weight: 600;
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.qp-hs-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.qp-hs-prompt {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.qp-hs-prompt :deep(p) {
+  margin: 0;
+}
+
+.qp-hs-rowlabel {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: #eff6ff;
+  border-radius: 4px;
+}
+
+.qp-dropdown {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 160px;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.qp-dropdown-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.qp-dropdown-arrow {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.qp-yesno {
+  flex-shrink: 0;
+  padding: 4px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.qp-yesno.is-yes {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #22c55e;
+}
+
+.qp-yesno.is-no {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #f87171;
 }
 
 .qp-answer-section {

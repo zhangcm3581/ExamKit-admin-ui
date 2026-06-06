@@ -1,7 +1,61 @@
 <template>
   <div class="qep-root">
-    <!-- 双语 tab -->
-    <el-tabs v-if="hasBothLanguages" v-model="activeTab" type="border-card" class="qep-tabs">
+    <!-- 双语 + 热点/拖放：中英左右对照（与「试题管理」编辑弹窗一致） -->
+    <div v-if="hasBothLanguages && isSpecialized" class="qep-bilingual-columns">
+      <div class="qep-bilingual-col">
+        <div class="qep-bilingual-col__title">中文</div>
+        <el-form label-position="top">
+          <el-form-item label="题目内容">
+            <RichTextField v-model="form.contentZh" />
+          </el-form-item>
+        </el-form>
+        <HotspotOptionsEditor
+          v-if="form.type === 'HOTSPOT'"
+          ref="hotspotZhEditorRef"
+          v-model="form.optionsZh"
+          v-model:answer="form.answer"
+        />
+        <DragMatchOptionsEditor
+          v-else
+          ref="dragMatchZhEditorRef"
+          v-model="form.optionsZh"
+          v-model:answer="form.answer"
+        />
+        <el-form label-position="top">
+          <el-form-item label="解析">
+            <RichTextField v-model="form.explanationZh" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <div class="qep-bilingual-col">
+        <div class="qep-bilingual-col__title">英文</div>
+        <el-form label-position="top">
+          <el-form-item label="Question">
+            <RichTextField v-model="form.contentEn" />
+          </el-form-item>
+        </el-form>
+        <HotspotOptionsEditor
+          v-if="form.type === 'HOTSPOT'"
+          ref="hotspotEnEditorRef"
+          v-model="form.optionsEn"
+          v-model:answer="form.answerEn"
+        />
+        <DragMatchOptionsEditor
+          v-else
+          ref="dragMatchEnEditorRef"
+          v-model="form.optionsEn"
+          v-model:answer="form.answerEn"
+        />
+        <el-form label-position="top">
+          <el-form-item label="Explanation">
+            <RichTextField v-model="form.explanationEn" />
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- 双语 tab（非热点/拖放题） -->
+    <el-tabs v-else-if="hasBothLanguages" v-model="activeTab" type="border-card" class="qep-tabs">
       <el-tab-pane label="中文" name="zh">
         <el-form label-position="top">
           <el-form-item label="题目内容">
@@ -84,8 +138,8 @@
       </el-form-item>
     </el-form>
 
-    <!-- 热点/拖放配置（中文或仅英文科目为主编辑区；双语另配英文区） -->
-    <section v-if="form.type === 'HOTSPOT'" class="qep-specialized">
+    <!-- 单语科目热点/拖放配置（双语在上方左右对照区处理） -->
+    <section v-if="form.type === 'HOTSPOT' && !hasBothLanguages" class="qep-specialized">
       <HotspotOptionsEditor
         v-if="!onlyEn"
         ref="hotspotZhEditorRef"
@@ -98,23 +152,9 @@
         v-model="form.optionsEn"
         v-model:answer="form.answer"
       />
-      <template v-if="hasBothLanguages">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          class="qep-bilingual-hint"
-          title="英文须单独配置选项池与答案（行数/模式与中文一致）。"
-        />
-        <HotspotOptionsEditor
-          ref="hotspotEnEditorRef"
-          v-model="form.optionsEn"
-          v-model:answer="form.answerEn"
-        />
-      </template>
     </section>
 
-    <section v-else-if="form.type === 'DRAG_MATCH'" class="qep-specialized">
+    <section v-else-if="form.type === 'DRAG_MATCH' && !hasBothLanguages" class="qep-specialized">
       <DragMatchOptionsEditor
         v-if="!onlyEn"
         ref="dragMatchZhEditorRef"
@@ -127,20 +167,6 @@
         v-model="form.optionsEn"
         v-model:answer="form.answer"
       />
-      <template v-if="hasBothLanguages">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          class="qep-bilingual-hint"
-          title="英文须单独配置 Tool 池与答案（槽位数与中文一致）。"
-        />
-        <DragMatchOptionsEditor
-          ref="dragMatchEnEditorRef"
-          v-model="form.optionsEn"
-          v-model:answer="form.answerEn"
-        />
-      </template>
     </section>
 
     <el-form
@@ -239,6 +265,9 @@ const onlyZh = computed(
 const onlyEn = computed(
   () => supportedLangs.value.includes("en") && !supportedLangs.value.includes("zh")
 );
+const isSpecialized = computed(
+  () => props.question.type === "HOTSPOT" || props.question.type === "DRAG_MATCH"
+);
 
 const hasOptions = computed(
   () =>
@@ -324,7 +353,7 @@ onMounted(async () => {
   watcherArmed = true;
 });
 
-defineExpose({ isDirty: () => dirty.value });
+defineExpose({ isDirty: () => dirty.value, save });
 
 function onCancel() {
   emit("cancel");
@@ -432,13 +461,14 @@ function buildPayload(): QuestionForm | null {
   return payload;
 }
 
-async function onSave() {
+/** 保存题目修改；成功返回 true，校验失败或保存出错返回 false */
+async function save(): Promise<boolean> {
   if (!form.id) {
     ElMessage.error("缺少题目 ID");
-    return;
+    return false;
   }
   const payload = buildPayload();
-  if (!payload) return;
+  if (!payload) return false;
   saving.value = true;
   try {
     await QuestionAPI.update(form.id, payload);
@@ -455,9 +485,16 @@ async function onSave() {
     ElMessage.success("题目已更新");
     dirty.value = false;
     emit("saved", updated);
+    return true;
+  } catch {
+    return false;
   } finally {
     saving.value = false;
   }
+}
+
+function onSave() {
+  save();
 }
 </script>
 
@@ -531,7 +568,31 @@ async function onSave() {
   border-top: 1px solid #ebeef5;
 }
 
-.qep-bilingual-hint {
-  margin-bottom: 4px;
+.qep-bilingual-columns {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.qep-bilingual-col {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.qep-bilingual-col__title {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+@media (max-width: 992px) {
+  .qep-bilingual-columns {
+    flex-direction: column;
+  }
 }
 </style>
