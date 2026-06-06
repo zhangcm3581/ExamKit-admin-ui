@@ -125,14 +125,15 @@
           <el-input v-model="editForm.questionNumber" disabled />
         </el-form-item>
         <el-form-item label="题型">
-          <el-select v-model="editForm.type" style="width: 100%" @change="handleTypeChange">
+          <el-select v-model="typeSelection" style="width: 100%">
             <el-option label="单选题" value="SINGLE" />
             <el-option label="多选题" value="MULTIPLE" />
             <el-option label="判断题" value="JUDGE" />
             <el-option label="填空题" value="FILL_BLANK" />
             <el-option label="简答题" value="SHORT_ANSWER" />
             <el-option label="拖放题" value="DRAG_MATCH" />
-            <el-option label="热点题" value="HOTSPOT" />
+            <el-option label="热点题（下拉）" value="HOTSPOT_DROPDOWN" />
+            <el-option label="热点题（判断 Yes/No）" value="HOTSPOT_YESNO" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目内容">
@@ -144,6 +145,7 @@
           ref="hotspotEditorRef"
           v-model="editForm.options"
           v-model:answer="editForm.answer"
+          :interaction="hotspotInteraction"
         />
 
         <DragMatchOptionsEditor
@@ -324,6 +326,7 @@ import {
   createDefaultEditorState,
   editorStateToOptionsJson,
   parseHotspotOptions,
+  type HotspotInteraction,
 } from "@/utils/hotspot";
 import {
   flushSpecializedEditor,
@@ -373,6 +376,31 @@ const editForm = reactive({
   options: "",
   answer: "",
   explanation: "",
+});
+
+// 热点题交互模式（抽到「题型」选择，后端题型仍为 HOTSPOT）
+const hotspotInteraction = ref<HotspotInteraction>("dropdown");
+
+/** 「题型」下拉代理：热点题拆为「下拉 / 判断」两项，editForm.type 始终为 HOTSPOT */
+const typeSelection = computed<string>({
+  get: () => {
+    if (editForm.type === "HOTSPOT") {
+      return hotspotInteraction.value === "yesno" ? "HOTSPOT_YESNO" : "HOTSPOT_DROPDOWN";
+    }
+    return editForm.type;
+  },
+  set: (val: string) => {
+    if (val === "HOTSPOT_DROPDOWN" || val === "HOTSPOT_YESNO") {
+      const wasHotspot = editForm.type === "HOTSPOT";
+      hotspotInteraction.value = val === "HOTSPOT_YESNO" ? "yesno" : "dropdown";
+      // 仅从非热点题切入时初始化默认 options；同为热点题仅切换交互模式时，
+      // 交由编辑器按 interaction prop 转换，保留已填题干。
+      if (!wasHotspot) handleTypeChange("HOTSPOT");
+      else editForm.type = "HOTSPOT";
+    } else {
+      handleTypeChange(val);
+    }
+  },
 });
 
 // 编辑选项（数组形式）
@@ -543,6 +571,10 @@ const handleEdit = (row: QuestionDraftItemVO) => {
     const type = normalizeQuestionTypeCode(row.type);
     if (type === "SHORT_ANSWER" || type === "HOTSPOT" || type === "DRAG_MATCH") {
       editOptions.value = [];
+      if (type === "HOTSPOT") {
+        const opts = parseHotspotOptions(row.options);
+        hotspotInteraction.value = opts?.interaction === "yesno" ? "yesno" : "dropdown";
+      }
     } else {
       editOptions.value = JSON.parse(row.options);
     }
@@ -562,7 +594,9 @@ const handleTypeChange = (newType: string) => {
     editOptions.value = [];
     editForm.answer = "";
     if (type === "HOTSPOT") {
-      editForm.options = editorStateToOptionsJson(createDefaultEditorState());
+      const st = createDefaultEditorState();
+      st.interaction = hotspotInteraction.value;
+      editForm.options = editorStateToOptionsJson(st);
     } else if (type === "DRAG_MATCH") {
       editForm.options = editorStateToDragMatchOptionsJson(createDefaultDragMatchEditorState());
     } else {

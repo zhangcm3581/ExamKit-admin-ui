@@ -1,5 +1,15 @@
 <template>
   <div class="qep-root">
+    <!-- 热点题：交互模式抽到「试题类型」选择（题型仍为 HOTSPOT） -->
+    <el-form v-if="form.type === 'HOTSPOT'" label-position="top">
+      <el-form-item label="试题类型">
+        <el-radio-group v-model="hotspotInteraction">
+          <el-radio label="dropdown">热点题（下拉）</el-radio>
+          <el-radio label="yesno">热点题（判断 Yes/No）</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+
     <!-- 双语 + 热点/拖放：中英左右对照（与「试题管理」编辑弹窗一致） -->
     <div v-if="hasBothLanguages && isSpecialized" class="qep-bilingual-columns">
       <div class="qep-bilingual-col">
@@ -14,6 +24,7 @@
           ref="hotspotZhEditorRef"
           v-model="form.optionsZh"
           v-model:answer="form.answer"
+          :interaction="hotspotInteraction"
         />
         <DragMatchOptionsEditor
           v-else
@@ -39,6 +50,7 @@
           ref="hotspotEnEditorRef"
           v-model="form.optionsEn"
           v-model:answer="form.answerEn"
+          :interaction="hotspotInteraction"
         />
         <DragMatchOptionsEditor
           v-else
@@ -145,12 +157,14 @@
         ref="hotspotZhEditorRef"
         v-model="form.optionsZh"
         v-model:answer="form.answer"
+        :interaction="hotspotInteraction"
       />
       <HotspotOptionsEditor
         v-else
         ref="hotspotEnEditorRef"
         v-model="form.optionsEn"
         v-model:answer="form.answer"
+        :interaction="hotspotInteraction"
       />
     </section>
 
@@ -224,6 +238,7 @@ import QuestionAPI, { type QuestionVO, type QuestionForm } from "@/api/exam/ques
 import RichTextField from "@/components/RichTextField/index.vue";
 import HotspotOptionsEditor from "@/components/HotspotOptionsEditor/index.vue";
 import DragMatchOptionsEditor from "@/components/DragMatchOptionsEditor/index.vue";
+import { parseHotspotOptions, type HotspotInteraction } from "@/utils/hotspot";
 import {
   flushSpecializedEditor,
   resolveEditorRef,
@@ -304,6 +319,13 @@ const form = reactive<QuestionForm>({
   explanationZh: props.question.explanationZh || "",
   explanationEn: props.question.explanationEn || "",
 });
+
+// 热点题交互模式（抽到「试题类型」选择，后端题型仍为 HOTSPOT），从已存 options 还原
+const hotspotInteraction = ref<HotspotInteraction>(
+  parseHotspotOptions(props.question.optionsZh || props.question.optionsEn)?.interaction === "yesno"
+    ? "yesno"
+    : "dropdown"
+);
 
 const optionsZh = ref(parseOptions(props.question.optionsZh));
 const optionsEn = ref(
