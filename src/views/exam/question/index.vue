@@ -308,14 +308,15 @@
     >
       <el-form ref="dataFormRef" :model="formData" :rules="rules" label-position="top">
         <el-form-item label="试题类型" prop="type">
-          <el-radio-group v-model="formData.type" @change="handleTypeChange">
+          <el-radio-group v-model="typeSelection">
             <el-radio label="SINGLE">单选题</el-radio>
             <el-radio label="MULTIPLE">多选题</el-radio>
             <el-radio label="JUDGE">判断题</el-radio>
             <el-radio label="FILL_BLANK">填空题</el-radio>
             <el-radio label="SHORT_ANSWER">简答题</el-radio>
             <el-radio label="DRAG_MATCH">拖放题</el-radio>
-            <el-radio label="HOTSPOT">热点题</el-radio>
+            <el-radio label="HOTSPOT_DROPDOWN">热点题（下拉）</el-radio>
+            <el-radio label="HOTSPOT_YESNO">热点题（判断 Yes/No）</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -338,6 +339,7 @@
                 ref="hotspotZhEditorRef"
                 v-model="formData.optionsZh"
                 v-model:answer="formData.answer"
+                :interaction="hotspotInteraction"
               />
               <DragMatchOptionsEditor
                 v-else-if="isDragMatchType(formData.type)"
@@ -367,6 +369,7 @@
                 ref="hotspotEnEditorRef"
                 v-model="formData.optionsEn"
                 v-model:answer="formData.answerEn"
+                :interaction="hotspotInteraction"
               />
               <DragMatchOptionsEditor
                 v-else-if="isDragMatchType(formData.type)"
@@ -507,6 +510,7 @@
               ref="hotspotZhEditorRef"
               v-model="formData.optionsZh"
               v-model:answer="formData.answer"
+              :interaction="hotspotInteraction"
             />
 
             <DragMatchOptionsEditor
@@ -570,6 +574,7 @@
               ref="hotspotEnEditorRef"
               v-model="formData.optionsEn"
               v-model:answer="formData.answer"
+              :interaction="hotspotInteraction"
             />
 
             <DragMatchOptionsEditor
@@ -736,6 +741,7 @@ import {
   createDefaultEditorState,
   editorStateToOptionsJson,
   parseHotspotOptions,
+  type HotspotInteraction,
 } from "@/utils/hotspot";
 import {
   flushSpecializedEditor,
@@ -788,6 +794,35 @@ const activeLanguageTab = ref("zh");
 
 const formData = reactive<QuestionForm>({
   type: "SINGLE",
+});
+
+// 热点题交互模式（抽到「试题类型」选择，后端题型仍为 HOTSPOT）
+const hotspotInteraction = ref<HotspotInteraction>("dropdown");
+
+/**
+ * 「试题类型」单选代理：热点题拆为「下拉 / 判断」两项展示，
+ * 但 formData.type 始终为 HOTSPOT，交互模式存于 hotspotInteraction。
+ */
+const typeSelection = computed<string>({
+  get: () => {
+    if (formData.type === "HOTSPOT") {
+      return hotspotInteraction.value === "yesno" ? "HOTSPOT_YESNO" : "HOTSPOT_DROPDOWN";
+    }
+    return formData.type || "SINGLE";
+  },
+  set: (val: string) => {
+    if (val === "HOTSPOT_DROPDOWN" || val === "HOTSPOT_YESNO") {
+      const wasHotspot = formData.type === "HOTSPOT";
+      hotspotInteraction.value = val === "HOTSPOT_YESNO" ? "yesno" : "dropdown";
+      formData.type = "HOTSPOT";
+      // 仅在从非热点题切入时初始化默认 options；同为热点题仅切换交互模式时，
+      // 交由编辑器按 interaction prop 转换，保留已填题干，避免清空。
+      if (!wasHotspot) handleTypeChange();
+    } else {
+      formData.type = val;
+      handleTypeChange();
+    }
+  },
 });
 
 // 选项列表（中文）
@@ -1118,7 +1153,9 @@ function handleTypeChange() {
     optionsList.value = [];
     optionsListEn.value = [];
     if (isHotspotType(formData.type)) {
-      const empty = editorStateToOptionsJson(createDefaultEditorState());
+      const defaultState = createDefaultEditorState();
+      defaultState.interaction = hotspotInteraction.value;
+      const empty = editorStateToOptionsJson(defaultState);
       formData.optionsZh = empty;
       formData.optionsEn = empty;
       formData.answer = "";
@@ -1283,6 +1320,12 @@ async function handleEdit(row: QuestionVO) {
   Object.assign(formData, data);
   if (data.type) {
     formData.type = normalizeQuestionTypeCode(data.type);
+  }
+
+  // 热点题：从已存 options 还原交互模式（供「试题类型」单选回显）
+  if (isHotspotType(formData.type)) {
+    const opts = parseHotspotOptions(data.optionsZh || data.optionsEn);
+    hotspotInteraction.value = opts?.interaction === "yesno" ? "yesno" : "dropdown";
   }
 
   // 简答题/填空题/拖放题/热点题不需要 A/B/C 选项
@@ -1490,6 +1533,7 @@ function handleCloseDialog() {
 function resetForm() {
   formData.id = undefined;
   formData.type = "SINGLE";
+  hotspotInteraction.value = "dropdown";
   formData.contentZh = "";
   formData.contentEn = "";
   formData.optionsZh = "";

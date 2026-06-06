@@ -35,7 +35,8 @@
     <el-divider />
 
     <el-form label-position="top" class="hotspot-editor__form">
-      <el-form-item label="交互模式">
+      <!-- 交互模式：未受控时内部选择；受控（由「试题类型」选择）时隐藏 -->
+      <el-form-item v-if="props.interaction === undefined" label="交互模式">
         <el-radio-group v-model="state.interaction" @change="onInteractionChange">
           <el-radio label="dropdown">下拉</el-radio>
           <el-radio label="yesno">判断 Yes/No</el-radio>
@@ -46,7 +47,36 @@
         每行独立配置选项池：左侧填写题干，右侧逐行填写本行选项，并点击选择正确答案。
       </p>
 
-      <el-form-item label="行配置">
+      <!-- 判断 Yes/No：批量粘贴陈述，按换行自动生成行 -->
+      <el-form-item v-if="state.interaction === 'yesno'" label="陈述（批量粘贴，每行一个）">
+        <div class="hotspot-editor__yesno">
+          <el-input
+            v-model="yesnoText"
+            type="textarea"
+            :autosize="{ minRows: 4 }"
+            placeholder="把多个判断陈述一次性粘贴进来，每行一个，如：&#10;陈述一&#10;陈述二&#10;陈述三"
+          />
+          <p class="hotspot-editor__tip">下方会按行自动生成，逐行选择 Y / N 即可，无需手动添加。</p>
+
+          <div v-if="yesnoLines.length" class="hotspot-editor__yesno-rows">
+            <div v-for="(line, idx) in yesnoLines" :key="idx" class="hotspot-editor__yesno-row">
+              <span class="hotspot-editor__yesno-index">第 {{ idx + 1 }} 行</span>
+              <span class="hotspot-editor__yesno-text">{{ line }}</span>
+              <el-radio-group
+                v-model="yesnoAnswers[idx]"
+                class="hotspot-editor__yesno-radios"
+                @change="syncYesnoToState"
+              >
+                <el-radio label="Y">Y / 是</el-radio>
+                <el-radio label="N">N / 否</el-radio>
+              </el-radio-group>
+            </div>
+          </div>
+        </div>
+      </el-form-item>
+
+      <!-- 下拉：每行独立选项池 -->
+      <el-form-item v-else label="行配置">
         <div class="hotspot-editor__rows">
           <div v-for="(row, idx) in state.rows" :key="idx" class="hotspot-editor__row-card">
             <div class="hotspot-editor__row-head">
@@ -56,10 +86,7 @@
               </el-button>
             </div>
 
-            <div
-              class="hotspot-editor__row-body"
-              :class="{ 'is-dropdown': state.interaction === 'dropdown' }"
-            >
+            <div class="hotspot-editor__row-body is-dropdown">
               <!-- 左：行描述（文本多时自动换行） -->
               <div class="hotspot-editor__row-prompt">
                 <span class="hotspot-editor__field-label">行描述 / 陈述</span>
@@ -71,8 +98,8 @@
                 />
               </div>
 
-              <!-- 右：本行选项池 + 正确答案（下拉题，单选可见全部选项） -->
-              <div v-if="state.interaction === 'dropdown'" class="hotspot-editor__row-pool">
+              <!-- 右：本行选项池 + 正确答案（单选可见全部选项） -->
+              <div class="hotspot-editor__row-pool">
                 <span class="hotspot-editor__field-label">本行选项池（每行一个）</span>
                 <el-input
                   v-model="row.itemsText"
@@ -93,15 +120,6 @@
                   </el-radio>
                 </el-radio-group>
                 <p v-else class="hotspot-editor__tip">请先在上方填写本行选项</p>
-              </div>
-
-              <!-- 右：Y/No（判断题） -->
-              <div v-else class="hotspot-editor__row-pool">
-                <span class="hotspot-editor__field-label">正确答案</span>
-                <el-radio-group v-model="row.answer">
-                  <el-radio label="Y">Y / 是</el-radio>
-                  <el-radio label="N">N / 否</el-radio>
-                </el-radio-group>
               </div>
             </div>
           </div>
@@ -127,12 +145,15 @@ import {
   splitPipe,
   validateHotspotEditorState,
   type HotspotEditorState,
+  type HotspotInteraction,
   type HotspotOptions,
 } from "@/utils/hotspot";
 
 const props = defineProps<{
   modelValue?: string;
   answer?: string;
+  /** 受控交互模式：由父级（「试题类型」）指定时，隐藏内部「交互模式」选择并跟随该值 */
+  interaction?: HotspotInteraction;
 }>();
 
 const emit = defineEmits<{
@@ -145,6 +166,53 @@ const state = reactive<HotspotEditorState>(createDefaultEditorState());
 const previewAnswers = reactive<string[]>([]);
 const validationError = ref("");
 let syncing = false;
+
+/** 判断 Yes/No 批量编辑：整段陈述文本 + 逐行答案，按换行自动成行 */
+const yesnoText = ref("");
+const yesnoAnswers = reactive<string[]>([]);
+const yesnoLines = computed(() => splitLines(yesnoText.value));
+
+function normalizeYesNo(raw: string): "Y" | "N" {
+  const t = (raw || "").trim().toUpperCase();
+  return t === "N" || t === "NO" || raw === "否" ? "N" : "Y";
+}
+
+/** 用当前陈述文本 + 逐行答案重建 state.rows（判断题专用） */
+function syncYesnoToState() {
+  if (state.interaction !== "yesno" || syncing) return;
+  const lines = yesnoLines.value;
+  while (yesnoAnswers.length < lines.length) yesnoAnswers.push("Y");
+  if (yesnoAnswers.length > lines.length) yesnoAnswers.length = lines.length;
+  state.rows = lines.map((prompt, i) => ({
+    prompt,
+    label: "",
+    itemsText: "",
+    answer: yesnoAnswers[i] || "Y",
+  }));
+}
+
+/** 从 state.rows 初始化批量编辑的文本与逐行答案 */
+function loadYesnoFromState() {
+  const fromState = joinLines(state.rows.map((r) => r.prompt));
+  // 仅当内容实际不同才覆盖，避免回显（父组件回传 modelValue）时打断正在输入的文本
+  if (joinLines(yesnoLines.value) !== fromState) {
+    yesnoText.value = fromState;
+  }
+  yesnoAnswers.length = 0;
+  state.rows.forEach((r) => yesnoAnswers.push(normalizeYesNo(r.answer)));
+}
+
+watch(yesnoText, () => syncYesnoToState());
+
+// 受控交互模式：父级切换「试题类型（下拉/判断）」时同步并归一化
+watch(
+  () => props.interaction,
+  (val) => {
+    if (val === undefined || val === state.interaction) return;
+    state.interaction = val;
+    onInteractionChange();
+  }
+);
 
 function syncFromProps() {
   syncing = true;
@@ -163,6 +231,13 @@ function syncFromProps() {
     next.reusable = true;
   }
   Object.assign(state, next);
+  // 受控交互模式优先于已存 options 的 interaction
+  if (props.interaction !== undefined && props.interaction !== state.interaction) {
+    state.interaction = props.interaction;
+    onInteractionChange();
+  } else if (state.interaction === "yesno") {
+    loadYesnoFromState();
+  }
   const parsed = parseHotspotOptions(props.modelValue);
   const parts = splitPipe(props.answer || "");
   previewAnswers.length = 0;
@@ -231,6 +306,8 @@ function onInteractionChange() {
       r.itemsText = "";
       if (r.answer !== "Y" && r.answer !== "N") r.answer = "Y";
     });
+    loadYesnoFromState();
+    syncYesnoToState();
   } else {
     // 下拉题统一各行独立选项池
     state.poolMode = "perRow";
@@ -397,6 +474,51 @@ defineExpose({
   line-height: 1.4;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+/* 判断 Yes/No：批量陈述 + 自动生成行 */
+.hotspot-editor__yesno {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.hotspot-editor__yesno-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotspot-editor__yesno-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.hotspot-editor__yesno-index {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.hotspot-editor__yesno-text {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--el-text-color-regular);
+  overflow-wrap: anywhere;
+}
+
+.hotspot-editor__yesno-radios {
+  flex-shrink: 0;
 }
 
 .mt-2 {
