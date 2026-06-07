@@ -17,6 +17,13 @@
               </div>
             </div>
           </el-form-item>
+          <el-form-item v-if="form.type === 'FILL_BLANK'" label="答案（中文）">
+            <el-input
+              v-model="form.answer"
+              placeholder="请输入中文填空答案，多个空可用 | 分隔"
+              clearable
+            />
+          </el-form-item>
           <el-form-item label="解析">
             <RichTextField v-model="form.explanationZh" />
           </el-form-item>
@@ -36,6 +43,13 @@
                 </div>
               </div>
             </div>
+          </el-form-item>
+          <el-form-item v-if="form.type === 'FILL_BLANK'" label="答案（英文）">
+            <el-input
+              v-model="form.answerEn"
+              placeholder="Enter English answer, use | to separate multiple blanks"
+              clearable
+            />
           </el-form-item>
           <el-form-item label="Explanation">
             <RichTextField v-model="form.explanationEn" />
@@ -84,8 +98,12 @@
       </el-form-item>
     </el-form>
 
-    <!-- 答案（不区分语言） -->
-    <el-form label-position="top" class="qep-answer">
+    <!-- 答案：选择题/简答/拖拽不区分语言；填空题双语科目的答案在上方语言 tab 内编辑 -->
+    <el-form
+      v-if="!(form.type === 'FILL_BLANK' && hasBothLanguages)"
+      label-position="top"
+      class="qep-answer"
+    >
       <el-form-item label="答案">
         <template v-if="form.type === 'SHORT_ANSWER' || form.type === 'DRAG'">
           <RichTextField v-model="form.answer" />
@@ -193,6 +211,7 @@ const form = reactive<QuestionForm>({
   optionsZh: props.question.optionsZh || "",
   optionsEn: props.question.optionsEn || "",
   answer: props.question.answer || "",
+  answerEn: props.question.answerEn || "",
   explanationZh: props.question.explanationZh || "",
   explanationEn: props.question.explanationEn || "",
 });
@@ -229,6 +248,7 @@ watch(
     form.explanationZh,
     form.explanationEn,
     form.answer,
+    form.answerEn,
     JSON.stringify(optionsZh.value),
     JSON.stringify(optionsEn.value),
   ],
@@ -251,6 +271,11 @@ function onCancel() {
 
 function buildPayload(): QuestionForm {
   const payload: QuestionForm = { ...form };
+
+  // answerEn 仅填空题使用，其余题型清空避免脏数据
+  if (form.type !== "FILL_BLANK") {
+    payload.answerEn = "";
+  }
 
   if (form.type === "SHORT_ANSWER" || form.type === "DRAG" || form.type === "FILL_BLANK") {
     payload.optionsZh = "[]";

@@ -84,8 +84,27 @@ const TOOLBAR_KEYS: IToolbarConfig["toolbarKeys"] = [
 const localValue = ref<string | undefined>(modelValue.value);
 let editorReady = false;
 
+/**
+ * wangEditor-next 要求顶层节点为块级元素。若内容顶层是「裸内联元素」（如
+ * `<span style="color:...">文本</span>`），编辑器解析时会丢弃该节点 → 进入编辑后
+ * 出现空白框。这里在送入编辑器前给这类内容包一层 `<p>`。
+ * 纯文本（不以 `<` 开头）编辑器会自动包段落，无需处理；已是块级元素的也不处理。
+ */
+const BLOCK_LEVEL_START =
+  /^<(p|div|h[1-6]|ul|ol|li|blockquote|pre|table|thead|tbody|tr|td|th|figure|section|article|hr|dl|dd|dt)\b/i;
+
+function normalizeForEditor(html?: string): string | undefined {
+  if (!html) return html;
+  const trimmed = html.trim();
+  if (trimmed.startsWith("<") && !BLOCK_LEVEL_START.test(trimmed)) {
+    return `<p>${trimmed}</p>`;
+  }
+  return html;
+}
+
 watch(modelValue, (v) => {
-  if (v !== localValue.value) localValue.value = v;
+  const nv = normalizeForEditor(v);
+  if (nv !== localValue.value) localValue.value = nv;
 });
 
 watch(localValue, (v) => {
@@ -95,7 +114,8 @@ watch(localValue, (v) => {
 
 function enterEdit() {
   // 进入编辑前先把最新外部值刷入本地，确保 WangEditor 起手值正确
-  localValue.value = modelValue.value;
+  // 顶层裸内联元素需包块级标签，否则 wangEditor-next 解析为空白
+  localValue.value = normalizeForEditor(modelValue.value);
   editorReady = false;
   editing.value = true;
 }

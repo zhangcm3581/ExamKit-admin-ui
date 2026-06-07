@@ -192,7 +192,7 @@
           <div class="qp-answer-section">
             <div class="qp-answer-line">
               <span class="qp-answer-title">正确答案</span>
-              <span class="qp-answer-value">{{ questionDetail.answer }}</span>
+              <span class="qp-answer-value">{{ correctAnswerDisplay }}</span>
             </div>
             <div v-if="questionExplanation" class="qp-explanation">
               <div class="qp-explanation-title">答案解析：</div>
@@ -357,6 +357,18 @@ const questionExplanation = computed(() => {
 const hasBilingual = computed(() => {
   if (!questionDetail.value) return false;
   return !!(questionDetail.value.contentZh && questionDetail.value.contentEn);
+});
+
+// 填空题答案区分中英文：按当前展示语言取对应答案（缺失回退另一语言）
+const correctAnswerDisplay = computed(() => {
+  const q = questionDetail.value;
+  if (!q) return "";
+  if (q.type === "FILL_BLANK") {
+    const zh = q.answer || "";
+    const en = q.answerEn || "";
+    return questionLocale.value === "en" ? en || zh : zh || en;
+  }
+  return q.answer;
 });
 
 onMounted(() => {

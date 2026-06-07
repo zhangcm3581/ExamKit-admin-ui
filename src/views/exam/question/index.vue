@@ -200,6 +200,10 @@
                     class="block-content"
                     v-html="row.answer"
                   ></div>
+                  <!-- 填空题显示英文答案（缺失回退中文） -->
+                  <div v-else-if="row.type === 'FILL_BLANK'" class="block-content answer-content">
+                    {{ row.answerEn || row.answer }}
+                  </div>
                   <!-- 其他题型显示字母答案 -->
                   <div v-else class="block-content answer-content">{{ row.answer }}</div>
                 </div>
@@ -358,6 +362,14 @@
             <el-form-item label="解析">
               <RichTextField v-model="formData.explanationZh" />
             </el-form-item>
+
+            <el-form-item v-if="formData.type === 'FILL_BLANK'" label="答案（中文）" required>
+              <el-input
+                v-model="formData.answer"
+                placeholder="请输入中文填空答案，多个空可用 | 分隔"
+                clearable
+              />
+            </el-form-item>
           </el-tab-pane>
 
           <!-- 英文标签页 -->
@@ -415,6 +427,14 @@
 
             <el-form-item label="解析">
               <RichTextField v-model="formData.explanationEn" />
+            </el-form-item>
+
+            <el-form-item v-if="formData.type === 'FILL_BLANK'" label="答案（英文）">
+              <el-input
+                v-model="formData.answerEn"
+                placeholder="Enter English answer, use | to separate multiple blanks"
+                clearable
+              />
             </el-form-item>
           </el-tab-pane>
         </el-tabs>
@@ -528,8 +548,12 @@
           </template>
         </template>
 
-        <!-- 答案（通用，不区分语言） -->
-        <el-form-item label="答案" prop="answer">
+        <!-- 答案：填空题双语科目的答案在上方语言 tab 内编辑 -->
+        <el-form-item
+          v-if="!(formData.type === 'FILL_BLANK' && hasBothLanguagesForEdit())"
+          label="答案"
+          prop="answer"
+        >
           <!-- 简答题使用富文本编辑器 -->
           <template v-if="isTextAnswerType(formData.type)">
             <RichTextField v-model="formData.answer" />
@@ -945,6 +969,7 @@ watch(multipleAnswers, (newVal) => {
 function handleTypeChange() {
   // 重置答案
   formData.answer = "";
+  formData.answerEn = "";
   multipleAnswers.value = [];
 
   // 简答题/拖拽题/填空题不需要选项
@@ -1163,39 +1188,46 @@ function handleDelete(id?: number) {
   });
 }
 
+// 把选项编辑器（optionsList/optionsListEn）等同步进 formData。
+// 必须在 validate 之前调用：optionsZh/optionsEn 的「required」校验读取的是 formData，
+// 而选项实际存放在 optionsList 里，否则校验会误报 optionsZh/optionsEn is required。
+function syncOptionsToFormData() {
+  // answerEn 仅填空题使用，其余题型清空避免脏数据
+  if (formData.type !== "FILL_BLANK") {
+    formData.answerEn = "";
+  }
+  // 简答题/拖拽题/填空题不需要选项
+  if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
+    formData.optionsZh = "[]";
+    formData.optionsEn = "[]";
+  }
+  // 判断题固定选项
+  else if (formData.type === "JUDGE") {
+    formData.optionsZh = JSON.stringify([
+      { label: "A", value: "正确" },
+      { label: "B", value: "错误" },
+    ]);
+    formData.optionsEn = JSON.stringify([
+      { label: "A", value: "True" },
+      { label: "B", value: "False" },
+    ]);
+  }
+  // 单选/多选题
+  else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
+    // 构建中文选项JSON
+    formData.optionsZh = JSON.stringify(optionsList.value);
+    // 构建英文选项JSON（如果有内容）
+    const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
+    formData.optionsEn = hasEnglishOptions ? JSON.stringify(optionsListEn.value) : "";
+  }
+}
+
 // 提交
 function handleSubmit() {
+  // 先同步选项到 formData，再校验
+  syncOptionsToFormData();
   dataFormRef.value.validate((valid: boolean) => {
     if (valid) {
-      // 简答题/拖拽题/填空题不需要选项
-      if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
-        formData.optionsZh = "[]";
-        formData.optionsEn = "[]";
-      }
-      // 判断题固定选项
-      else if (formData.type === "JUDGE") {
-        formData.optionsZh = JSON.stringify([
-          { label: "A", value: "正确" },
-          { label: "B", value: "错误" },
-        ]);
-        formData.optionsEn = JSON.stringify([
-          { label: "A", value: "True" },
-          { label: "B", value: "False" },
-        ]);
-      }
-      // 单选/多选题
-      else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
-        // 构建中文选项JSON
-        formData.optionsZh = JSON.stringify(optionsList.value);
-        // 构建英文选项JSON（如果有内容）
-        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
-        if (hasEnglishOptions) {
-          formData.optionsEn = JSON.stringify(optionsListEn.value);
-        } else {
-          formData.optionsEn = "";
-        }
-      }
-
       // 设置科目ID
       formData.subjectId = queryParams.subjectId;
 
@@ -1228,6 +1260,7 @@ function resetForm() {
   formData.optionsZh = "";
   formData.optionsEn = "";
   formData.answer = "";
+  formData.answerEn = "";
   formData.explanationZh = "";
   formData.explanationEn = "";
 

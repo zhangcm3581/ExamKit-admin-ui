@@ -42,8 +42,10 @@ export interface QuestionVO {
   optionsZh: string;
   /** 选项(英文) JSON格式 */
   optionsEn?: string;
-  /** 答案 */
+  /** 答案(填空题为中文答案) */
   answer: string;
+  /** 英文答案(仅填空题使用) */
+  answerEn?: string;
   /** 答案解析(中文) */
   explanationZh?: string;
   /** 答案解析(英文) */
@@ -70,8 +72,10 @@ export interface QuestionForm {
   optionsZh?: string;
   /** 选项(英文) JSON格式 */
   optionsEn?: string;
-  /** 答案 */
+  /** 答案(填空题为中文答案) */
   answer?: string;
+  /** 英文答案(仅填空题使用) */
+  answerEn?: string;
   /** 答案解析(中文) */
   explanationZh?: string;
   /** 答案解析(英文) */

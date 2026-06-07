@@ -344,7 +344,12 @@ const showChoiceOptions = computed(() => {
 /** 背题模式下的正确答案展示 */
 const displayAnswer = computed(() => {
   const q = currentQuestion.value;
-  const ans = (q.answer || "").trim();
+  // 填空题答案区分中英文：按当前展示语言取对应答案（缺失回退另一语言）
+  const rawAnswer =
+    q.type === "FILL_BLANK"
+      ? (questionLocale.value === "en" ? q.answerEn || q.answer : q.answer || q.answerEn) || ""
+      : q.answer || "";
+  const ans = rawAnswer.trim();
   if (!ans) return "";
   if (q.type === "FILL_BLANK") {
     return ans
