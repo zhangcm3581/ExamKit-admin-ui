@@ -8,8 +8,8 @@
       role="textbox"
       tabindex="0"
       @click="enterEdit"
-      @keydown.enter.prevent="enterEdit"
-      @keydown.space.prevent="enterEdit"
+      @keydown.enter.prevent="enterEdit()"
+      @keydown.space.prevent="enterEdit()"
     >
       <div v-if="modelValue" class="rtf-preview-html" v-html="formatted"></div>
       <span v-else class="rtf-placeholder">{{ placeholder }}</span>
@@ -29,9 +29,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import type { IToolbarConfig } from "@wangeditor-next/editor";
 import { formatRichText } from "@/utils/rich-text";
+import { toEditorHtml } from "@/utils/editor-html";
+import { getPreviewCaretOffset, focusEditorAtOffset } from "@/utils/editor-caret";
 
 defineProps({
   placeholder: {
@@ -93,15 +95,28 @@ watch(localValue, (v) => {
   if (v !== modelValue.value) modelValue.value = v;
 });
 
-function enterEdit() {
-  // 进入编辑前先把最新外部值刷入本地，确保 WangEditor 起手值正确
-  localValue.value = modelValue.value;
+// 点击进入编辑时，记录点击落在预览文本的第几个字符，待编辑器就绪后定位光标
+let pendingCaretOffset: number | null = null;
+
+function enterEdit(e?: MouseEvent) {
+  pendingCaretOffset = null;
+  if (e) {
+    const contentEl = rootEl.value?.querySelector<HTMLElement>(".rtf-preview-html");
+    if (contentEl) pendingCaretOffset = getPreviewCaretOffset(contentEl, e.clientX, e.clientY);
+  }
+  // 进入编辑前把外部值规整成 wangEditor 可解析的规范 HTML，确保起手内容（尤其含图片时）
+  // 不被严格解析器丢弃。见 utils/editor-html.ts。
+  localValue.value = toEditorHtml(modelValue.value);
   editorReady = false;
   editing.value = true;
 }
 
-function handleEditorReady() {
+function handleEditorReady(editor: any) {
   editorReady = true;
+  const offset = pendingCaretOffset;
+  pendingCaretOffset = null;
+  // 等编辑器 DOM 渲染完再定位光标到点击位置（失败回退到末尾）
+  nextTick(() => focusEditorAtOffset(editor, offset));
 }
 
 /**

@@ -1486,40 +1486,53 @@ function handleSubmit() {
     return;
   }
 
-  dataFormRef.value.validate((valid: boolean) => {
-    if (!valid) return;
+  dataFormRef.value.validate(
+    (valid: boolean, invalidFields?: Record<string, { message?: string }[]>) => {
+      if (!valid) {
+        // 必填项落在未激活的语言标签页时，红字提示看不到 ——
+        // 切到出错字段所在标签页，并弹出第一条错误，避免「点确定无反应」。
+        if (invalidFields?.contentEn && activeLanguageTab.value !== "en") {
+          activeLanguageTab.value = "en";
+        } else if (invalidFields?.contentZh && activeLanguageTab.value !== "zh") {
+          activeLanguageTab.value = "zh";
+        }
+        const firstMsg = Object.values(invalidFields ?? {})[0]?.[0]?.message;
+        ElMessage.warning(firstMsg || "请完善必填项后再保存");
+        return;
+      }
 
-    // 简答题/填空题不需要 options；拖放/热点 options/answer 已由 applySpecializedEditorsFromForm 写入
-    if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
-      formData.optionsZh = "[]";
-      formData.optionsEn = "[]";
-    } else if (formData.type === "JUDGE") {
-      formData.optionsZh = JSON.stringify([
-        { label: "A", value: "正确" },
-        { label: "B", value: "错误" },
-      ]);
-      formData.optionsEn = JSON.stringify([
-        { label: "A", value: "True" },
-        { label: "B", value: "False" },
-      ]);
-    } else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
-      formData.optionsZh = JSON.stringify(optionsList.value);
-      const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
-      formData.optionsEn = hasEnglishOptions ? JSON.stringify(optionsListEn.value) : "";
+      // 简答题/填空题不需要 options；拖放/热点 options/answer 已由 applySpecializedEditorsFromForm 写入
+      if (isTextAnswerType(formData.type) || formData.type === "FILL_BLANK") {
+        formData.optionsZh = "[]";
+        formData.optionsEn = "[]";
+      } else if (formData.type === "JUDGE") {
+        formData.optionsZh = JSON.stringify([
+          { label: "A", value: "正确" },
+          { label: "B", value: "错误" },
+        ]);
+        formData.optionsEn = JSON.stringify([
+          { label: "A", value: "True" },
+          { label: "B", value: "False" },
+        ]);
+      } else if (formData.type === "SINGLE" || formData.type === "MULTIPLE") {
+        formData.optionsZh = JSON.stringify(optionsList.value);
+        const hasEnglishOptions = optionsListEn.value.some((opt) => opt.value.trim() !== "");
+        formData.optionsEn = hasEnglishOptions ? JSON.stringify(optionsListEn.value) : "";
+      }
+
+      formData.subjectId = queryParams.subjectId;
+
+      const action = formData.id
+        ? QuestionAPI.update(formData.id, formData)
+        : QuestionAPI.create(formData);
+
+      action.then(() => {
+        ElMessage.success(formData.id ? "修改成功" : "新增成功");
+        dialog.visible = false;
+        fetchData();
+      });
     }
-
-    formData.subjectId = queryParams.subjectId;
-
-    const action = formData.id
-      ? QuestionAPI.update(formData.id, formData)
-      : QuestionAPI.create(formData);
-
-    action.then(() => {
-      ElMessage.success(formData.id ? "修改成功" : "新增成功");
-      dialog.visible = false;
-      fetchData();
-    });
-  });
+  );
 }
 
 // 关闭对话框

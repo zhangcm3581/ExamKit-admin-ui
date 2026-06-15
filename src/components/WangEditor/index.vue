@@ -138,6 +138,8 @@ function centerModalOnBody(modalOrPanel: { type?: string; $elem?: unknown }) {
 // 编辑器配置：placeholder 跟随 prop
 const editorConfig = computed<Partial<IEditorConfig>>(() => ({
   placeholder: props.placeholder,
+  // 关闭默认的「创建即聚焦到开头」，由调用方（RichTextField）按点击位置自行定位光标
+  autoFocus: false,
   MENU_CONF: {
     uploadImage: {
       customUpload(file: File, insertFn: InsertFnType) {
