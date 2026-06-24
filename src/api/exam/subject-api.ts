@@ -131,6 +131,8 @@ export interface SubjectVO {
   videoUrls?: string;
   /** 科目标签/分类 */
   tag?: string;
+  /** 考试代码(如SAA-C03) */
+  examCode?: string;
   /** 排序值 */
   sortOrder: number;
   /** 状态 */
@@ -167,6 +169,8 @@ export interface SubjectForm {
   videoUrls?: string;
   /** 科目标签/分类 */
   tag?: string;
+  /** 考试代码(如SAA-C03) */
+  examCode?: string;
   /** 排序值 */
   sortOrder?: number;
   /** 状态 */

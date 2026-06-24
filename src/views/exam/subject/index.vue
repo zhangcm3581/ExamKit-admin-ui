@@ -176,6 +176,14 @@
           />
         </el-form-item>
 
+        <el-form-item label="考试代码" prop="examCode">
+          <el-input
+            v-model="formData.examCode"
+            placeholder="可选，如：SAA-C03（用于 SEO 落地页 URL 与长尾词）"
+            clearable
+          />
+        </el-form-item>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="供应商">
@@ -420,6 +428,7 @@ function handleEditClick(id: string) {
     formData.examInfoZh = data.examInfoZh || "";
     formData.examInfoEn = data.examInfoEn || "";
     formData.tag = data.tag || "";
+    formData.examCode = data.examCode || "";
     formData.sortOrder = data.sortOrder || 0;
     formData.status = data.status !== undefined ? data.status : 1;
     formData.price = data.price != null ? data.price : 9800;
@@ -487,6 +496,7 @@ function handleDialogClosed() {
     formData.examInfoZh = undefined;
     formData.examInfoEn = undefined;
     formData.tag = undefined;
+    formData.examCode = undefined;
     formData.sortOrder = 0;
     formData.status = 1;
     formData.price = 9800;
