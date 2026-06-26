@@ -467,6 +467,14 @@
           />
         </el-form-item>
 
+        <el-form-item label="考试代码" prop="examCode">
+          <el-input
+            v-model="subjectEditForm.examCode"
+            placeholder="可选，如：SAA-C03（用于 SEO 落地页 URL 与长尾词）"
+            clearable
+          />
+        </el-form-item>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="供应商">
@@ -650,6 +658,14 @@
           <el-input
             v-model="subjectCreateForm.miniappDisplayName"
             placeholder="可选，如：PL-200（小程序优先显示此名称）"
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="考试代码" prop="examCode">
+          <el-input
+            v-model="subjectCreateForm.examCode"
+            placeholder="可选，如：SAA-C03（用于 SEO 落地页 URL 与长尾词）"
             clearable
           />
         </el-form-item>
@@ -992,6 +1008,7 @@ const subjectEditForm = reactive({
   nameZh: "",
   nameEn: "",
   miniappDisplayName: "",
+  examCode: "",
   providerId: undefined as number | undefined,
   supportLanguages: "",
   descriptionZh: "",
@@ -1052,6 +1069,7 @@ const subjectCreateForm = reactive({
   nameZh: "",
   nameEn: "",
   miniappDisplayName: "",
+  examCode: "",
   providerId: undefined as number | undefined,
   supportLanguages: "",
   descriptionZh: "",
@@ -1641,6 +1659,7 @@ function handleEditSubject(row: TableRow) {
   SubjectAPI.getFormData(row.id as string).then((data) => {
     // 先设置表单数据
     subjectEditForm.nameZh = data.nameZh || "";
+    subjectEditForm.examCode = data.examCode || "";
     subjectEditForm.nameEn = data.nameEn || "";
     subjectEditForm.miniappDisplayName = data.miniappDisplayName || "";
     subjectEditForm.providerId = data.providerId;
@@ -1673,6 +1692,7 @@ function handleSubmitSubjectEdit() {
         nameZh: subjectEditForm.nameZh,
         nameEn: subjectEditForm.nameEn,
         miniappDisplayName: subjectEditForm.miniappDisplayName,
+        examCode: subjectEditForm.examCode,
         providerId: subjectEditForm.providerId,
         supportLanguages: subjectEditForm.supportLanguages,
         descriptionZh: subjectEditForm.descriptionZh,
@@ -1711,6 +1731,7 @@ function handleSubjectEditDialogClosed() {
     subjectEditForm.nameZh = "";
     subjectEditForm.nameEn = "";
     subjectEditForm.miniappDisplayName = "";
+    subjectEditForm.examCode = "";
     subjectEditForm.providerId = undefined;
     subjectEditForm.supportLanguages = "";
     subjectEditForm.descriptionZh = "";
@@ -1730,6 +1751,7 @@ function handleNewSubject() {
   subjectCreateForm.nameZh = "";
   subjectCreateForm.nameEn = "";
   subjectCreateForm.miniappDisplayName = "";
+  subjectCreateForm.examCode = "";
   subjectCreateForm.providerId = undefined;
   subjectCreateForm.supportLanguages = "";
   subjectCreateForm.descriptionZh = "";
@@ -1760,6 +1782,7 @@ function handleSubmitSubjectCreate() {
         nameZh: subjectCreateForm.nameZh,
         nameEn: subjectCreateForm.nameEn,
         miniappDisplayName: subjectCreateForm.miniappDisplayName,
+        examCode: subjectCreateForm.examCode,
         providerId: subjectCreateForm.providerId,
         supportLanguages: subjectCreateForm.supportLanguages,
         descriptionZh: subjectCreateForm.descriptionZh,
@@ -1798,6 +1821,7 @@ function handleSubjectCreateDialogClosed() {
     subjectCreateForm.nameZh = "";
     subjectCreateForm.nameEn = "";
     subjectCreateForm.miniappDisplayName = "";
+    subjectCreateForm.examCode = "";
     subjectCreateForm.providerId = undefined;
     subjectCreateForm.supportLanguages = "";
     subjectCreateForm.descriptionZh = "";
