@@ -6,6 +6,10 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <span v-if="total > 0" class="total-tip">共 {{ total }} 条订单</span>
+          <span v-if="total > 0" class="paid-total-tip">
+            已支付总额
+            <em>¥{{ paidTotalYuan }}</em>
+          </span>
         </div>
         <div class="toolbar-right">
           <el-input
@@ -299,7 +303,16 @@ const query = reactive<AppOrderAdminPageQuery>({
 const dateRange = ref<[string, string] | null>(null);
 const rows = ref<AppOrderAdminVO[]>([]);
 const total = ref(0);
+const paidTotalCents = ref(0);
 const loading = ref(false);
+
+// 已支付总额（元，千分位，最多 2 位小数）
+const paidTotalYuan = computed(() =>
+  (paidTotalCents.value / 100).toLocaleString("zh-CN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+);
 
 function onDateRangeChange(v: [string, string] | null) {
   query.startTime = v?.[0];
@@ -310,12 +323,17 @@ function onDateRangeChange(v: [string, string] | null) {
 async function loadOrders() {
   loading.value = true;
   try {
-    const res = await AppOrderAdminAPI.page(query);
+    const [res, paid] = await Promise.all([
+      AppOrderAdminAPI.page(query),
+      AppOrderAdminAPI.paidTotal(query),
+    ]);
     rows.value = res.data;
     total.value = res.total;
+    paidTotalCents.value = paid ?? 0;
   } catch {
     rows.value = [];
     total.value = 0;
+    paidTotalCents.value = 0;
     ElMessage.error("加载订单失败");
   } finally {
     loading.value = false;
@@ -430,6 +448,19 @@ onMounted(loadOrders);
       .total-tip {
         font-size: 13px;
         color: var(--el-text-color-secondary);
+      }
+
+      .paid-total-tip {
+        padding-left: 12px;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
+        border-left: 1px solid var(--el-border-color-lighter);
+
+        em {
+          font-style: normal;
+          font-weight: 600;
+          color: var(--el-color-danger);
+        }
       }
     }
 

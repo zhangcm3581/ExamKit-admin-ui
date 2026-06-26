@@ -54,6 +54,14 @@ const AppOrderAdminAPI = {
       method: "get",
     });
   },
+  /** 已支付订单总金额（分），筛选条件同列表但强制 status=PAID */
+  paidTotal(query: AppOrderAdminPageQuery) {
+    return request<any, number>({
+      url: `${APP_ORDER_BASE}/paid-total`,
+      method: "post",
+      data: query,
+    });
+  },
 };
 
 export default AppOrderAdminAPI;
