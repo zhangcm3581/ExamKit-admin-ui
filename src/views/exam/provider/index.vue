@@ -808,13 +808,14 @@ import ProviderAPI, {
   type BankItemVO,
 } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import QuestionBankAPI from "@/api/exam/question-bank-api";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import RichTextField from "@/components/RichTextField/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
 import { formatDate } from "@/utils/datetime";
 import { useRoute, useRouter } from "vue-router";
 import Sortable from "sortablejs";
-import { type FormRules } from "element-plus";
+import { ElLoading, type FormRules } from "element-plus";
 
 const examIcon = "/exam.png";
 const folderIcon = "/folder.png";
@@ -1333,7 +1334,7 @@ function handleRowMoreAction(command: string, row: TableRow) {
       moveDialog.targetProviderId = row.providerId || -1;
       break;
     case "export":
-      ElMessage.info("导出功能开发中");
+      handleExportSubject(row);
       break;
     case "password":
       ElMessage.info("密码设置功能开发中");
@@ -1356,6 +1357,74 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "delete":
       handleDeleteSubject(row);
       break;
+  }
+}
+
+// 导出题库为 Excel（与导入模板一致，可重新导入）
+async function handleExportSubject(row: TableRow) {
+  const subjectId = row.id as string;
+  const support = row.supportLanguages || "";
+  let language: string | undefined;
+
+  // 双语题库让管理员选择导出语言（导入模板为单语言）
+  if (support.includes("zh") && support.includes("en")) {
+    try {
+      const action = await ElMessageBox.confirm("请选择导出的题目语言", "导出题库", {
+        confirmButtonText: "中文",
+        cancelButtonText: "English",
+        distinguishCancelAndClose: true,
+        type: "info",
+      });
+      language = action === "confirm" ? "zh" : "en";
+    } catch (action) {
+      if (action === "cancel") {
+        language = "en";
+      } else {
+        // 关闭弹窗（点 X 或按 ESC）则取消导出
+        return;
+      }
+    }
+  }
+
+  const loadingInstance = ElLoading.service({
+    fullscreen: true,
+    lock: true,
+    text: "题库导出中...",
+    background: "rgba(0, 0, 0, 0.5)",
+  });
+
+  try {
+    const response: any = await QuestionBankAPI.export(subjectId, language);
+    const fileData = response.data;
+
+    // 优先使用后端返回的文件名
+    let fileName = `${row.nameZh || row.nameEn || "题库"}_题库导出.xlsx`;
+    const contentDisposition = response.headers?.["content-disposition"];
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)/i);
+      if (match && match[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+
+    const blob = new Blob([fileData], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8",
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = fileName;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    ElMessage.success("导出成功");
+  } catch (error: any) {
+    console.error("导出失败", error);
+    ElMessage.error(error?.message || "导出失败，请稍后重试");
+  } finally {
+    loadingInstance.close();
   }
 }
 
