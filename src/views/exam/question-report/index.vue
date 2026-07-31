@@ -129,11 +129,21 @@
       <div v-if="currentReport" v-loading="questionLoading">
         <!-- 题目区域工具栏 -->
         <div v-if="questionDetail" class="question-toolbar">
-          <span v-if="!editing && questionDetail?.type === 'FILL_BLANK'" class="qt-hint">
-            填空题暂不支持在此处编辑，请前往「试题管理」修改
-          </span>
-          <span v-else-if="!editing" class="qt-hint">点击右侧按钮可直接修改本题</span>
-          <span v-else class="qt-hint qt-hint-editing">编辑模式</span>
+          <div class="qt-context">
+            <div class="qt-context-title">
+              <span class="qt-context-subject">{{ currentReport.subjectName || "未知科目" }}</span>
+              <span class="qt-context-divider">·</span>
+              <span v-if="currentReport.questionNumber != null">
+                {{ `第 ${currentReport.questionNumber} 题` }}
+              </span>
+              <span v-else>题号未知</span>
+            </div>
+            <span v-if="!editing && questionDetail?.type === 'FILL_BLANK'" class="qt-hint">
+              填空题暂不支持在此处编辑，请前往「试题管理」修改
+            </span>
+            <span v-else-if="!editing" class="qt-hint">点击右侧按钮可直接修改本题</span>
+            <span v-else class="qt-hint qt-hint-editing">编辑模式</span>
+          </div>
           <el-button
             v-if="!editing"
             type="primary"
@@ -1025,6 +1035,38 @@ async function submitProcess() {
   align-items: center;
   justify-content: space-between;
   padding: 4px 4px 8px;
+}
+
+.qt-context {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.qt-context-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.qt-context-subject {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.qt-context-divider {
+  font-weight: 400;
+  color: #c0c4cc;
+}
+
+.question-toolbar > .el-button {
+  flex-shrink: 0;
 }
 
 .qt-hint {
