@@ -93,6 +93,11 @@
             <span v-else-if="!scope.row.isFolder" style="color: #ccc">-</span>
           </template>
         </el-table-column>
+        <el-table-column label="排序号" prop="sortOrder" width="80" align="center">
+          <template #default="scope">
+            {{ scope.row.sortOrder ?? 0 }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="scope">
             <template v-if="scope.row.isFolder">
