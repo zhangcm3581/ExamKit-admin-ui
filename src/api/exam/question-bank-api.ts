@@ -1,4 +1,5 @@
 import request from "@/utils/request";
+import type { AxiosProgressEvent } from "axios";
 
 const QUESTION_BANK_BASE_URL = "/v1/question-bank";
 
@@ -113,15 +114,20 @@ const QuestionBankAPI = {
   },
 
   /**
-   * 导出科目题库 PDF
+   * 导出科目题库 PDF zip（每种语言含仅题目 + 题目答案）
    */
-  exportPdf(subjectId: string, language: string, includeAnswer: boolean) {
+  exportPdf(
+    subjectId: string,
+    languages: string[],
+    onDownloadProgress?: (event: AxiosProgressEvent) => void
+  ) {
     return request({
       url: `${QUESTION_BANK_BASE_URL}/export-pdf`,
       method: "get",
-      params: { subjectId, language, includeAnswer },
+      params: { subjectId, languages: languages.join(",") },
       responseType: "blob",
-      timeout: 180000,
+      timeout: 300000,
+      onDownloadProgress,
     });
   },
 };

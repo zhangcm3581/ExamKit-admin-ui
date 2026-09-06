@@ -358,27 +358,49 @@
     <el-dialog
       v-model="exportPdfDialog.visible"
       title="导出PDF"
-      width="420px"
-      @closed="exportPdfDialog.exporting = false"
+      width="460px"
+      :close-on-click-modal="!exportPdfDialog.exporting"
+      :close-on-press-escape="!exportPdfDialog.exporting"
+      :show-close="!exportPdfDialog.exporting"
+      @closed="resetExportPdfDialog"
     >
-      <p class="export-pdf-hint">请选择导出语言和是否包含答案：</p>
+      <p class="export-pdf-hint">
+        每种语言会同时导出「仅题目」和「题目+答案」两份 PDF，打包成 zip 下载。
+      </p>
       <el-form label-width="88px">
         <el-form-item label="语言">
-          <el-radio-group v-model="exportPdfDialog.language">
-            <el-radio :value="'zh'" :disabled="!exportPdfDialog.supportZh">中文题目</el-radio>
-            <el-radio :value="'en'" :disabled="!exportPdfDialog.supportEn">英文题目</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="内容">
-          <el-radio-group v-model="exportPdfDialog.includeAnswer">
-            <el-radio :value="false">仅题目</el-radio>
-            <el-radio :value="true">题目 + 答案</el-radio>
-          </el-radio-group>
+          <el-checkbox
+            v-model="exportPdfDialog.zh"
+            :disabled="!exportPdfDialog.supportZh || exportPdfDialog.exporting"
+          >
+            中文题目
+          </el-checkbox>
+          <el-checkbox
+            v-model="exportPdfDialog.en"
+            :disabled="!exportPdfDialog.supportEn || exportPdfDialog.exporting"
+          >
+            英文题目
+          </el-checkbox>
         </el-form-item>
       </el-form>
+      <div v-if="exportPdfDialog.exporting" class="export-pdf-progress">
+        <el-progress
+          :percentage="exportPdfDialog.progress"
+          :indeterminate="exportPdfDialog.waiting"
+          :stroke-width="12"
+        />
+        <p class="export-pdf-progress-text">{{ exportPdfDialog.progressText }}</p>
+      </div>
       <template #footer>
-        <el-button @click="exportPdfDialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="exportPdfDialog.exporting" @click="confirmExportPdf">
+        <el-button :disabled="exportPdfDialog.exporting" @click="exportPdfDialog.visible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="exportPdfDialog.exporting"
+          :disabled="!exportPdfDialog.zh && !exportPdfDialog.en"
+          @click="confirmExportPdf"
+        >
           导出
         </el-button>
       </template>
@@ -1017,11 +1039,14 @@ const exportPdfDialog = reactive({
   visible: false,
   subjectId: "" as string,
   subjectName: "" as string,
-  language: "zh" as "zh" | "en",
-  includeAnswer: false,
+  zh: true,
+  en: true,
   supportZh: true,
   supportEn: true,
   exporting: false,
+  waiting: false,
+  progress: 0,
+  progressText: "",
 });
 
 const uploadHeaders = computed(() => {
@@ -1504,10 +1529,32 @@ function handleOpenExportPdfDialog(row: TableRow) {
   exportPdfDialog.subjectName = getSubjectPrimaryName(row);
   exportPdfDialog.supportZh = supportZh;
   exportPdfDialog.supportEn = supportEn;
-  exportPdfDialog.language = supportZh ? "zh" : "en";
-  exportPdfDialog.includeAnswer = false;
+  exportPdfDialog.zh = supportZh;
+  exportPdfDialog.en = supportEn;
   exportPdfDialog.exporting = false;
+  exportPdfDialog.waiting = false;
+  exportPdfDialog.progress = 0;
+  exportPdfDialog.progressText = "";
   exportPdfDialog.visible = true;
+}
+
+function resetExportPdfDialog() {
+  exportPdfDialog.exporting = false;
+  exportPdfDialog.waiting = false;
+  exportPdfDialog.progress = 0;
+  exportPdfDialog.progressText = "";
+}
+
+function failExportPdf(message: string) {
+  ElMessage.error(message);
+  resetExportPdfDialog();
+}
+
+function formatExportBytes(loaded: number) {
+  if (loaded < 1024 * 1024) {
+    return `${Math.max(1, Math.round(loaded / 1024))} KB`;
+  }
+  return `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function parsePdfBlobFilename(disposition: string | undefined, fallback: string) {
@@ -1527,40 +1574,64 @@ function parsePdfBlobFilename(disposition: string | undefined, fallback: string)
 }
 
 async function confirmExportPdf() {
+  const languages: string[] = [];
+  if (exportPdfDialog.zh) languages.push("zh");
+  if (exportPdfDialog.en) languages.push("en");
+  if (languages.length === 0) {
+    ElMessage.warning("请至少选择一种语言");
+    return;
+  }
   exportPdfDialog.exporting = true;
+  exportPdfDialog.waiting = true;
+  exportPdfDialog.progress = 0;
+  exportPdfDialog.progressText = "正在生成 PDF 并写入压缩包…";
   try {
     const response = await QuestionBankAPI.exportPdf(
       exportPdfDialog.subjectId,
-      exportPdfDialog.language,
-      exportPdfDialog.includeAnswer
+      languages,
+      (evt) => {
+        const loaded = evt.loaded || 0;
+        if (loaded <= 0) {
+          return;
+        }
+        exportPdfDialog.waiting = false;
+        if (evt.total) {
+          exportPdfDialog.progress = Math.min(99, Math.round((loaded / evt.total) * 100));
+          exportPdfDialog.progressText = `正在传输 ${exportPdfDialog.progress}%`;
+        } else {
+          exportPdfDialog.progress = Math.min(90, 15 + Math.floor(Math.log2(loaded + 1) * 8));
+          exportPdfDialog.progressText = `正在传输，已接收 ${formatExportBytes(loaded)}`;
+        }
+      }
     );
     const blob: Blob = response.data;
     if (blob.type && blob.type.includes("json")) {
       const payload = JSON.parse(await blob.text());
-      ElMessage.error(payload.message || payload.msg || "导出失败");
+      failExportPdf(payload.message || payload.msg || "导出失败");
       return;
     }
     if (blob.size < 64) {
-      ElMessage.error("导出失败，请稍后重试");
+      failExportPdf("导出失败，请稍后重试");
       return;
     }
-    const fallback = `${exportPdfDialog.subjectName || "题库"}_${
-      exportPdfDialog.language === "en" ? "英文" : "中文"
-    }${exportPdfDialog.includeAnswer ? "" : "_无答案"}_题目.pdf`;
+    exportPdfDialog.waiting = false;
+    exportPdfDialog.progress = 100;
+    exportPdfDialog.progressText = "传输完成，开始下载";
+    const fallback = `${exportPdfDialog.subjectName || "题库"}_题目.zip`;
     const filename = parsePdfBlobFilename(response.headers?.["content-disposition"], fallback);
-    const file = new Blob([blob], { type: "application/pdf" });
+    const file = new Blob([blob], { type: "application/zip" });
     const url = URL.createObjectURL(file);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = filename.endsWith(".zip") ? filename : `${filename}.zip`;
     a.click();
     URL.revokeObjectURL(url);
-    exportPdfDialog.visible = false;
-    ElMessage.success("PDF 已开始下载");
+    ElMessage.success("压缩包已开始下载");
+    setTimeout(() => {
+      exportPdfDialog.visible = false;
+    }, 400);
   } catch {
-    ElMessage.error("导出 PDF 失败");
-  } finally {
-    exportPdfDialog.exporting = false;
+    failExportPdf("导出 PDF 失败");
   }
 }
 
@@ -2351,7 +2422,18 @@ onMounted(() => {
 .export-pdf-hint {
   margin: 0 0 16px;
   font-size: 14px;
+  line-height: 1.6;
   color: #606266;
+}
+
+.export-pdf-progress {
+  margin-top: 8px;
+}
+
+.export-pdf-progress-text {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #409eff;
 }
 
 /* 科目名称样式 */
