@@ -163,6 +163,7 @@
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
                       <el-dropdown-item command="editPrice">修改价格</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
+                      <el-dropdown-item command="exportPdf">导出PDF</el-dropdown-item>
                       <el-dropdown-item command="editVideo">编辑视频</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
@@ -350,6 +351,36 @@
 
       <template #footer>
         <el-button @click="pdfDialog.visible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 导出PDF -->
+    <el-dialog
+      v-model="exportPdfDialog.visible"
+      title="导出PDF"
+      width="420px"
+      @closed="exportPdfDialog.exporting = false"
+    >
+      <p class="export-pdf-hint">请选择导出语言和是否包含答案：</p>
+      <el-form label-width="88px">
+        <el-form-item label="语言">
+          <el-radio-group v-model="exportPdfDialog.language">
+            <el-radio :value="'zh'" :disabled="!exportPdfDialog.supportZh">中文题目</el-radio>
+            <el-radio :value="'en'" :disabled="!exportPdfDialog.supportEn">英文题目</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-radio-group v-model="exportPdfDialog.includeAnswer">
+            <el-radio :value="false">仅题目</el-radio>
+            <el-radio :value="true">题目 + 答案</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="exportPdfDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="exportPdfDialog.exporting" @click="confirmExportPdf">
+          导出
+        </el-button>
       </template>
     </el-dialog>
 
@@ -982,6 +1013,17 @@ const pdfUploadUrl = computed(() => {
   return `${import.meta.env.VITE_APP_BASE_API}/v1/subjects/${pdfDialog.subjectId}/pdf`;
 });
 
+const exportPdfDialog = reactive({
+  visible: false,
+  subjectId: "" as string,
+  subjectName: "" as string,
+  language: "zh" as "zh" | "en",
+  includeAnswer: false,
+  supportZh: true,
+  supportEn: true,
+  exporting: false,
+});
+
 const uploadHeaders = computed(() => {
   return { Authorization: `Bearer ${AuthStorage.getAccessToken()}` };
 });
@@ -1356,6 +1398,9 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "uploadPdf":
       handleOpenPdfDialog(row);
       break;
+    case "exportPdf":
+      handleOpenExportPdfDialog(row);
+      break;
     case "editVideo":
       handleOpenVideoDialog(row);
       break;
@@ -1449,6 +1494,74 @@ function handleOpenPdfDialog(row: TableRow) {
   pdfDialog.savingLink = false;
   nextTick(() => pdfLinkFormRef.value?.clearValidate?.());
   pdfDialog.visible = true;
+}
+
+function handleOpenExportPdfDialog(row: TableRow) {
+  const support = row.supportLanguages || "zh,en";
+  const supportZh = support.includes("zh");
+  const supportEn = support.includes("en");
+  exportPdfDialog.subjectId = row.id as string;
+  exportPdfDialog.subjectName = getSubjectPrimaryName(row);
+  exportPdfDialog.supportZh = supportZh;
+  exportPdfDialog.supportEn = supportEn;
+  exportPdfDialog.language = supportZh ? "zh" : "en";
+  exportPdfDialog.includeAnswer = false;
+  exportPdfDialog.exporting = false;
+  exportPdfDialog.visible = true;
+}
+
+function parsePdfBlobFilename(disposition: string | undefined, fallback: string) {
+  if (!disposition) {
+    return fallback;
+  }
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      return fallback;
+    }
+  }
+  const ascii = /filename="?([^";]+)"?/i.exec(disposition);
+  return ascii?.[1] ? decodeURIComponent(ascii[1]) : fallback;
+}
+
+async function confirmExportPdf() {
+  exportPdfDialog.exporting = true;
+  try {
+    const response = await QuestionBankAPI.exportPdf(
+      exportPdfDialog.subjectId,
+      exportPdfDialog.language,
+      exportPdfDialog.includeAnswer
+    );
+    const blob: Blob = response.data;
+    if (blob.type && blob.type.includes("json")) {
+      const payload = JSON.parse(await blob.text());
+      ElMessage.error(payload.message || payload.msg || "导出失败");
+      return;
+    }
+    if (blob.size < 64) {
+      ElMessage.error("导出失败，请稍后重试");
+      return;
+    }
+    const fallback = `${exportPdfDialog.subjectName || "题库"}_${
+      exportPdfDialog.language === "en" ? "英文" : "中文"
+    }${exportPdfDialog.includeAnswer ? "" : "_无答案"}_题目.pdf`;
+    const filename = parsePdfBlobFilename(response.headers?.["content-disposition"], fallback);
+    const file = new Blob([blob], { type: "application/pdf" });
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    exportPdfDialog.visible = false;
+    ElMessage.success("PDF 已开始下载");
+  } catch {
+    ElMessage.error("导出 PDF 失败");
+  } finally {
+    exportPdfDialog.exporting = false;
+  }
 }
 
 function beforePdfUpload(file: File) {
@@ -2233,6 +2346,12 @@ onMounted(() => {
 /* 添加时间单行不换行 */
 .datetime-cell {
   white-space: nowrap;
+}
+
+.export-pdf-hint {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #606266;
 }
 
 /* 科目名称样式 */

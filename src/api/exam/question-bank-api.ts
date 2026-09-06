@@ -111,6 +111,19 @@ const QuestionBankAPI = {
       responseType: "blob",
     });
   },
+
+  /**
+   * 导出科目题库 PDF
+   */
+  exportPdf(subjectId: string, language: string, includeAnswer: boolean) {
+    return request({
+      url: `${QUESTION_BANK_BASE_URL}/export-pdf`,
+      method: "get",
+      params: { subjectId, language, includeAnswer },
+      responseType: "blob",
+      timeout: 180000,
+    });
+  },
 };
 
 export default QuestionBankAPI;
