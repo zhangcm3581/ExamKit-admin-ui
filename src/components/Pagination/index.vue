@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { useLayout } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
 
 const props = defineProps({
   total: {

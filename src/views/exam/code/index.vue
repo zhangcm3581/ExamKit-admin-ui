@@ -432,7 +432,7 @@ import ActivationCodeAPI, {
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import { formatDateTime } from "@/utils/datetime";
-import { useLayout } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
 
 const { isMobile } = useLayout();
 

@@ -9,7 +9,8 @@
 </template>
 
 <script setup lang="ts">
-import { useLayout, useDeviceDetection } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
+import { useDeviceDetection } from "@/composables/layout/useDeviceDetection";
 
 /// Layout-related functionality and state management
 const { layoutClass, isSidebarOpen, closeSidebar } = useLayout();

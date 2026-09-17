@@ -234,7 +234,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { Edit, CircleClose, Loading } from "@element-plus/icons-vue";
 import UserSubjectAuthAPI, { type UserSubjectAuthAdminVO } from "@/api/exam/user-subject-auth-api";
 import { formatDateTime } from "@/utils/datetime";
-import { useLayout } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
 
 const props = defineProps<{ userId?: number }>();
 const { isMobile } = useLayout();

@@ -239,7 +239,7 @@ defineOptions({
 import AppUserAPI, { type AppUserPageQuery, type AppUserVO } from "@/api/exam/app-user-api";
 import IpBlacklistAPI from "@/api/exam/ip-blacklist-api";
 import { formatDateTime } from "@/utils/datetime";
-import { useLayout } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
 
 const { isMobile } = useLayout();
 

@@ -60,7 +60,8 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { useWindowSize } from "@vueuse/core";
-import { useLayout, useLayoutMenu } from "@/composables";
+import { useLayout } from "@/composables/layout/useLayout";
+import { useLayoutMenu } from "@/composables/layout/useLayoutMenu";
 import BaseLayout from "../base/index.vue";
 import AppLogo from "../../components/AppLogo/index.vue";
 import MixTopMenu from "../../components/Menu/MixTopMenu.vue";
