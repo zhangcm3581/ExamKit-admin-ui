@@ -12,7 +12,7 @@
             v-model="searchKeyword"
             placeholder="请输入激活码"
             clearable
-            style="width: 200px; margin-right: 8px"
+            class="filter-code"
             @keyup.enter="handleSearch"
           />
           <el-select
@@ -20,7 +20,7 @@
             placeholder="供应商"
             clearable
             filterable
-            style="width: 160px; margin-right: 8px"
+            class="filter-provider"
             @change="onQueryProviderChange"
           >
             <el-option
@@ -35,7 +35,7 @@
             placeholder="科目"
             clearable
             filterable
-            style="width: 220px; margin-right: 8px"
+            class="filter-subject"
             @change="handleQuery"
           >
             <template v-if="queryParams.providerId">
@@ -65,7 +65,7 @@
             v-model="queryParams.status"
             placeholder="状态"
             clearable
-            style="width: 100px; margin-right: 8px"
+            class="filter-status"
             @change="handleQuery"
           >
             <el-option label="未使用" :value="0" />
@@ -73,12 +73,15 @@
             <el-option label="已过期" :value="2" />
             <el-option label="已回收" :value="3" />
           </el-select>
-          <el-button type="primary" icon="Search" @click="handleSearch" />
-          <el-button icon="Refresh" @click="handleReset" />
+          <div class="toolbar-actions">
+            <el-button type="primary" icon="Search" @click="handleSearch" />
+            <el-button icon="Refresh" @click="handleReset" />
+          </div>
         </div>
       </div>
 
       <el-table
+        v-if="!isMobile"
         v-loading="loading"
         :data="tableData"
         row-key="id"
@@ -171,6 +174,56 @@
         </el-table-column>
       </el-table>
 
+      <div v-else v-loading="loading" class="code-cards">
+        <article v-for="row in tableData" :key="row.id" class="code-card">
+          <div class="code-card__head">
+            <div class="code-card__code">
+              <span class="code-text">{{ row.code }}</span>
+              <el-icon class="copy-icon" @click="handleCopy(row.code)">
+                <DocumentCopy />
+              </el-icon>
+            </div>
+            <el-tag :type="statusTagType(row.status)" size="small" effect="plain">
+              {{ statusLabel(row.status) }}
+            </el-tag>
+          </div>
+          <div class="code-card__subject">
+            <div class="zh">{{ row.subjectName || row.subjectNameEn || "—" }}</div>
+            <div v-if="row.subjectName && row.subjectNameEn" class="en">
+              {{ row.subjectNameEn }}
+            </div>
+          </div>
+          <div class="code-card__meta">
+            <span>{{ row.providerName || "—" }}</span>
+            <span>{{ row.validDays ? `${row.validDays} 天` : "—" }}</span>
+            <span>{{ row.usedByName || "未使用" }}</span>
+          </div>
+          <div v-if="row.usedAt" class="code-card__time">使用 {{ formatDateTime(row.usedAt) }}</div>
+          <div class="code-card__ops">
+            <el-button
+              v-if="row.status === 0"
+              type="danger"
+              size="small"
+              plain
+              :icon="Delete"
+              @click="onDelete(row)"
+            >
+              删除
+            </el-button>
+            <el-button
+              v-else-if="row.canRecycle"
+              type="danger"
+              size="small"
+              :icon="CircleClose"
+              @click="onRecycle(row)"
+            >
+              回收
+            </el-button>
+          </div>
+        </article>
+        <el-empty v-if="!loading && !tableData?.length" description="暂无激活码" :image-size="72" />
+      </div>
+
       <pagination
         v-if="total > 0"
         v-model:total="total"
@@ -184,10 +237,18 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="700px"
+      :width="isMobile ? '94%' : '700px'"
+      :fullscreen="isMobile"
+      align-center
       @close="handleDialogClose"
     >
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        :label-width="isMobile ? 'auto' : '100px'"
+        :label-position="isMobile ? 'top' : 'right'"
+      >
         <el-form-item label="供应商">
           <el-select
             v-model="formProviderId"
@@ -263,10 +324,8 @@
         </el-form-item>
 
         <el-form-item label="有效天数" prop="validDays">
-          <el-input-number v-model="formData.validDays" :min="1" :max="3650" style="width: 200px" />
-          <span style="margin-left: 12px; font-size: 12px; color: #909399">
-            默认 365 天（1 年），可自定义，设为 1 方便测试
-          </span>
+          <el-input-number v-model="formData.validDays" :min="1" :max="3650" class="days-input" />
+          <span class="days-hint">默认 365 天（1 年），可自定义，设为 1 方便测试</span>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -282,8 +341,16 @@
     </el-dialog>
 
     <!-- 导出对话框 -->
-    <el-dialog v-model="exportDialogVisible" title="导出激活码" width="700px">
-      <el-form label-width="80px">
+    <el-dialog
+      v-model="exportDialogVisible"
+      title="导出激活码"
+      :width="isMobile ? '94%' : '700px'"
+      align-center
+    >
+      <el-form
+        :label-width="isMobile ? 'auto' : '80px'"
+        :label-position="isMobile ? 'top' : 'right'"
+      >
         <el-form-item label="供应商">
           <el-select
             v-model="exportProviderId"
@@ -365,6 +432,9 @@ import ActivationCodeAPI, {
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
 import { formatDateTime } from "@/utils/datetime";
+import { useLayout } from "@/composables";
+
+const { isMobile } = useLayout();
 
 const formRef = ref();
 const loading = ref(false);
@@ -609,9 +679,33 @@ function handleConfirmExport() {
 
 // 复制激活码
 function handleCopy(code: string) {
-  navigator.clipboard.writeText(code).then(() => {
-    ElMessage.success("复制成功");
-  });
+  const done = () => ElMessage.success("复制成功");
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard
+      .writeText(code)
+      .then(done)
+      .catch(() => fallbackCopy(code, done));
+    return;
+  }
+  fallbackCopy(code, done);
+}
+
+function fallbackCopy(code: string, done: () => void) {
+  const input = document.createElement("textarea");
+  input.value = code;
+  input.setAttribute("readonly", "true");
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  document.body.appendChild(input);
+  input.select();
+  try {
+    document.execCommand("copy");
+    done();
+  } catch {
+    ElMessage.warning("复制失败，请长按手动复制");
+  } finally {
+    document.body.removeChild(input);
+  }
 }
 
 // 状态标签：0=未使用 1=已使用 2=已过期 3=已回收
@@ -715,6 +809,41 @@ onMounted(() => {
   }
 }
 
+.filter-code {
+  width: 200px;
+  margin-right: 8px;
+}
+
+.filter-provider {
+  width: 160px;
+  margin-right: 8px;
+}
+
+.filter-subject {
+  width: 220px;
+  margin-right: 8px;
+}
+
+.filter-status {
+  width: 100px;
+  margin-right: 8px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.days-input {
+  width: 200px;
+}
+
+.days-hint {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #909399;
+}
+
 .code-table {
   :deep(.el-table__header) {
     th {
@@ -789,6 +918,127 @@ onMounted(() => {
   font-weight: 600;
   color: #606266;
   background-color: #f5f7fa !important;
+}
+
+.code-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.code-card {
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 12px;
+
+  &__head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__code {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  &__subject {
+    margin-top: 10px;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  &__time {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  &__ops {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid #eef0f3;
+
+    .el-button {
+      margin: 0;
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .app-container {
+    padding: 10px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .toolbar-left {
+    width: 100%;
+
+    :deep(.el-button) {
+      flex: 1;
+    }
+  }
+
+  .toolbar-right {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-code,
+  .filter-provider,
+  .filter-subject,
+  .filter-status {
+    width: calc(50% - 4px);
+    margin-right: 0;
+  }
+
+  .filter-code {
+    width: 100%;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+
+    .el-button {
+      flex: 1;
+    }
+  }
+
+  .days-input {
+    width: 100%;
+  }
+
+  .days-hint {
+    display: block;
+    margin: 8px 0 0;
+  }
+
+  :deep(.el-card__body) {
+    padding: 12px;
+  }
+
+  :deep(.el-radio-group) {
+    flex-wrap: wrap;
+  }
 }
 </style>
 

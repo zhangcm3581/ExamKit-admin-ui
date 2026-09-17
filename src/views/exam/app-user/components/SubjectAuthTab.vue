@@ -37,6 +37,7 @@
       </div>
 
       <el-table
+        v-if="!isMobile"
         :data="list"
         class="auth-table"
         :border="false"
@@ -111,13 +112,56 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div v-else class="auth-cards">
+        <article v-for="row in list" :key="row.id" class="auth-card">
+          <div class="auth-card__title">
+            {{ row.subjectNameEn || row.subjectNameZh }}
+          </div>
+          <div v-if="row.subjectNameZh && row.subjectNameEn" class="auth-card__sub">
+            {{ row.subjectNameZh }}
+          </div>
+          <div class="auth-card__meta">
+            <span>{{ row.providerName }}</span>
+            <el-tag size="small" :type="sourceTagType(row.source)" effect="light" round>
+              {{ sourceLabel(row.source) }}
+            </el-tag>
+          </div>
+          <div v-if="row.code" class="code-line">{{ row.code }}</div>
+          <div class="expiry" style="margin-top: 10px">
+            <span class="status-dot" :class="`status-dot--${statusOf(row).key}`" />
+            <div class="expiry__text">
+              <div class="expiry__primary">{{ statusOf(row).label }}</div>
+              <div class="expiry__secondary">
+                <template v-if="!row.expiredAt">长期有效</template>
+                <template v-else>{{ formatDateTime(row.expiredAt) }}</template>
+              </div>
+            </div>
+          </div>
+          <div class="ops auth-card__ops">
+            <el-button type="primary" size="small" :icon="Edit" @click="openEdit(row)">
+              改期
+            </el-button>
+            <el-button
+              v-if="!row.expiredAt || !row.isExpired"
+              type="danger"
+              size="small"
+              plain
+              :icon="CircleClose"
+              @click="onForceExpire(row)"
+            >
+              强制过期
+            </el-button>
+          </div>
+        </article>
+      </div>
     </template>
 
     <!-- 改期对话框 -->
     <el-dialog
       v-model="editVisible"
       title="修改到期时间"
-      width="460px"
+      :width="isMobile ? '94%' : '460px'"
       :close-on-click-modal="false"
       append-to-body
       align-center
@@ -190,8 +234,10 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { Edit, CircleClose, Loading } from "@element-plus/icons-vue";
 import UserSubjectAuthAPI, { type UserSubjectAuthAdminVO } from "@/api/exam/user-subject-auth-api";
 import { formatDateTime } from "@/utils/datetime";
+import { useLayout } from "@/composables";
 
 const props = defineProps<{ userId?: number }>();
+const { isMobile } = useLayout();
 
 const loading = ref(false);
 const list = ref<UserSubjectAuthAdminVO[]>([]);
@@ -580,5 +626,65 @@ defineExpose({ reload: load });
   margin-right: 4px;
   font-size: 12px;
   color: var(--auth-text-muted);
+}
+
+.auth-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-card {
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--auth-border);
+  border-radius: 12px;
+
+  &__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--auth-text-strong);
+  }
+
+  &__sub,
+  &__meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--auth-text);
+  }
+
+  &__meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .code-line {
+    max-width: 100%;
+  }
+
+  &__ops {
+    justify-content: flex-end;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--auth-border);
+  }
+}
+
+@media (max-width: 992px) {
+  .summary {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .summary__cell {
+    flex: 1 1 30%;
+    min-width: 72px;
+  }
+
+  .summary__divider {
+    display: none;
+  }
 }
 </style>

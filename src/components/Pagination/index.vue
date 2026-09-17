@@ -5,7 +5,8 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :background="background"
-        :layout="layout"
+        :layout="resolvedLayout"
+        :pager-count="pagerCount"
         :page-sizes="pageSizes"
         :total="total"
         @size-change="handleSizeChange"
@@ -16,6 +17,8 @@
 </template>
 
 <script setup lang="ts">
+import { useLayout } from "@/composables";
+
 const props = defineProps({
   total: {
     type: Number as PropType<number>,
@@ -46,6 +49,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["pagination"]);
+
+const { isMobile } = useLayout();
+const resolvedLayout = computed(() => (isMobile.value ? "total, prev, next" : props.layout));
+const pagerCount = computed(() => (isMobile.value ? 5 : 7));
 
 const currentPage = defineModel("page", {
   type: Number,
@@ -86,6 +93,22 @@ function handleCurrentChange(val: number) {
 
   &.hidden {
     display: none;
+  }
+}
+
+@media (max-width: 992px) {
+  .pagination {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 4px;
+  }
+}
+
+@media (max-width: 992px) {
+  .pagination {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
   }
 }
 </style>

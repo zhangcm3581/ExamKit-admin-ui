@@ -29,4 +29,11 @@ const canViewDashboard = computed(() =>
   padding: 14px 32px 28px;
   background: #fafafa;
 }
+
+@media (max-width: 992px) {
+  .dashboard-container {
+    min-height: 0;
+    padding: 12px 12px 24px;
+  }
+}
 </style>

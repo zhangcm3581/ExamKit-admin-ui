@@ -142,6 +142,26 @@ const onClick = () => {
     transform: translateX(2px);
   }
 
+  @media (max-width: 992px) {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+
+    &__label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &__count {
+      flex: 0 0 auto;
+    }
+
+    &__cta {
+      justify-content: flex-end;
+      width: 100%;
+    }
+  }
+
   // tone presets
   &.tone-red {
     .todo-row__icon {

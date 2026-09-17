@@ -222,6 +222,10 @@ function handleAvatarError() {
       color: var(--el-text-color-regular);
       white-space: nowrap;
       transition: color 0.3s;
+
+      @media (max-width: 992px) {
+        display: none;
+      }
     }
   }
 }

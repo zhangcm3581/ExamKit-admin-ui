@@ -357,13 +357,40 @@ const formComponents = {
   resetPwd: defineAsyncComponent(() => import("./components/ResetPwd.vue")),
 };
 
-onMounted(() => {});
-onBeforeUnmount(() => {});
+onMounted(() => {
+  document.documentElement.classList.add("login-no-zoom");
+  document.addEventListener("gesturestart", preventPinch, { passive: false });
+  document.addEventListener("gesturechange", preventPinch, { passive: false });
+  document.addEventListener("touchmove", preventMultiTouch, { passive: false });
+});
+
+onBeforeUnmount(() => {
+  document.documentElement.classList.remove("login-no-zoom");
+  document.removeEventListener("gesturestart", preventPinch);
+  document.removeEventListener("gesturechange", preventPinch);
+  document.removeEventListener("touchmove", preventMultiTouch);
+});
+
+function preventPinch(e: Event) {
+  e.preventDefault();
+}
+
+function preventMultiTouch(e: TouchEvent) {
+  if (e.touches.length > 1) {
+    e.preventDefault();
+  }
+}
 </script>
 
 <style lang="scss">
 /* ============ Global font load ============ */
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+
+html.login-no-zoom,
+html.login-no-zoom body {
+  overscroll-behavior: none;
+  touch-action: pan-y;
+}
 </style>
 
 <style lang="scss" scoped>
@@ -412,7 +439,9 @@ $body:
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   font-family: $body;
+  touch-action: pan-y;
   background: linear-gradient(135deg, #5fa3ff 0%, #2563eb 55%, #1e3a8a 100%);
   isolation: isolate;
 }
@@ -685,19 +714,43 @@ $body:
 }
 
 @media (max-width: 640px) {
+  .login-shell {
+    align-items: flex-start;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+  }
+
   .login-card {
-    width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
-    padding: 18px 18px 14px;
-    border-radius: 22px;
+    width: 100%;
+    max-height: none;
+    padding: 14px 14px 10px;
+    border-radius: 18px;
+  }
+
+  .card-header {
+    padding: 2px 2px 14px;
   }
 
   .card-body {
+    min-height: 0;
     border-radius: 14px;
   }
 
+  .card-form-area {
+    padding: 20px 16px 18px;
+  }
+
   .brand-name {
-    font-size: 19px;
+    font-size: 18px;
+  }
+
+  .brand-sub {
+    letter-spacing: 0.08em;
+  }
+
+  .card-foot {
+    gap: 6px;
+    padding-top: 14px;
+    font-size: 11px;
   }
 }
 

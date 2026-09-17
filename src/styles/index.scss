@@ -23,6 +23,17 @@ pre,
   padding: 15px;
 }
 
+@media (max-width: 992px) {
+  .app-container {
+    padding: 10px;
+  }
+
+  .el-message-box {
+    width: calc(100vw - 32px) !important;
+    max-width: 420px;
+  }
+}
+
 // 进度条颜色
 #nprogress .bar {
   background-color: var(--el-color-primary);

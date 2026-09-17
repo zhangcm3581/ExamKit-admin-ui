@@ -28,7 +28,7 @@
       </el-form-item>
 
       <!-- Password -->
-      <el-tooltip :visible="isCapsLock" :content="t('login.capsLock')" placement="right">
+      <el-tooltip :visible="isCapsLock" :content="t('login.capsLock')" placement="top">
         <el-form-item prop="password">
           <label class="ek-label">密码</label>
           <el-input

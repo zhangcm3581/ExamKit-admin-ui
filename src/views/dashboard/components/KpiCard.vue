@@ -121,4 +121,28 @@ const display = computed(() => Math.round(animated.value).toLocaleString("en-US"
     letter-spacing: -0.015em;
   }
 }
+
+@media (max-width: 992px) {
+  .kpi-stat {
+    gap: 8px;
+    padding: 16px 18px;
+
+    &::after {
+      display: none;
+    }
+
+    &:not(.kpi-stat--last) {
+      border-bottom: 1px solid #eef0f3;
+    }
+
+    &__label {
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+
+    &__value {
+      font-size: 28px;
+    }
+  }
+}
 </style>

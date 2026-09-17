@@ -474,3 +474,29 @@ $body:
 :global(html.dark) .form-row :deep(.el-checkbox__label) {
   color: #cbd5e1;
 }
+
+@media (max-width: 640px) {
+  .form-header {
+    margin-bottom: 18px;
+  }
+
+  .form-title {
+    font-size: 22px;
+  }
+
+  .form-title-tag {
+    display: none;
+  }
+
+  .captcha-img {
+    width: 104px;
+  }
+
+  .ek-btn.primary:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .ek-form :deep(.el-input__inner) {
+    font-size: 16px;
+  }
+}

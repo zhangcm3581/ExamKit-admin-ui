@@ -38,10 +38,24 @@ function toggleSideBar() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   height: $navbar-height;
+  padding: 0 8px 0 0;
+
+  > .flex-y-center {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  :deep(.el-breadcrumb) {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 
   &__actions {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     height: 100%;
   }

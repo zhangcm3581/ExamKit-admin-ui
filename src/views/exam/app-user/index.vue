@@ -1,7 +1,7 @@
 <!-- 注册用户管理 -->
 <template>
   <div class="app-container">
-    <el-card shadow="never">
+    <el-card shadow="never" class="page-card">
       <!-- 页面头部 -->
       <div class="page-header">
         <div class="header-left">
@@ -9,7 +9,7 @@
             v-model="searchKeyword"
             placeholder="输入昵称或邮箱搜索"
             clearable
-            style="width: 280px; margin-right: 12px"
+            class="filter-input"
             @keyup.enter="handleSearch"
           >
             <template #prefix>
@@ -22,7 +22,7 @@
             v-model="queryParams.emailVerified"
             placeholder="验证状态"
             clearable
-            style="width: 120px"
+            class="filter-select"
             @change="handleQuery"
           >
             <el-option label="已验证" :value="true" />
@@ -32,6 +32,7 @@
       </div>
 
       <el-table
+        v-if="!isMobile"
         v-loading="loading"
         :data="tableData"
         row-key="id"
@@ -142,6 +143,67 @@
         </el-table-column>
       </el-table>
 
+      <div v-else v-loading="loading" class="user-cards">
+        <article v-for="row in tableData" :key="row.id" class="user-card">
+          <div class="user-card__top">
+            <el-avatar v-if="row.avatar" :src="row.avatar" :size="40" />
+            <el-avatar v-else :size="40">{{ row.nickname?.substring(0, 1) }}</el-avatar>
+            <div class="user-card__id">
+              <div class="user-card__name">{{ row.nickname || "—" }}</div>
+              <div class="user-card__email">{{ row.email || "未绑定邮箱" }}</div>
+            </div>
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain">
+              {{ row.status === 1 ? "正常" : "已禁用" }}
+            </el-tag>
+          </div>
+          <div class="user-card__meta">
+            <div>注册 {{ formatDateTime(row.createTime) }}</div>
+            <div>登录 {{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : "—" }}</div>
+            <div v-if="row.lastLoginIp || row.lastLoginRegion" class="user-card__ip">
+              <span>{{ [row.lastLoginRegion, row.lastLoginIp].filter(Boolean).join(" · ") }}</span>
+              <el-button
+                v-if="row.lastLoginIp"
+                type="danger"
+                link
+                size="small"
+                @click="handleBlockIp(row)"
+              >
+                拉黑
+              </el-button>
+            </div>
+          </div>
+          <div class="user-card__ops">
+            <el-button type="primary" size="small" @click="openAuthDialog(row)">题库权限</el-button>
+            <el-button
+              v-if="row.status === 1"
+              type="danger"
+              plain
+              size="small"
+              @click="handleDisableUser(row)"
+            >
+              禁用
+            </el-button>
+            <el-button v-else type="success" plain size="small" @click="handleEnableUser(row)">
+              启用
+            </el-button>
+            <el-button
+              v-if="!row.emailVerified"
+              type="primary"
+              plain
+              size="small"
+              @click="handleVerifyEmail(row)"
+            >
+              验证通过
+            </el-button>
+            <span v-else class="verified-text">
+              <el-icon><CircleCheck /></el-icon>
+              已验证
+            </span>
+          </div>
+        </article>
+        <el-empty v-if="!loading && !tableData?.length" description="暂无用户" :image-size="72" />
+      </div>
+
       <pagination
         v-if="total > 0"
         v-model:total="total"
@@ -154,8 +216,11 @@
     <el-dialog
       v-model="authDialogVisible"
       :title="authDialogUser ? `${authDialogUser.nickname} - 题库权限` : '题库权限'"
-      width="1000px"
+      :width="isMobile ? '94%' : '1000px'"
+      :fullscreen="isMobile"
       destroy-on-close
+      align-center
+      class="auth-dialog"
     >
       <SubjectAuthTab :user-id="authDialogUser?.id" />
     </el-dialog>
@@ -174,6 +239,9 @@ defineOptions({
 import AppUserAPI, { type AppUserPageQuery, type AppUserVO } from "@/api/exam/app-user-api";
 import IpBlacklistAPI from "@/api/exam/ip-blacklist-api";
 import { formatDateTime } from "@/utils/datetime";
+import { useLayout } from "@/composables";
+
+const { isMobile } = useLayout();
 
 const loading = ref(false);
 const total = ref(0);
@@ -300,8 +368,17 @@ onMounted(() => {
 
 .header-left {
   display: flex;
+  flex: 1;
   gap: 12px;
   align-items: center;
+}
+
+.filter-input {
+  width: 280px;
+}
+
+.filter-select {
+  width: 120px;
 }
 
 .user-table {
@@ -396,5 +473,101 @@ onMounted(() => {
 :deep(.el-tag) {
   font-weight: 500;
   border-radius: 4px;
+}
+
+.user-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.user-card {
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 12px;
+
+  &__top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  &__id {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  &__email {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #64748b;
+  }
+
+  &__ip {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    word-break: break-all;
+  }
+
+  &__ops {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid #eef0f3;
+
+    .el-button {
+      margin: 0;
+    }
+
+    .verified-text {
+      margin-left: 0;
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .page-header {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .header-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  :deep(.el-card__body) {
+    padding: 12px;
+  }
 }
 </style>

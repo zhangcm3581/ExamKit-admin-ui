@@ -51,7 +51,12 @@ function render() {
   const FILL_BOTTOM = "rgb(30 58 138 / 0%)";
 
   chart.setOption({
-    grid: { left: 32, right: 8, top: 12, bottom: 28 },
+    grid: {
+      left: window.innerWidth < 992 ? 28 : 32,
+      right: 8,
+      top: 12,
+      bottom: window.innerWidth < 992 ? 22 : 28,
+    },
     tooltip: {
       trigger: "axis",
       backgroundColor: "rgb(11 18 32 / 92%)",
@@ -149,6 +154,17 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     height: 220px;
+  }
+}
+
+@media (max-width: 992px) {
+  .trend {
+    padding: 14px 14px 16px;
+
+    &__canvas,
+    &__placeholder {
+      height: 176px;
+    }
   }
 }
 </style>

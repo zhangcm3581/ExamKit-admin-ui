@@ -252,4 +252,24 @@ onBeforeUnmount(() => abortController?.abort());
     border-radius: 12px;
   }
 }
+
+@media (max-width: 992px) {
+  .dash {
+    gap: 12px;
+
+    &__head {
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    &__range {
+      gap: 16px;
+    }
+
+    &__kpis {
+      flex-direction: column;
+    }
+  }
+}
 </style>
