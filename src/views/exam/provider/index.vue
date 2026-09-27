@@ -668,6 +668,8 @@ import ProviderAPI, {
   type BankItemVO,
 } from "@/api/exam/provider-api";
 import SubjectAPI, { type SubjectVO } from "@/api/exam/subject-api";
+import QuestionBankAPI from "@/api/exam/question-bank-api";
+import { ElLoading } from "element-plus";
 import ImagePicker from "@/components/ImagePicker/index.vue";
 import RichTextField from "@/components/RichTextField/index.vue";
 import Dialog from "@/components/Dialog/index.vue";
@@ -1060,7 +1062,7 @@ function handleRowMoreAction(command: string, row: TableRow) {
       moveDialog.targetProviderId = row.providerId || -1;
       break;
     case "export":
-      ElMessage.info("导出功能开发中");
+      handleExportSubject(row);
       break;
     case "password":
       ElMessage.info("密码设置功能开发中");
@@ -1080,6 +1082,75 @@ function handleRowMoreAction(command: string, row: TableRow) {
     case "delete":
       handleDeleteSubject(row);
       break;
+  }
+}
+
+async function handleExportSubject(row: TableRow) {
+  const subjectId = row.id as string;
+  const support = row.supportLanguages || "";
+  let language: string | undefined;
+
+  if (support.includes("zh") && support.includes("en")) {
+    try {
+      await ElMessageBox.confirm("请选择导出的题目语言", "导出题库", {
+        confirmButtonText: "中文",
+        cancelButtonText: "English",
+        distinguishCancelAndClose: true,
+        type: "info",
+      });
+      language = "zh";
+    } catch (action) {
+      if (action === "cancel") {
+        language = "en";
+      } else {
+        return;
+      }
+    }
+  }
+
+  const loadingInstance = ElLoading.service({
+    fullscreen: true,
+    lock: true,
+    text: "题库导出中...",
+    background: "rgba(0, 0, 0, 0.5)",
+  });
+
+  try {
+    const response: any = await QuestionBankAPI.export(subjectId, language);
+    const fileData: Blob = response.data;
+
+    if (fileData.type && fileData.type.includes("json")) {
+      const text = await fileData.text();
+      const json = JSON.parse(text);
+      throw new Error(json.message || "导出失败");
+    }
+
+    let fileName = `${row.nameZh || row.nameEn || "题库"}_题库导出.xlsx`;
+    const contentDisposition = response.headers?.["content-disposition"];
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)/i);
+      if (match?.[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+
+    const blob = new Blob([fileData], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8",
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = fileName;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    window.URL.revokeObjectURL(downloadUrl);
+    ElMessage.success("导出成功");
+  } catch (error: any) {
+    console.error("导出失败", error);
+    ElMessage.error(error?.message || "导出失败，请稍后重试");
+  } finally {
+    loadingInstance.close();
   }
 }
 

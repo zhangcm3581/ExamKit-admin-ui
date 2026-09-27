@@ -99,6 +99,18 @@ const QuestionBankAPI = {
       data,
     });
   },
+
+  /**
+   * 导出科目题库为 Excel（与导入模板一致，可重新导入）
+   */
+  export(subjectId: string, language?: string) {
+    return request({
+      url: `${QUESTION_BANK_BASE_URL}/export`,
+      method: "get",
+      params: { subjectId, language },
+      responseType: "blob",
+    });
+  },
 };
 
 export default QuestionBankAPI;
