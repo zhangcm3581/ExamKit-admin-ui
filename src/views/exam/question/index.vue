@@ -59,11 +59,46 @@
           </el-dropdown>
           <el-dropdown trigger="click">
             <el-button class="toolbar-btn">
+              {{ currentChapterLabel }}
+              <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  :class="{ 'is-active': !queryParams.chapterFilter }"
+                  @click="handleChapterFilter('')"
+                >
+                  全部章节
+                </el-dropdown-item>
+                <el-dropdown-item
+                  :class="{ 'is-active': queryParams.chapterFilter === 'NONE' }"
+                  @click="handleChapterFilter('NONE')"
+                >
+                  无章节
+                </el-dropdown-item>
+                <el-dropdown-item
+                  v-for="chapter in flatChapters"
+                  :key="chapter.id"
+                  :class="{ 'is-active': queryParams.chapterFilter === String(chapter.id) }"
+                  @click="handleChapterFilter(String(chapter.id))"
+                >
+                  <span :style="{ paddingLeft: `${chapter.depth * 16}px` }">
+                    {{ chapter.name }}
+                  </span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-dropdown trigger="click">
+            <el-button class="toolbar-btn">
               更多操作
               <el-icon class="el-icon--right"><arrow-down /></el-icon>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item :disabled="ids.length === 0" @click="openBatchChapter">
+                  批量更换章节
+                </el-dropdown-item>
                 <el-dropdown-item :disabled="ids.length === 0" @click="handleBatchChangeType">
                   批量更换题型
                 </el-dropdown-item>
@@ -255,6 +290,11 @@
             <span v-else>{{ row.answer }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="章节" min-width="180" align="center" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ chapterPath(row.chapterId) || row.chapterName || "--" }}
+          </template>
+        </el-table-column>
         <el-table-column label="编辑时间" width="200" align="center">
           <template #default="{ row }">
             {{ formatDateTime(row.updateTime) }}
@@ -291,6 +331,26 @@
       @close="handleCloseDialog"
     >
       <el-form ref="dataFormRef" :model="formData" :rules="rules" label-position="top">
+        <el-form-item label="选择章节">
+          <div class="chapter-pick">
+            <el-tree-select
+              v-model="formData.chapterId"
+              :data="chapterTree"
+              :props="chapterTreeProps"
+              check-strictly
+              clearable
+              filterable
+              placeholder="请选择"
+              class="chapter-pick__select"
+            >
+              <template #label="{ label, value }">
+                <span>{{ chapterPath(value) || label }}</span>
+              </template>
+            </el-tree-select>
+            <el-button type="primary" plain @click="openChapterManager">编辑章节</el-button>
+          </div>
+        </el-form-item>
+
         <el-form-item label="试题类型" prop="type">
           <el-radio-group v-model="formData.type" @change="handleTypeChange">
             <el-radio label="SINGLE">单选题</el-radio>
@@ -634,6 +694,32 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="batchChapterVisible" title="批量更换章节" width="560px" append-to-body>
+      <div class="chapter-pick batch-chapter-dialog__body">
+        <el-tree-select
+          v-model="batchChapterId"
+          :data="chapterTree"
+          :props="chapterTreeProps"
+          check-strictly
+          filterable
+          placeholder="请选择"
+          class="chapter-pick__select"
+        >
+          <template #label="{ label, value }">
+            <span>{{ chapterPath(value) || label }}</span>
+          </template>
+        </el-tree-select>
+        <el-button type="primary" plain @click="openChapterManager">编辑章节</el-button>
+      </div>
+      <template #footer>
+        <el-button type="primary" :loading="batchChapterLoading" @click="confirmBatchChapter">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <ChapterManager ref="chapterManagerRef" @changed="loadChapters" />
   </div>
 </template>
 
@@ -647,6 +733,8 @@ import QuestionAPI, {
   type QuestionForm,
 } from "@/api/exam/question-api";
 import SubjectAPI from "@/api/exam/subject-api";
+import ChapterAPI, { type ChapterNode } from "@/api/exam/chapter-api";
+import ChapterManager from "./components/ChapterManager.vue";
 import { formatDateTime } from "@/utils/datetime";
 import RichTextField from "@/components/RichTextField/index.vue";
 
@@ -666,6 +754,7 @@ const queryParams = reactive<QuestionPageQuery>({
   subjectId: route.query.subjectId as string,
   pageNum: 1,
   pageSize: 100,
+  chapterFilter: "",
 });
 
 const tableData = ref<QuestionVO[]>([]);
@@ -717,6 +806,117 @@ const currentTypeLabel = computed(() => {
   };
   return typeMap[queryParams.type || ""] || "全部题型";
 });
+
+const chapterTree = ref<ChapterNode[]>([]);
+const chapterManagerRef = ref<{ open: (subjectId: string) => void }>();
+const chapterTreeProps = { label: "name", value: "id", children: "children" };
+const batchChapterVisible = ref(false);
+const batchChapterId = ref<number | undefined>();
+const batchChapterLoading = ref(false);
+
+interface FlatChapter {
+  id: number;
+  name: string;
+  depth: number;
+}
+
+const flatChapters = computed<FlatChapter[]>(() => {
+  const rows: FlatChapter[] = [];
+  const walk = (nodes: ChapterNode[], depth: number) => {
+    for (const node of nodes) {
+      rows.push({ id: node.id, name: node.name, depth });
+      if (node.children?.length) walk(node.children, depth + 1);
+    }
+  };
+  walk(chapterTree.value, 0);
+  return rows;
+});
+
+function chapterPath(id: number | string | null | undefined) {
+  if (id == null || id === "") return "";
+  const target = Number(id);
+  const walk = (nodes: ChapterNode[], parents: string[]): string | undefined => {
+    for (const node of nodes) {
+      const path = [...parents, node.name];
+      if (node.id === target) return path.join(" / ");
+      if (node.children?.length) {
+        const found = walk(node.children, path);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+  return walk(chapterTree.value, []) ?? "";
+}
+
+const currentChapterLabel = computed(() => {
+  if (!queryParams.chapterFilter) return "全部章节";
+  if (queryParams.chapterFilter === "NONE") return "无章节";
+  return chapterPath(queryParams.chapterFilter) || "全部章节";
+});
+
+function normalizeChapterTree(nodes: ChapterNode[]): ChapterNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    children: node.children?.length ? normalizeChapterTree(node.children) : undefined,
+  }));
+}
+
+async function loadChapters() {
+  if (!queryParams.subjectId) return;
+  const data = await ChapterAPI.tree(queryParams.subjectId);
+  chapterTree.value = normalizeChapterTree(data || []);
+  if (
+    batchChapterId.value != null &&
+    !flatChapters.value.some((item) => item.id === batchChapterId.value)
+  ) {
+    batchChapterId.value = undefined;
+  }
+}
+
+function handleChapterFilter(filter: string) {
+  queryParams.chapterFilter = filter;
+  queryParams.pageNum = 1;
+  fetchData();
+}
+
+function openChapterManager() {
+  if (!queryParams.subjectId) {
+    ElMessage.warning("请先选择科目");
+    return;
+  }
+  chapterManagerRef.value?.open(queryParams.subjectId);
+}
+
+function openBatchChapter() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请选择要更换章节的试题");
+    return;
+  }
+  batchChapterId.value = undefined;
+  batchChapterVisible.value = true;
+  void loadChapters();
+}
+
+async function confirmBatchChapter() {
+  if (batchChapterId.value == null) {
+    ElMessage.warning("请选择章节");
+    return;
+  }
+  batchChapterLoading.value = true;
+  try {
+    await QuestionAPI.batchChangeChapter(
+      queryParams.subjectId,
+      ids.value as number[],
+      batchChapterId.value
+    );
+    ElMessage.success("章节已更新");
+    batchChapterVisible.value = false;
+    fetchData();
+  } finally {
+    batchChapterLoading.value = false;
+  }
+}
 
 // 无选项的文本答案题型（简答、拖拽）
 function isTextAnswerType(type?: string) {
@@ -1283,6 +1483,7 @@ function resetForm() {
   if (dataFormRef.value) {
     dataFormRef.value.resetFields();
   }
+  formData.chapterId = null;
 }
 
 onMounted(() => {
@@ -1294,6 +1495,7 @@ onMounted(() => {
   // 获取科目信息，以便确定支持的语言
   loadSubjectInfo();
   fetchData();
+  void loadChapters();
 
   // 监听窗口大小变化，重新渲染题目预览
   window.addEventListener("resize", handleResize);
@@ -1334,6 +1536,20 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.chapter-pick {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+.chapter-pick__select {
+  flex: 1;
+  max-width: 360px;
+}
+.batch-chapter-dialog__body {
+  align-items: flex-start;
+  min-height: 280px;
+}
 .toolbar {
   display: flex;
   align-items: center;

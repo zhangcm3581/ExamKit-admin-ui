@@ -164,6 +164,7 @@
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
                       <el-dropdown-item command="copyShareUrl">复制Web分享链接</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
+                      <el-dropdown-item command="keyPoint">考点速记</el-dropdown-item>
                       <el-dropdown-item command="move">移动</el-dropdown-item>
                       <el-dropdown-item command="export">导出</el-dropdown-item>
                       <el-dropdown-item command="delete" divided class="delete-item">
@@ -216,6 +217,7 @@
     </el-card>
 
     <MiniappQrDialog v-model="qrDialogVisible" :subject-id="qrSubjectId" />
+    <KeyPointDialog ref="keyPointDialogRef" />
 
     <!-- 新建文件夹弹窗 -->
     <!-- 文件夹弹窗 -->
@@ -660,6 +662,7 @@ import {
   Link,
 } from "@element-plus/icons-vue";
 import MiniappQrDialog from "@/views/exam/subject/components/MiniappQrDialog.vue";
+import KeyPointDialog from "@/views/exam/subject/components/KeyPointDialog.vue";
 import { AuthStorage } from "@/utils/auth";
 import ProviderAPI, {
   type ProviderPageQuery,
@@ -718,6 +721,7 @@ const tableRef = ref(); // 表格引用
 
 const qrDialogVisible = ref(false);
 const qrSubjectId = ref("");
+const keyPointDialogRef = ref<InstanceType<typeof KeyPointDialog>>();
 
 function openMiniappQr(row: { id: string }) {
   qrSubjectId.value = row.id;
@@ -1078,6 +1082,9 @@ function handleRowMoreAction(command: string, row: TableRow) {
       break;
     case "uploadPdf":
       handleOpenPdfDialog(row);
+      break;
+    case "keyPoint":
+      keyPointDialogRef.value?.open(String(row.id), row.nameZh || row.nameEn || "");
       break;
     case "delete":
       handleDeleteSubject(row);

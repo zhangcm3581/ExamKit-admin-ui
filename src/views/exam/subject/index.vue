@@ -126,8 +126,11 @@
             <span v-else class="text-gray-400">-</span>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" align="center" width="150">
+        <el-table-column fixed="right" label="操作" align="center" width="210">
           <template #default="scope">
+            <el-button type="primary" link size="small" @click.stop="openKeyPoints(scope.row)">
+              考点
+            </el-button>
             <el-button
               type="primary"
               link
@@ -276,6 +279,7 @@
         </div>
       </template>
     </el-dialog>
+    <KeyPointDialog ref="keyPointDialogRef" />
   </div>
 </template>
 
@@ -292,8 +296,10 @@ import SubjectAPI, {
 } from "@/api/exam/subject-api";
 import ProviderAPI, { type ProviderOptionVO } from "@/api/exam/provider-api";
 import RichTextField from "@/components/RichTextField/index.vue";
+import KeyPointDialog from "./components/KeyPointDialog.vue";
 import { formatDateTime } from "@/utils/datetime";
 
+const keyPointDialogRef = ref<{ open: (id: string, name: string) => void }>();
 const queryFormRef = ref();
 const dataFormRef = ref();
 
@@ -403,6 +409,10 @@ function handleAddClick() {
  *
  * @param id 科目ID
  */
+function openKeyPoints(row: SubjectVO) {
+  keyPointDialogRef.value?.open(row.id, row.nameZh || row.nameEn || "");
+}
+
 function handleEditClick(id: string) {
   // 先加载数据，再打开对话框
   SubjectAPI.getFormData(id).then((data) => {

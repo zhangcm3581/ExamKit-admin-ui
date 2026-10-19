@@ -10,6 +10,8 @@ export interface QuestionPageQuery {
   keywords?: string;
   /** 题型 */
   type?: string;
+  /** 章节筛选：空为全部，NONE 为未归类，其余为章节 ID */
+  chapterFilter?: string;
   /** 页码 */
   pageNum: number;
   /** 每页大小 */
@@ -22,6 +24,10 @@ export interface QuestionVO {
   id: number;
   /** 科目ID */
   subjectId: string;
+  /** 章节ID */
+  chapterId?: number | null;
+  /** 章节名称 */
+  chapterName?: string;
   /** 题号 */
   questionNumber: number;
   /** 是否案例题 */
@@ -62,6 +68,8 @@ export interface QuestionForm {
   id?: number;
   /** 科目ID */
   subjectId?: string;
+  /** 章节ID，空表示未归类 */
+  chapterId?: number | null;
   /** 题型 */
   type?: string;
   /** 题目内容(中文) */
@@ -167,6 +175,15 @@ const QuestionAPI = {
       url: `${QUESTION_BASE_URL}/batch-change-type`,
       method: "post",
       data: { ids, type },
+    });
+  },
+
+  /** 批量更换章节 */
+  batchChangeChapter(subjectId: string, ids: number[], chapterId: number) {
+    return request({
+      url: `${QUESTION_BASE_URL}/batch-change-chapter`,
+      method: "post",
+      data: { subjectId, ids, chapterId },
     });
   },
 
