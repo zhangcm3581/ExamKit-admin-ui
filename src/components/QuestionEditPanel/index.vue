@@ -205,6 +205,7 @@ function parseOptions(json?: string): { label: string; value: string }[] {
 const form = reactive<QuestionForm>({
   id: props.question.id,
   subjectId: props.question.subjectId,
+  chapterId: props.question.chapterId ?? null,
   type: props.question.type,
   contentZh: props.question.contentZh || "",
   contentEn: props.question.contentEn || "",
