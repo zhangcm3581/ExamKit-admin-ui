@@ -3,7 +3,17 @@
     <el-card shadow="never">
       <!-- 工具栏 -->
       <div class="toolbar">
-        <div class="toolbar-left"></div>
+        <div class="toolbar-left">
+          <el-button
+            type="primary"
+            plain
+            icon="Download"
+            :loading="exporting"
+            @click="handleExportPending"
+          >
+            导出待处理
+          </el-button>
+        </div>
         <div class="toolbar-right">
           <el-select
             v-model="queryParams.subjectId"
@@ -280,6 +290,7 @@ import QuestionEditPanel from "@/components/QuestionEditPanel/index.vue";
 import { formatRichText } from "@/utils/rich-text";
 
 const loading = ref(false);
+const exporting = ref(false);
 const tableData = ref<ReportVO[]>([]);
 const total = ref(0);
 const subjectOptions = ref<{ id: string; name: string }[]>([]);
@@ -454,6 +465,42 @@ function handleReset() {
   queryParams.pageNum = 1;
   queryParams.pageSize = 20;
   fetchData();
+}
+
+async function handleExportPending() {
+  exporting.value = true;
+  try {
+    const response: any = await QuestionReportAPI.exportPending(queryParams.subjectId);
+    const fileData: Blob = response.data;
+    if (fileData.type && fileData.type.includes("json")) {
+      const json = JSON.parse(await fileData.text());
+      throw new Error(json.message || "导出失败");
+    }
+    let fileName = "待处理纠错.docx";
+    const contentDisposition = response.headers?.["content-disposition"];
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^;"']+)/i);
+      if (match?.[1]) {
+        fileName = decodeURIComponent(match[1]);
+      }
+    }
+    const downloadUrl = window.URL.createObjectURL(fileData);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    ElMessage.success("导出成功");
+  } catch (error) {
+    const axiosLike = error as { isAxiosError?: boolean; message?: string };
+    if (!axiosLike?.isAxiosError) {
+      ElMessage.error(axiosLike?.message || "导出失败");
+    }
+  } finally {
+    exporting.value = false;
+  }
 }
 
 async function handleProcess(row: ReportVO) {

@@ -20,6 +20,17 @@ const QuestionReportAPI = {
     });
   },
 
+  /** 导出待处理纠错为 Word，subjectId 为空则导出全部科目 */
+  exportPending(subjectId?: string) {
+    return request({
+      url: `${REPORT_BASE_URL}/export`,
+      method: "get",
+      params: { subjectId },
+      responseType: "blob",
+      timeout: 180000,
+    });
+  },
+
   /** 处理纠错 */
   handle(id: number, data: { status: string; handlerRemark: string }) {
     return request({
