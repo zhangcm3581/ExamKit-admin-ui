@@ -162,6 +162,7 @@
                   <template #dropdown>
                     <el-dropdown-menu class="subject-dropdown-menu">
                       <el-dropdown-item command="editSubject">编辑题库信息</el-dropdown-item>
+                      <el-dropdown-item command="editChapter">编辑章节</el-dropdown-item>
                       <el-dropdown-item command="copyShareUrl">复制Web分享链接</el-dropdown-item>
                       <el-dropdown-item command="uploadPdf">上传PDF</el-dropdown-item>
                       <el-dropdown-item command="keyPoint">考点速记</el-dropdown-item>
@@ -218,6 +219,7 @@
 
     <MiniappQrDialog v-model="qrDialogVisible" :subject-id="qrSubjectId" />
     <KeyPointDialog ref="keyPointDialogRef" />
+    <ChapterManager ref="chapterManagerRef" />
 
     <!-- 新建文件夹弹窗 -->
     <!-- 文件夹弹窗 -->
@@ -663,6 +665,7 @@ import {
 } from "@element-plus/icons-vue";
 import MiniappQrDialog from "@/views/exam/subject/components/MiniappQrDialog.vue";
 import KeyPointDialog from "@/views/exam/subject/components/KeyPointDialog.vue";
+import ChapterManager from "@/views/exam/question/components/ChapterManager.vue";
 import { AuthStorage } from "@/utils/auth";
 import ProviderAPI, {
   type ProviderPageQuery,
@@ -722,6 +725,7 @@ const tableRef = ref(); // 表格引用
 const qrDialogVisible = ref(false);
 const qrSubjectId = ref("");
 const keyPointDialogRef = ref<InstanceType<typeof KeyPointDialog>>();
+const chapterManagerRef = ref<InstanceType<typeof ChapterManager>>();
 
 function openMiniappQr(row: { id: string }) {
   qrSubjectId.value = row.id;
@@ -1075,7 +1079,7 @@ function handleRowMoreAction(command: string, row: TableRow) {
       ElMessage.info("自定义题型功能开发中");
       break;
     case "editChapter":
-      ElMessage.info("编辑章节功能开发中");
+      chapterManagerRef.value?.open(String(row.id));
       break;
     case "examTemplate":
       ElMessage.info("配置模拟考试模板功能开发中");
