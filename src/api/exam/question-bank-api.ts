@@ -139,6 +139,7 @@ export interface QuestionDraftItemVO {
   options: string;
   answer: string;
   explanation?: string;
+  chapterName?: string;
 }
 
 /** 草稿更新请求 */

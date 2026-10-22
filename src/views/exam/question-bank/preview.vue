@@ -39,6 +39,7 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column prop="chapterName" label="章节" width="140" show-overflow-tooltip />
           <el-table-column label="题目内容" min-width="300">
             <template #default="{ row }">
               <div v-if="row.isCase && row.caseContent" class="case-content">
