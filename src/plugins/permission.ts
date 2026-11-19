@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from "vue-router";
 import NProgress from "@/utils/nprogress";
-import router from "@/router";
+import router, { Layout } from "@/router";
 import { usePermissionStore, useUserStore } from "@/store";
 
 export function setupPermission() {
@@ -40,7 +40,18 @@ export function setupPermission() {
 
         const dynamicRoutes = await permissionStore.generateRoutes();
         dynamicRoutes.forEach((route: RouteRecordRaw) => {
-          router.addRoute(route);
+          // 顶层页面使用公共布局，同时保留菜单配置中的访问路径。
+          if (
+            route.component &&
+            route.component !== Layout &&
+            !route.children?.length &&
+            route.path.startsWith("/") &&
+            !route.path.startsWith("//")
+          ) {
+            router.addRoute("/", route);
+          } else {
+            router.addRoute(route);
+          }
         });
 
         // 关键：传 path 字符串（不是 spread `to`），强制 Vue Router 用新注册的动态路由

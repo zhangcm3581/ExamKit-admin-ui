@@ -1,11 +1,10 @@
 import type { RouteRecordRaw } from "vue-router";
 import { constantRoutes } from "@/router";
 import { store } from "@/store";
-import router from "@/router";
+import router, { Layout } from "@/router";
 
 import MenuAPI, { type RouteVO } from "@/api/system/menu-api";
 const modules = import.meta.glob("../../views/**/**.vue");
-const Layout = () => import("../../layouts/index.vue");
 
 export const usePermissionStore = defineStore("permission", () => {
   // 所有路由（静态路由 + 动态路由）
