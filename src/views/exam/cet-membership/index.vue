@@ -1,136 +1,148 @@
 <template>
   <div class="app-container">
     <el-card shadow="never">
-      <div class="toolbar">
-        <div class="toolbar-group">
-          <el-button type="success" @click="openExport">导出</el-button>
-          <el-button type="primary" @click="openGenerate">生成激活码</el-button>
-          <el-button @click="priceOpen = true">会员售价</el-button>
-        </div>
-        <el-form class="toolbar-group" @submit.prevent="applyFilters">
-          <el-input
-            v-model="filters.keyword"
-            placeholder="请输入激活码"
-            aria-label="激活码"
-            maxlength="12"
-            clearable
-            class="filter-code"
-            @clear="applyFilters"
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="激活码" name="codes">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <el-button type="success" @click="openExport">导出</el-button>
+              <el-button type="primary" @click="openGenerate">生成激活码</el-button>
+              <el-button @click="priceOpen = true">会员售价</el-button>
+            </div>
+            <el-form class="toolbar-group" @submit.prevent="applyFilters">
+              <el-input
+                v-model="filters.keyword"
+                placeholder="请输入激活码"
+                aria-label="激活码"
+                maxlength="12"
+                clearable
+                class="filter-code"
+                @clear="applyFilters"
+              />
+              <el-select
+                v-model="filters.examType"
+                placeholder="考试级别"
+                aria-label="考试级别"
+                clearable
+                class="filter-level"
+                @change="applyFilters"
+              >
+                <el-option
+                  v-for="(label, level) in labels"
+                  :key="level"
+                  :value="level"
+                  :label="label"
+                />
+              </el-select>
+              <el-select
+                v-model="filters.status"
+                placeholder="状态"
+                aria-label="状态"
+                clearable
+                class="filter-status"
+                @change="applyFilters"
+              >
+                <el-option
+                  v-for="(entry, state) in states"
+                  :key="state"
+                  :value="state"
+                  :label="entry.label"
+                />
+              </el-select>
+              <el-button type="primary" native-type="submit" :icon="Search" aria-label="搜索" />
+              <el-button :icon="Refresh" aria-label="重置筛选" @click="resetFilters" />
+            </el-form>
+          </div>
+
+          <el-table
+            v-loading="loading"
+            :data="codes"
+            row-key="id"
+            header-cell-class-name="table-header"
+            class="code-table"
+            stripe
+            empty-text="暂无激活码"
+          >
+            <el-table-column label="序号" width="60" align="center">
+              <template #default="{ $index }">{{ (page - 1) * size + $index + 1 }}</template>
+            </el-table-column>
+            <el-table-column label="激活码" min-width="170">
+              <template #default="{ row }: { row: CodeRow }">
+                <span v-if="row.code" class="code-text">{{ row.code }}</span>
+                <el-button
+                  v-if="row.code"
+                  link
+                  :icon="DocumentCopy"
+                  aria-label="复制激活码"
+                  @click="copyCode(row.code)"
+                />
+                <span v-else class="legacy-code" title="历史记录只保留了尾号">
+                  尾号 {{ row.suffix }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="考试级别" min-width="110">
+              <template #default="{ row }: { row: CodeRow }">{{ labels[row.examType] }}</template>
+            </el-table-column>
+            <el-table-column
+              label="有效期（月）"
+              prop="durationMonths"
+              width="116"
+              align="center"
+            />
+            <el-table-column label="状态" width="94" align="center">
+              <template #default="{ row }: { row: CodeRow }">
+                <el-tag :type="states[row.status].type" size="small" effect="plain">
+                  {{ states[row.status].label }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="用户" prop="userName" min-width="115" show-overflow-tooltip>
+              <template #default="{ row }: { row: CodeRow }">{{ row.userName || "—" }}</template>
+            </el-table-column>
+            <el-table-column label="使用时间" min-width="164" align="center">
+              <template #default="{ row }: { row: CodeRow }">{{ date(row.redeemedAt) }}</template>
+            </el-table-column>
+            <el-table-column label="生成时间" min-width="164" align="center">
+              <template #default="{ row }: { row: CodeRow }">{{ date(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
+            <el-table-column label="操作" width="104" fixed="right" align="center">
+              <template #default="{ row }: { row: CodeRow }">
+                <el-button
+                  v-if="row.status !== 'recycled'"
+                  type="danger"
+                  size="small"
+                  text
+                  bg
+                  :icon="CircleClose"
+                  :loading="recycling === row.id"
+                  @click="recycle(row)"
+                >
+                  {{ row.status === "unused" ? "作废" : "回收" }}
+                </el-button>
+                <span v-else :title="date(row.recycledAt)">—</span>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <el-pagination
+            v-if="total > 0"
+            v-model:current-page="page"
+            v-model:page-size="size"
+            :page-sizes="[20, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            background
+            class="code-pagination"
+            @current-change="loadCodes"
+            @size-change="applyFilters"
           />
-          <el-select
-            v-model="filters.examType"
-            placeholder="考试级别"
-            aria-label="考试级别"
-            clearable
-            class="filter-level"
-            @change="applyFilters"
-          >
-            <el-option
-              v-for="(label, level) in labels"
-              :key="level"
-              :value="level"
-              :label="label"
-            />
-          </el-select>
-          <el-select
-            v-model="filters.status"
-            placeholder="状态"
-            aria-label="状态"
-            clearable
-            class="filter-status"
-            @change="applyFilters"
-          >
-            <el-option
-              v-for="(entry, state) in states"
-              :key="state"
-              :value="state"
-              :label="entry.label"
-            />
-          </el-select>
-          <el-button type="primary" native-type="submit" :icon="Search" aria-label="搜索" />
-          <el-button :icon="Refresh" aria-label="重置筛选" @click="resetFilters" />
-        </el-form>
-      </div>
-
-      <el-table
-        v-loading="loading"
-        :data="codes"
-        row-key="id"
-        header-cell-class-name="table-header"
-        class="code-table"
-        stripe
-        empty-text="暂无激活码"
-      >
-        <el-table-column label="序号" width="60" align="center">
-          <template #default="{ $index }">{{ (page - 1) * size + $index + 1 }}</template>
-        </el-table-column>
-        <el-table-column label="激活码" min-width="170">
-          <template #default="{ row }: { row: CodeRow }">
-            <span v-if="row.code" class="code-text">{{ row.code }}</span>
-            <el-button
-              v-if="row.code"
-              link
-              :icon="DocumentCopy"
-              aria-label="复制激活码"
-              @click="copyCode(row.code)"
-            />
-            <span v-else class="legacy-code" title="历史记录只保留了尾号">
-              尾号 {{ row.suffix }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="考试级别" min-width="110">
-          <template #default="{ row }: { row: CodeRow }">{{ labels[row.examType] }}</template>
-        </el-table-column>
-        <el-table-column label="有效期（月）" prop="durationMonths" width="116" align="center" />
-        <el-table-column label="状态" width="94" align="center">
-          <template #default="{ row }: { row: CodeRow }">
-            <el-tag :type="states[row.status].type" size="small" effect="plain">
-              {{ states[row.status].label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="用户" prop="userName" min-width="115" show-overflow-tooltip>
-          <template #default="{ row }: { row: CodeRow }">{{ row.userName || "—" }}</template>
-        </el-table-column>
-        <el-table-column label="使用时间" min-width="164" align="center">
-          <template #default="{ row }: { row: CodeRow }">{{ date(row.redeemedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="生成时间" min-width="164" align="center">
-          <template #default="{ row }: { row: CodeRow }">{{ date(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="104" fixed="right" align="center">
-          <template #default="{ row }: { row: CodeRow }">
-            <el-button
-              v-if="row.status !== 'recycled'"
-              type="danger"
-              size="small"
-              text
-              bg
-              :icon="CircleClose"
-              :loading="recycling === row.id"
-              @click="recycle(row)"
-            >
-              {{ row.status === "unused" ? "作废" : "回收" }}
-            </el-button>
-            <span v-else :title="date(row.recycledAt)">—</span>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-if="total > 0"
-        v-model:current-page="page"
-        v-model:page-size="size"
-        :page-sizes="[20, 50, 100]"
-        :total="total"
-        layout="total, sizes, prev, pager, next"
-        background
-        class="code-pagination"
-        @current-change="loadCodes"
-        @size-change="applyFilters"
-      />
+        </el-tab-pane>
+        <el-tab-pane label="微信订单" name="orders" lazy>
+          <CetMembershipOrders :labels="labels" />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <el-dialog
@@ -244,9 +256,11 @@ import { CircleClose, DocumentCopy, Refresh, Search } from "@element-plus/icons-
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatDateTime } from "@/utils/datetime";
 import request from "@/utils/request";
+import CetMembershipOrders from "./CetMembershipOrders.vue";
 
 defineOptions({ name: "CetMembershipAdmin" });
 
+const activeTab = ref("codes");
 const labels = { CET4: "英语四级", CET6: "英语六级" };
 const states = {
   unused: { label: "未使用", type: "success" },
